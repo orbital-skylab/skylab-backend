@@ -39,6 +39,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Heroku Login Command
+        uses: actions/setup-node@v1
         run: |
           heroku login -i
           ${{ secrets.HEROKU_EMAIL }}
