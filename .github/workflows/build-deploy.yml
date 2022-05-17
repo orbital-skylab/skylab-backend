@@ -4,33 +4,34 @@ on: [push, pull_request]
 
 # Target Branch Job
 jobs:
-  Lint-Test:
-    runs-on: ubuntu-latest
-    steps:
-      # Check Out Repository
-      - uses: actions/checkout@v1
+  # Lint-Test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # Check Out Repository
+  #     - uses: actions/checkout@v1
 
-      # Install Node.js
-      - uses: actions/setup-node@v1.4.4
-        with:
-          node-version: 14
+  #     # Install Node.js
+  #     - uses: actions/setup-node@v1.4.4
+  #       with:
+  #         node-version: 14
 
-      # Install Node Dependencies
-      - name: Installing NodeJS Dependencies
-        run: npm install
+  #     # Install Node Dependencies
+  #     - name: Installing NodeJS Dependencies
+  #       run: npm install
 
-      # Run ESLint
-      - name: ESLint Check
-        run: npx eslint . --config .eslintrc.js --ext .js,.ts
+  #     # Run ESLint
+  #     - name: ESLint Check
+  #       run: npx eslint . --config .eslintrc.js --ext .js,.ts
 
-      # Run Prettier
-      - name: Prettier Check
-        run: npx prettier --check "src/**/*.ts"
+  #     # Run Prettier
+  #     - name: Prettier Check
+  #       run: npx prettier --check "src/**/*.ts"
 
-      ## TODO: Add test scripts when Jest is configured
+  #     ## TODO: Add test scripts when Jest is configured
 
   Deploy:
-    needs: [Lint-Test]
+    # needs: [Lint-Test]
+    needs: []
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     steps:
