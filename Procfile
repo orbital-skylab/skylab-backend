@@ -1,1 +1,1 @@
-web: nodemon
+web: ts-node ./src/index.ts
