@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0
       - name: Heroku Login Command
         run: |
-          heroku login;
+          heroku login -i
           ${{ secrets.HEROKU_EMAIL }}
           ${{ secrets.HEROKU_API_KEY }}
         env:
