@@ -4,19 +4,9 @@ import cors from "cors";
 
 import apiRouter from "./routes/api";
 
-if (process.env.NODE_ENV === "test") {
-  dotenv.config({
-    path: "environments/.env.test",
-  });
-} else if (process.env.NODE_ENV === "production") {
-  dotenv.config({
-    path: "environments/.env.production",
-  });
-} else {
-  dotenv.config({
-    path: "environments/.env.development",
-  });
-}
+dotenv.config({
+  path: "../.env",
+});
 
 // Constants
 const app = express();
