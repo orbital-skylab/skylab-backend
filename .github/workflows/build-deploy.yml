@@ -25,7 +25,7 @@ jobs:
 
       # Run Prettier
       - name: Prettier Check
-        run: npx prettier --check *.ts
+        run: npx prettier --check "src/**/*.ts"
 
       ## TODO: Add test scripts when Jest is configured
 
