@@ -40,14 +40,20 @@ jobs:
         with:
           fetch-depth: 0
       - name: Heroku Login Command
-        uses: actions/setup-node@v1
         run: |
           heroku login -i
           ${{ secrets.HEROKU_EMAIL }}
           ${{ secrets.HEROKU_API_KEY }}
+      - name: Heroku Input Email
+        run: |
+          $HEROKU_EMAIL
+        env:
+          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
+      - name: Heroku Input Password
+        run: |
+          $HEROKU_API_KEY
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
       - name: Add Heroku remote
         run: heroku git:remote --app skylab-backend
       - name: Push to Heroku
