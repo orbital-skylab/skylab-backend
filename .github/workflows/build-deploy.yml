@@ -1,0 +1,45 @@
+## Continuous Integration Workflow
+name: Build and Deploy
+on: [push, pull_request]
+
+# Target Branch Job
+jobs:
+  Lint-Build-Test:
+    runs-on: ubuntu-latest
+    steps:
+      # Check Out Repository
+      - uses: actions/checkout@v1
+
+      # Install Node.js
+      - uses: actions/setup-node@v1.4.4
+        with:
+          node-version: 14
+
+      # Install Node Dependencies
+      - name: Installing NodeJS Dependencies
+        run: npm install
+
+      # Run Build
+      - name: tsc
+        run: npm run build
+
+      # Run ESLint
+      - name: ESLint Check
+        run: npx eslint . --config .eslintrc --ext .js,.ts
+
+      # Run Prettier
+      - name: Prettier Check
+        run: npx prettier --check .
+
+      ## TODO: Add test scripts when Jest is configured
+
+    # Deploy:
+    #   needs: [Lint-Build-Test]
+    #   runs-on: ubuntu-latest
+    #   steps:
+    #     # Re-Initialize Staging Server
+    #     - if: github.ref == 'refs/heads/staging'
+    #       name: Push Changes to Staging Server [LIVE]
+
+    #     - if: github.ref == 'refs/heads/master'
+    #       name: Push Changes to Production Server [LIVE]
