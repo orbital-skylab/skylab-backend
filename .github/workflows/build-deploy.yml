@@ -25,7 +25,7 @@ jobs:
 
       # Run ESLint
       - name: ESLint Check
-        run: npx eslint . --config .eslintrc --ext .js,.ts
+        run: npx eslint . --config .eslintrc.js --ext .js,.ts
 
       # Run Prettier
       - name: Prettier Check
