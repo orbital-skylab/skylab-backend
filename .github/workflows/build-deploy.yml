@@ -35,7 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     steps:
-      - shell: bash
       - uses: actions/checkout@v2
       - uses: akhileshns/heroku-deploy@v3.12.12
         with:
@@ -47,4 +46,4 @@ jobs:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
           HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
           HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
-      - run: echo $HEROKU_EMAIL
+      - run: echo "HEROKU_EMAIL: $HEROKU_EMAIL"
