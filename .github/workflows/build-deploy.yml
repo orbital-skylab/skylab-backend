@@ -35,24 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.12.12
         with:
-          fetch-depth: 0
-      - name: Heroku Login
-        run: |
-          cat > ~/.netrc <<EOF
-            machine api.heroku.com
-              login $HEROKU_EMAIL
-              password $HEROKU_API_KEY
-            machine git.heroku.com
-              login $HEROKU_EMAIL
-              password $HEROKU_API_KEY
-          EOF
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
-      - name: Add Heroku remote
-        run: heroku git:remote --app skylab-backend
-      - name: Push to Heroku
-        run: git push heroku staging:main
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ""
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          justlogin: true
+      - run: heroku auth:whoami
