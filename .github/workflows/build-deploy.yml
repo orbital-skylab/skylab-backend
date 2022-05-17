@@ -41,5 +41,4 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           remote_branch: "main"
-          healthcheck: "https://https://skylab-backend.herokuapp.com/api/healthCheck"
           procfile: "web: ./node_modules/.bin/ts-node -r tsconfig-paths/register ./src"
