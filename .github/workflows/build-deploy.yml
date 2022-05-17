@@ -29,13 +29,14 @@ jobs:
 
       ## TODO: Add test scripts when Jest is configured
 
-    # Deploy:
-    #   needs: [Lint-Build-Test]
-    #   runs-on: ubuntu-latest
-    #   steps:
-    #     # Re-Initialize Staging Server
-    #     - if: github.ref == 'refs/heads/staging'
-    #       name: Push Changes to Staging Server [LIVE]
-
-    #     - if: github.ref == 'refs/heads/master'
-    #       name: Push Changes to Production Server [LIVE]
+    Deploy:
+      needs: [Lint-Test]
+      runs-on: ubuntu-latest
+      if: github.ref == 'refs/heads/staging'
+      steps:
+        - uses: actions/checkout@v2
+        - uses: akhileshns/heroku-deploy@v3.12.12
+          with:
+            heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+            heroku_app_name: "skylab-backend"
+            heroku_email: ${{ secrets.HEROKU_EMAIL }}
