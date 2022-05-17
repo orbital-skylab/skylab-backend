@@ -2,7 +2,9 @@
   "name": "skylab-backend",
   "version": "0.0.0",
   "scripts": {
-    "build": "./node_modules/.bin/ts-node build.ts",
+    "build": "tsc",
+    "test": "NODE_ENV=test jest --runInBand --verbose --detectOpenHandles --coverage --forceExit",
+    "test:badges": "jest-coverage-badges",
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check *.ts",
     "lint": "eslint . --ext .ts",
     "start": "nodemon"

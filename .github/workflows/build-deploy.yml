@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 # Target Branch Job
 jobs:
-  Lint-Build-Test:
+  Lint-Test:
     runs-on: ubuntu-latest
     steps:
       # Check Out Repository
@@ -18,10 +18,6 @@ jobs:
       # Install Node Dependencies
       - name: Installing NodeJS Dependencies
         run: npm install
-
-      # Run Build
-      - name: tsc
-        run: npm run build
 
       # Run ESLint
       - name: ESLint Check
