@@ -16,7 +16,7 @@ model User {
   nusnet_id         String? @db.VarChar(40)
   matric_no         String? @db.VarChar(40)
   name              String  @db.VarChar(255)
-  email             String  @db.VarChar(255)
+  email             String  @unique @db.VarChar(255)
   profile_pic_url   String?
   github_url        String?
   linkedin_url      String?
