@@ -7,17 +7,8 @@
     "test:badges": "jest-coverage-badges",
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
     "lint": "eslint . --ext .ts",
-    "start": "nodemon"
-  },
-  "nodemonConfig": {
-    "watch": [
-      "src"
-    ],
-    "ext": "ts, html",
-    "ignore": [
-      "src/public"
-    ],
-    "exec": "./node_modules/.bin/ts-node -r tsconfig-paths/register ./src"
+    "start": "nodemon",
+    "dev": "nodemon src/index.ts"
   },
   "_moduleAliases": {
     "@services": "dist/services",
