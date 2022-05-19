@@ -27,7 +27,7 @@ app.use(express.urlencoded({ extended: false }));
  **********************************************************************************/
 
 app.get("/", (_: Request, res: Response) => {
-  return res.status(HttpStatusCode.OK).json("Server is running");
+  return res.status(HttpStatusCode.OK).send("Server is running");
 });
 
 // Add api router
