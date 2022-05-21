@@ -8,7 +8,6 @@ import {
   getUserByEmail,
   updateUserByEmail,
 } from "src/models/users.db";
-import { apiCallArgumentsMissingError } from "src/utils/errors";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
@@ -54,7 +53,9 @@ router
   .post("/batch", async (req: Request, res: Response) => {
     try {
       if (!req.body.users || !req.body.count) {
-        throw apiCallArgumentsMissingError;
+        res
+          .status(HttpStatusCode.BAD_REQUEST)
+          .send("Arguments missing from request");
       }
 
       const { users, count } = req.body;
