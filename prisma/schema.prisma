@@ -12,14 +12,14 @@ datasource db {
 }
 
 model User {
-  id                Int     @id @default(autoincrement())
-  nusnet_id         String? @db.VarChar(40)
-  matric_no         String? @db.VarChar(40)
-  name              String  @db.VarChar(255)
-  email             String  @unique @db.VarChar(255)
-  profile_pic_url   String?
-  github_url        String?
-  linkedin_url      String?
-  personal_site_url String?
-  self_intro        String?
+  id              Int     @id @default(autoincrement())
+  nusnetId        String? @db.VarChar(40)
+  matricNo        String? @db.VarChar(40)
+  name            String? @db.VarChar(255)
+  email           String  @unique @db.VarChar(255)
+  profilePicUrl   String?
+  githubUrl       String?
+  linkedinUrl     String?
+  personalSiteUrl String?
+  selfIntro       String?
 }
