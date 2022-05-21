@@ -1,9 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
-import {
-  unknownInternalServerError,
-  userEmailNotFoundError,
-} from "src/utils/errors";
+import { SkylabError } from "src/errors/SkylabError";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
@@ -27,8 +25,21 @@ export interface IUser {
 export const createUser = async (
   userToCreate: Prisma.UserCreateInput | IUser
 ) => {
-  const createUser = await prisma.user.create({ data: userToCreate });
-  return createUser;
+  try {
+    const createUser = await prisma.user.create({ data: userToCreate });
+    return createUser;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    // Unique constraint error
+    if (e.code === "P2002") {
+      throw new SkylabError("User is not unique", HttpStatusCode.BAD_REQUEST);
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+  }
 };
 
 /**
@@ -51,10 +62,13 @@ export const createManyUsers = async (
     }
 
     if (e.code === "P2002") {
-      throw new Error("User data has conflicting unique inputs");
+      throw new SkylabError(
+        "At least one user is not unique",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
-    throw e;
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
@@ -85,19 +99,18 @@ export const getUsers = async (searchCriteria: { [key: string]: string }) => {
  * @returns User that has the given email
  */
 export const getUserByEmail = async (email: string) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email: email },
-    });
+  const user = await prisma.user.findUnique({
+    where: { email: email },
+  });
 
-    if (user == null) {
-      throw new Error("User not found");
-    }
-
-    return user;
-  } catch (e) {
-    throw e;
+  if (user == null) {
+    throw new SkylabError(
+      "User with given email was not found",
+      HttpStatusCode.BAD_REQUEST
+    );
   }
+
+  return user;
 };
 
 export const updateUserByEmail = async (
@@ -118,10 +131,13 @@ export const updateUserByEmail = async (
     }
 
     if (e.code === "P2025") {
-      throw userEmailNotFoundError;
+      throw new SkylabError(
+        "User with given email was not found",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
-    throw unknownInternalServerError;
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
@@ -144,9 +160,12 @@ export const deleteUserByEmail = async (email: string) => {
     }
 
     if (e.code === "P2025") {
-      throw userEmailNotFoundError;
+      throw new SkylabError(
+        "User with given email was not found",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
-    throw unknownInternalServerError;
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
