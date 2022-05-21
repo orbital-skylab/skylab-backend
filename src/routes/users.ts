@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import {
+  createManyUsers,
   createUser,
   deleteUserByEmail,
   getAllUsers,
@@ -33,6 +34,35 @@ router
     }
   })
   .all("/", (_: Request, res: Response) => {
+    res
+      .status(HttpStatusCode.BAD_REQUEST)
+      .send("Invalid method to access endpoint");
+  });
+
+router
+  .post("/batch", async (req: Request, res: Response) => {
+    try {
+      if (!req.body.users || !req.body.count) {
+        throw apiCallArgumentsMissingError;
+      }
+
+      const { users, count } = req.body;
+
+      if (users.length !== count) {
+        res
+          .status(HttpStatusCode.BAD_REQUEST)
+          .send("Number of users do not tally");
+      }
+
+      const createAllUsers = await createManyUsers(users);
+      res
+        .status(HttpStatusCode.OK)
+        .send(`${createAllUsers} users were created`);
+    } catch (e) {
+      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+    }
+  })
+  .all("/batch", (_: Request, res: Response) => {
     res
       .status(HttpStatusCode.BAD_REQUEST)
       .send("Invalid method to access endpoint");

@@ -32,6 +32,33 @@ export const createUser = async (
 };
 
 /**
+ * @function createManyUsers Insert multiple users into the database
+ * @param usersToCreate Array of users to be created
+ * @returns Number of user records created
+ */
+export const createManyUsers = async (
+  usersToCreate: Prisma.UserCreateInput[] | IUser[]
+) => {
+  try {
+    const createUsers = await prisma.user.createMany({
+      data: usersToCreate,
+      skipDuplicates: false, // skip if unique fields are equal
+    });
+    return createUsers.count;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    if (e.code === "P2002") {
+      throw new Error("User data has conflicting unique inputs");
+    }
+
+    throw e;
+  }
+};
+
+/**
  * @function getAllUsers Return all users in the database
  * @returns All User Records in the database
  */
@@ -59,15 +86,16 @@ export const getUsers = async (searchCriteria: { [key: string]: string }) => {
  */
 export const getUserByEmail = async (email: string) => {
   try {
-    const user = await prisma.user.findMany({
+    const user = await prisma.user.findUnique({
       where: { email: email },
     });
-    return user;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
+
+    if (user == null) {
+      throw new Error("User not found");
     }
 
+    return user;
+  } catch (e) {
     throw e;
   }
 };
