@@ -1,8 +1,6 @@
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createManyUsers,
-  createUser,
   deleteUserByEmail,
   getAllUsers,
   getUserByEmail,
@@ -13,24 +11,6 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 const router = Router();
 
 router
-  .post("/", async (req: Request, res: Response) => {
-    try {
-      if (!req.body.user) {
-        res
-          .status(HttpStatusCode.BAD_REQUEST)
-          .send("Arguments missing from request");
-      }
-
-      await createUser(req.body.user);
-      res.sendStatus(HttpStatusCode.OK);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
-    }
-  })
   .get("/", async (_: Request, res: Response) => {
     try {
       const allUsers = await getAllUsers();
@@ -49,40 +29,38 @@ router
       .send("Invalid method to access endpoint");
   });
 
-router
-  .post("/batch", async (req: Request, res: Response) => {
-    try {
-      if (!req.body.users || !req.body.count) {
-        res
-          .status(HttpStatusCode.BAD_REQUEST)
-          .send("Arguments missing from request");
-      }
+// router
+//   .post("/batch", async (req: Request, res: Response) => {
+//     try {
+//       if (!req.body.users || !req.body.count) {
+//         res
+//           .status(HttpStatusCode.BAD_REQUEST)
+//           .send("Arguments missing from request");
+//       }
 
-      const { users, count } = req.body;
+//       const { users, count } = req.body;
 
-      if (users.length !== count) {
-        res
-          .status(HttpStatusCode.BAD_REQUEST)
-          .send("Number of users do not tally");
-      }
+//       if (users.length !== count) {
+//         res
+//           .status(HttpStatusCode.BAD_REQUEST)
+//           .send("Number of users do not tally");
+//       }
+//       await createManyUsers(users);
 
-      const createAllUsers = await createManyUsers(users);
-      res
-        .status(HttpStatusCode.OK)
-        .send(`${createAllUsers} users were created`);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
-    }
-  })
-  .all("/batch", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
-  });
+//       res.sendStatus(HttpStatusCode.OK);
+//     } catch (e) {
+//       if (!(e instanceof SkylabError)) {
+//         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+//       } else {
+//         res.status(e.statusCode).send(e.message);
+//       }
+//     }
+//   })
+//   .all("/batch", (_: Request, res: Response) => {
+//     res
+//       .status(HttpStatusCode.BAD_REQUEST)
+//       .send("Invalid method to access endpoint");
+//   });
 
 router
   .get("/:email", async (req: Request, res: Response) => {
