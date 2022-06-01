@@ -13,8 +13,6 @@ datasource db {
 
 model User {
   id              Int            @id @default(autoincrement())
-  nusnetId        String?        @db.VarChar(40)
-  matricNo        String?        @db.VarChar(40)
   name            String?        @db.VarChar(255)
   email           String         @unique @db.VarChar(255)
   profilePicUrl   String?
@@ -40,10 +38,12 @@ model Cohort {
 }
 
 model Student {
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int   @unique
-  team   Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId Int?
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int     @unique
+  team     Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId   Int?
+  nusnetId String? @db.VarChar(40)
+  matricNo String? @db.VarChar(40)
 }
 
 model Adviser {

@@ -18,37 +18,6 @@ export interface IUser {
 }
 
 /**
- * @function createManyStudentUsers Function to create student users in the database
- * @param users Array of users to create student accounts for
- * @returns The users that were created
- */
-export const createManyStudentUsers = async (
-  users: Prisma.UserCreateInput[]
-) => {
-  try {
-    const createdStudents = await Promise.all(
-      users.map(async (user) => {
-        return await prisma.user.create({
-          data: { ...user, Student: { create: {} } },
-        });
-      })
-    );
-    return createdStudents;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    if (e.code === "P2002") {
-      throw new SkylabError(
-        "At least one user is not unique",
-        HttpStatusCode.BAD_REQUEST
-      );
-    }
-  }
-};
-
-/**
  * @function createManyMentorUsers Function to create mentor users in the database
  * @param users Array of users to create mentor accounts for
  * @returns The users that were created
