@@ -4,7 +4,7 @@ import {
   getAllMentorsParsed,
   getMentorByEmailParsed,
 } from "src/helpers/mentors";
-import { createMentorUser, getMentorByEmail } from "src/models/mentors.db";
+import { createMentorUser } from "src/models/mentors.db";
 import { createManyMentorUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
