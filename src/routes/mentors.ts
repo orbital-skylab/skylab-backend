@@ -4,8 +4,7 @@ import {
   getAllMentorsParsed,
   getMentorByEmailParsed,
 } from "src/helpers/mentors";
-import { createMentorUser } from "src/models/mentors.db";
-import { createManyMentorUsers } from "src/models/users.db";
+import { createMentorUser, createManyMentorUsers } from "src/models/mentors.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();

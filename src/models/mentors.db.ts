@@ -43,7 +43,7 @@ export const getAllMentors = async () => {
 /**
  * @function createMentorUser Create User with associated Mentor Record in the database
  * @param user Information of user to be created
- * @returns
+ * @returns Mentor/User record created in the database
  */
 export const createMentorUser = async (user: Prisma.UserCreateInput) => {
   try {

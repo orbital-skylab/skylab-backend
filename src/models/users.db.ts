@@ -18,37 +18,6 @@ export interface IUser {
 }
 
 /**
- * @function createManyMentorUsers Function to create mentor users in the database
- * @param users Array of users to create mentor accounts for
- * @returns The users that were created
- */
-export const createManyMentorUsers = async (
-  users: Prisma.UserCreateInput[]
-) => {
-  try {
-    const createdMentors = await Promise.all(
-      users.map(async (user) => {
-        return await prisma.user.create({
-          data: { ...user, Mentor: { create: {} } },
-        });
-      })
-    );
-    return createdMentors;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    if (e.code === "P2002") {
-      throw new SkylabError(
-        "At least one user is not unique",
-        HttpStatusCode.BAD_REQUEST
-      );
-    }
-  }
-};
-
-/**
  * @function createManyAdviserUsers Function to create adviser users in the database
  * @param users Array of emails to create adviser accounts for
  * @returns The users that were created
@@ -94,7 +63,7 @@ export const getAllUsers = async () => {
  * @returns list of users that match the given search criteria
  */
 export const getUsers = async (searchCriteria: { [key: string]: string }) => {
-  const users = await prisma.user.findUnique({
+  const users = await prisma.user.findMany({
     where: searchCriteria,
   });
   return users;

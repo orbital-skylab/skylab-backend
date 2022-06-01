@@ -29,36 +29,36 @@ model User {
 }
 
 model Cohort {
-  id           Int      @id
+  id           Int       @id @default(autoincrement())
   startDate    DateTime
   endDate      DateTime
   academicYear Int
   User         User[]
-  Team         Team[]
+  Project      Project[]
 }
 
 model Student {
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   Int     @unique
-  team     Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int      @unique
+  project  Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId   Int?
-  nusnetId String? @db.VarChar(40)
-  matricNo String? @db.VarChar(40)
+  nusnetId String?  @db.VarChar(40)
+  matricNo String?  @db.VarChar(40)
 }
 
 model Adviser {
-  user   User   @relation(fields: [userId], references: [id])
-  userId Int    @unique
-  teams  Team[]
+  user    User      @relation(fields: [userId], references: [id])
+  userId  Int       @unique
+  project Project[]
 }
 
 model Mentor {
-  user   User   @relation(fields: [userId], references: [id])
-  userId Int    @unique
-  teams  Team[]
+  user     User      @relation(fields: [userId], references: [id])
+  userId   Int       @unique
+  projects Project[]
 }
 
-model Team {
+model Project {
   id           Int              @id @default(autoincrement())
   name         String
   Student      Student[]
