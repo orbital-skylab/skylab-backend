@@ -32,8 +32,9 @@ export const getMentorByEmail = async (email: string) => {
  * @returns All Mentor Records in the database
  */
 export const getAllMentors = async () => {
-  const allMentors = await prisma.mentor.findMany({
-    include: { user: true },
+  const allMentors = await prisma.user.findMany({
+    where: { Mentor: { isNot: null } },
+    include: { Mentor: true },
   });
 
   return allMentors;

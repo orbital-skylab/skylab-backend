@@ -1,10 +1,10 @@
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createMentorUser,
-  getAllMentors,
-  getMentorByEmail,
-} from "src/models/mentors.db";
+  getAllMentorsParsed,
+  getMentorByEmailParsed,
+} from "src/helpers/mentors";
+import { createMentorUser, getMentorByEmail } from "src/models/mentors.db";
 import { createManyMentorUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
@@ -13,7 +13,7 @@ const router = Router();
 router
   .get("/", async (_: Request, res: Response) => {
     try {
-      const allMentors = await getAllMentors();
+      const allMentors = await getAllMentorsParsed();
       res.status(HttpStatusCode.OK).json(allMentors);
     } catch (e) {
       if (!(e instanceof SkylabError)) {
@@ -25,7 +25,7 @@ router
   })
   .post("/", async (req: Request, res: Response) => {
     if (!req.body.user || !req.body.user.email) {
-      res
+      return res
         .status(HttpStatusCode.BAD_REQUEST)
         .send("Arguments missing from request");
     }
@@ -53,7 +53,7 @@ router
   .get("/:email", async (req: Request, res: Response) => {
     const { email } = req.params;
     try {
-      const mentorWithEmail = await getMentorByEmail(email);
+      const mentorWithEmail = await getMentorByEmailParsed(email);
       res.status(HttpStatusCode.OK).json(mentorWithEmail);
     } catch (e) {
       if (!(e instanceof SkylabError)) {
