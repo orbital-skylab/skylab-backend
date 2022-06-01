@@ -1,9 +1,5 @@
-import { Prisma, User, Mentor } from "@prisma/client";
-import {
-  createMentorUser,
-  getAllMentors,
-  getMentorByEmail,
-} from "src/models/mentors.db";
+import { User, Mentor } from "@prisma/client";
+import { getAllMentors, getMentorByEmail } from "src/models/mentors.db";
 
 export interface IGetMentor {
   Mentor?: Mentor | null;
