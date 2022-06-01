@@ -12,14 +12,75 @@ datasource db {
 }
 
 model User {
-  id              Int     @id @default(autoincrement())
-  nusnetId        String? @db.VarChar(40)
-  matricNo        String? @db.VarChar(40)
-  name            String? @db.VarChar(255)
-  email           String  @unique @db.VarChar(255)
+  id              Int            @id @default(autoincrement())
+  name            String?        @db.VarChar(255)
+  email           String         @unique @db.VarChar(255)
   profilePicUrl   String?
   githubUrl       String?
   linkedinUrl     String?
   personalSiteUrl String?
   selfIntro       String?
+  Student         Student?
+  cohort          Cohort?        @relation(fields: [cohortId], references: [id])
+  cohortId        Int?
+  Adviser         Adviser?
+  Mentor          Mentor?
+  Administrator   Administrator?
+}
+
+model Cohort {
+  id           Int      @id
+  startDate    DateTime
+  endDate      DateTime
+  academicYear Int
+  User         User[]
+  Team         Team[]
+}
+
+model Student {
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int     @unique
+  team     Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId   Int?
+  nusnetId String? @db.VarChar(40)
+  matricNo String? @db.VarChar(40)
+}
+
+model Adviser {
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int    @unique
+  teams  Team[]
+}
+
+model Mentor {
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int    @unique
+  teams  Team[]
+}
+
+model Team {
+  id           Int              @id @default(autoincrement())
+  name         String
+  Student      Student[]
+  Adviser      Adviser?         @relation(fields: [adviserId], references: [userId])
+  adviserId    Int?
+  Mentor       Mentor?          @relation(fields: [mentorUserId], references: [userId])
+  mentorUserId Int?
+  achievement  AchievementLevel
+  cohort       Cohort           @relation(fields: [cohortId], references: [id])
+  cohortId     Int
+}
+
+enum AchievementLevel {
+  Volstok
+  Gemini
+  Apollo
+  Artemis
+}
+
+model Administrator {
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+  startDate DateTime
+  endDate   DateTime
 }
