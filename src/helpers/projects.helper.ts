@@ -134,3 +134,23 @@ export const addStudentsToProject = async (
     data: { students: { connect: studentConnectIds } },
   });
 };
+
+export const addMentorToProject = async (
+  projectId: number,
+  mentorId: number
+) => {
+  await updateProject({
+    where: { id: projectId },
+    data: { mentor: { connect: { userId: mentorId } } },
+  });
+};
+
+export const addAdviserToProject = async (
+  projectId: number,
+  adviserId: number
+) => {
+  await updateProject({
+    where: { id: projectId },
+    data: { adviser: { connect: { userId: adviserId } } },
+  });
+};
