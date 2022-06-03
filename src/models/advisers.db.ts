@@ -6,50 +6,51 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 const prisma = new PrismaClient();
 
 /**
- * @function getMentorByEmail Get mentor record with the given email
- * @param email The email of the mentor to be retrieved
- * @returns The mentor with the given email
+ * @function getAdviserByEmail Get adviser record with the given email
+ * @param email The email fo the adviser record to be retrieved
+ * @returns The adviser with the given email
  */
-export const getMentorByEmail = async (email: string) => {
-  const mentorWithEmail = await prisma.user.findUnique({
+export const getAdviserByEmail = async (email: string) => {
+  const adviserWithEmail = await prisma.user.findUnique({
     where: { email: email },
-    include: { Mentor: true },
+    include: { Adviser: true },
     rejectOnNotFound: false,
   });
 
-  if (!mentorWithEmail || mentorWithEmail.Mentor == null) {
+  if (adviserWithEmail == null || adviserWithEmail?.Adviser == null) {
     throw new SkylabError(
-      "Mentor with given email was not found",
+      "Adviser with given email was not found",
       HttpStatusCode.NOT_FOUND
     );
   }
 
-  return mentorWithEmail;
+  return adviserWithEmail;
 };
 
 /**
- * @function getAllMentors Return all mentors in the database
- * @returns All Mentor Records in the database
+ * @function getAllAdvisers Return all advisers in the database
+ * @returns All Adviser records in the database
  */
-export const getAllMentors = async () => {
-  const allMentors = await prisma.user.findMany({
-    where: { Mentor: { isNot: null } },
-    include: { Mentor: true },
+export const getAllAdvisers = async () => {
+  const allAdvisers = await prisma.user.findMany({
+    where: { Adviser: { isNot: null } },
+    include: { Adviser: true },
   });
 
-  return allMentors;
+  return allAdvisers;
 };
 
 /**
- * @function createMentorUser Create User with associated Mentor Record in the database
+ * @function createAdviserUser Create User with the associated Adviser Record in the database
  * @param user Information of user to be created
- * @returns Mentor/User record created in the database
+ * @returns User/Adviser Record created in the database
  */
-export const createMentorUser = async (user: Prisma.UserCreateInput) => {
+export const createAdviserUser = async (user: Prisma.UserCreateInput) => {
   try {
     const newUser = await prisma.user.create({
-      data: { ...user, Mentor: { create: {} } },
+      data: { ...user, Adviser: { create: {} } },
     });
+
     return newUser;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
@@ -65,11 +66,11 @@ export const createMentorUser = async (user: Prisma.UserCreateInput) => {
 };
 
 /**
- * @function createManyMentorUsers Function to create mentor users in the database
- * @param users Array of users to create mentor accounts for
+ * @function createManyAdviserUsers Function to create adviser users in the database
+ * @param users Array of users to create adviser accounts for
  * @returns The users that were created
  */
-export const createManyMentorUsers = async (
+export const createManyAdviserUsers = async (
   users: Prisma.UserCreateInput[]
 ) => {
   try {

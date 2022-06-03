@@ -33,7 +33,7 @@ router
 
     try {
       await createMentorUser(userToCreate);
-      res.sendStatus(200);
+      res.sendStatus(HttpStatusCode.OK);
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
@@ -47,6 +47,27 @@ router
       .status(HttpStatusCode.BAD_REQUEST)
       .send("Invalid method to access endpoint");
   });
+
+router.post("/batch", async (req: Request, res: Response) => {
+  if (!req.body.users) {
+    res
+      .status(HttpStatusCode.BAD_REQUEST)
+      .send("Parameters missing from request");
+  }
+
+  const { users } = req.body;
+
+  try {
+    await createManyMentorUsers(users);
+    res.sendStatus(HttpStatusCode.OK);
+  } catch (e) {
+    if (!(e instanceof SkylabError)) {
+      res.status(HttpStatusCode.BAD_REQUEST).send(e.message);
+    } else {
+      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+    }
+  }
+});
 
 router
   .get("/:email", async (req: Request, res: Response) => {
