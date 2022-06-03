@@ -1,4 +1,5 @@
 import { AchievementLevel, Prisma } from "@prisma/client";
+import { equal } from "assert";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createProject,
@@ -26,19 +27,7 @@ export const createProjectHelper = async (
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const projectWhereInputParser = (filter: any) => {
-  if (!filter.page || !filter.limit) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  const take = Number(filter.limit);
-  const skip = (filter.page - 1) * filter.limit;
-
   let toReturn: Prisma.ProjectFindManyArgs = {
-    take: take,
-    skip: skip,
     include: {
       students: { include: { user: true } },
       mentor: { include: { user: true } },
@@ -46,11 +35,30 @@ export const projectWhereInputParser = (filter: any) => {
     },
   };
 
+  if (filter.page && filter.limit) {
+    toReturn = {
+      ...toReturn,
+      take: Number(filter.limit),
+      skip: (filter.page - 1) * filter.limit,
+    };
+  }
+
   if (filter.achievement) {
     const achievement = <AchievementLevel[]>filter.achievement;
     toReturn = {
       ...toReturn,
       where: { achievement: { in: achievement } },
+    };
+  }
+
+  if (filter.cohortYear) {
+    const cohortYear = Number(filter.cohortYear);
+    const cohortYearFilter: Prisma.ProjectWhereInput = {
+      cohortYear: cohortYear,
+    };
+    toReturn = {
+      ...toReturn,
+      where: { ...toReturn.where, ...cohortYearFilter },
     };
   }
 
