@@ -41,6 +41,11 @@ export const projectWhereInputParser = (filter: any) => {
   let toReturn: Prisma.ProjectFindManyArgs = {
     take: take,
     skip: skip,
+    include: {
+      students: { include: { user: true } },
+      mentor: { include: { user: true } },
+      adviser: { include: { user: true } },
+    },
   };
 
   if (filter.achievement) {
