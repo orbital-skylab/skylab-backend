@@ -1,6 +1,4 @@
 import { AchievementLevel, Prisma } from "@prisma/client";
-import { equal } from "assert";
-import { SkylabError } from "src/errors/SkylabError";
 import {
   createProject,
   getManyProjects,
