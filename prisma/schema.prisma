@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -21,58 +22,57 @@ model User {
   personalSiteUrl String?
   selfIntro       String?
   Student         Student?
-  cohort          Cohort?        @relation(fields: [cohortId], references: [id])
-  cohortId        Int?
+  cohort          Cohort?        @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear      Int
   Adviser         Adviser?
   Mentor          Mentor?
   Administrator   Administrator?
 }
 
 model Cohort {
-  id           Int      @id
   startDate    DateTime
   endDate      DateTime
-  academicYear Int
+  academicYear Int       @id
   User         User[]
-  Team         Team[]
+  Project      Project[]
 }
 
 model Student {
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   Int     @unique
-  team     Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int      @id
+  project  Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId   Int?
-  nusnetId String? @db.VarChar(40)
-  matricNo String? @db.VarChar(40)
+  nusnetId String?  @db.VarChar(40)
+  matricNo String?  @db.VarChar(40)
 }
 
 model Adviser {
-  user   User   @relation(fields: [userId], references: [id])
-  userId Int    @unique
-  teams  Team[]
+  user     User      @relation(fields: [userId], references: [id])
+  userId   Int       @unique
+  projects Project[]
 }
 
 model Mentor {
-  user   User   @relation(fields: [userId], references: [id])
-  userId Int    @unique
-  teams  Team[]
+  user     User      @relation(fields: [userId], references: [id])
+  userId   Int       @unique
+  projects Project[]
 }
 
-model Team {
+model Project {
   id           Int              @id @default(autoincrement())
   name         String
-  Student      Student[]
-  Adviser      Adviser?         @relation(fields: [adviserId], references: [userId])
+  students     Student[]
+  adviser      Adviser?         @relation(fields: [adviserId], references: [userId])
   adviserId    Int?
-  Mentor       Mentor?          @relation(fields: [mentorUserId], references: [userId])
+  mentor       Mentor?          @relation(fields: [mentorUserId], references: [userId])
   mentorUserId Int?
   achievement  AchievementLevel
-  cohort       Cohort           @relation(fields: [cohortId], references: [id])
-  cohortId     Int
+  cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear   Int
 }
 
 enum AchievementLevel {
-  Volstok
+  Vostok
   Gemini
   Apollo
   Artemis
@@ -80,7 +80,7 @@ enum AchievementLevel {
 
 model Administrator {
   user      User     @relation(fields: [userId], references: [id])
-  userId    Int      @unique
+  userId    Int      @id
   startDate DateTime
   endDate   DateTime
 }

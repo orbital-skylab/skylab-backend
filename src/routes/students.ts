@@ -5,7 +5,7 @@ import {
   createUserParsed,
   getAllStudentsParsed,
   getStudentByEmailParsed,
-} from "src/helpers/students";
+} from "src/helpers/students.helper";
 
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 

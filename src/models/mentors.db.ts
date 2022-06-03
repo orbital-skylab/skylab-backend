@@ -32,8 +32,9 @@ export const getMentorByEmail = async (email: string) => {
  * @returns All Mentor Records in the database
  */
 export const getAllMentors = async () => {
-  const allMentors = await prisma.mentor.findMany({
-    include: { user: true },
+  const allMentors = await prisma.user.findMany({
+    where: { Mentor: { isNot: null } },
+    include: { Mentor: true },
   });
 
   return allMentors;
@@ -42,7 +43,7 @@ export const getAllMentors = async () => {
 /**
  * @function createMentorUser Create User with associated Mentor Record in the database
  * @param user Information of user to be created
- * @returns
+ * @returns Mentor/User record created in the database
  */
 export const createMentorUser = async (user: Prisma.UserCreateInput) => {
   try {
