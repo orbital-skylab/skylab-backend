@@ -1,11 +1,9 @@
 import { User, Mentor } from "@prisma/client";
 import { getAllMentors, getMentorByEmail } from "src/models/mentors.db";
 
-export interface IGetMentor {
-  Mentor?: Mentor | null;
-}
-
-export const parseGetInput = (rawGetInfo: User & IGetMentor) => {
+export const parseGetInput = (
+  rawGetInfo: User & { Mentor?: Mentor | null }
+) => {
   const mentor = rawGetInfo.Mentor;
   delete rawGetInfo["Mentor"];
   return { ...rawGetInfo, ...mentor };

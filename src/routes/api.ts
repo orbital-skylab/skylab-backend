@@ -5,6 +5,7 @@ import studentRouter from "./students";
 import mentorRouter from "./mentors";
 import cohortRouter from "./cohorts";
 import projectRouter from "./projects";
+import adviserRouter from "./advisers";
 
 // Export the base-router
 const baseRouter = Router();
@@ -15,6 +16,7 @@ baseRouter.use("/students", studentRouter);
 baseRouter.use("/mentors", mentorRouter);
 baseRouter.use("/cohorts", cohortRouter);
 baseRouter.use("/projects", projectRouter);
+baseRouter.use("/advisers", adviserRouter);
 
 // Export default.
 export default baseRouter;
