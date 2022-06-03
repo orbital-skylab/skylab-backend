@@ -1,23 +1,23 @@
 import { User, Mentor } from "@prisma/client";
 import { getAllMentors, getMentorByEmail } from "src/models/mentors.db";
 
-export const parseGetInput = (
-  rawGetInfo: User & { Mentor?: Mentor | null }
+export const parseMentorGetInput = (
+  rawGetInfo: User & { mentor?: Mentor | null }
 ) => {
-  const mentor = rawGetInfo.Mentor;
-  delete rawGetInfo["Mentor"];
+  const mentor = rawGetInfo.mentor;
+  delete rawGetInfo["mentor"];
   return { ...rawGetInfo, ...mentor };
 };
 
 export const getMentorByEmailParsed = async (email: string) => {
   const mentorByEmail = await getMentorByEmail(email);
-  return parseGetInput(mentorByEmail);
+  return parseMentorGetInput(mentorByEmail);
 };
 
 export const getAllMentorsParsed = async () => {
   const allMentors = await getAllMentors();
   const allMentorsParsed = allMentors.map((mentor) => {
-    return parseGetInput(mentor);
+    return parseMentorGetInput(mentor);
   });
   return allMentorsParsed;
 };

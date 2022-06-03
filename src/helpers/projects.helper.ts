@@ -1,4 +1,12 @@
-import { AchievementLevel, Prisma } from "@prisma/client";
+import {
+  AchievementLevel,
+  Adviser,
+  Mentor,
+  Prisma,
+  Project,
+  Student,
+  User,
+} from "@prisma/client";
 import {
   createProject,
   getManyProjects,
@@ -61,6 +69,40 @@ export const projectWhereInputParser = (filter: any) => {
 
   return toReturn;
 };
+
+interface IGetProject {
+  mentor?: Mentor | null;
+  adviser?: Adviser | null;
+  students?: Student[] | [];
+}
+
+const flattenProjectUsers = (
+  toParse: (Mentor | Adviser | Student) & { user?: User }
+) => {
+  const user = toParse.user;
+
+  delete toParse["user"];
+  return { ...toParse, ...user };
+};
+
+export const projectsGetInputParser = async (
+  projects: (Project & IGetProject)[]
+) => {
+  const parsedProjects = projects.map(
+    ({ students, mentor, adviser, ...project }) => {
+      return {
+        ...project,
+        students: students
+          ? students.map((student) => flattenProjectUsers(student))
+          : [],
+        mentor: mentor ? flattenProjectUsers(mentor) : undefined,
+        adviser: adviser ? flattenProjectUsers(adviser) : undefined,
+      };
+    }
+  );
+  return parsedProjects;
+};
+
 /**
  * @function getManyProjectsHelper Helper function to parse input into getManyProjects
  * @param filter The filter condition to search on
@@ -72,7 +114,7 @@ export const getManyProjectsHelper = async (
 ) => {
   const parsedFilter = projectWhereInputParser(filter);
   const filteredProjects = await getManyProjects(parsedFilter);
-  return filteredProjects;
+  return projectsGetInputParser(filteredProjects);
 };
 
 /**
@@ -90,5 +132,25 @@ export const addStudentsToProject = async (
   await updateProject({
     where: { id: projectId },
     data: { students: { connect: studentConnectIds } },
+  });
+};
+
+export const addMentorToProject = async (
+  projectId: number,
+  mentorId: number
+) => {
+  await updateProject({
+    where: { id: projectId },
+    data: { mentor: { connect: { userId: mentorId } } },
+  });
+};
+
+export const addAdviserToProject = async (
+  projectId: number,
+  adviserId: number
+) => {
+  await updateProject({
+    where: { id: projectId },
+    data: { adviser: { connect: { userId: adviserId } } },
   });
 };
