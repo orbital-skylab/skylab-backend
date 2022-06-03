@@ -1,7 +1,5 @@
-import { AchievementLevel, Prisma, Project } from "@prisma/client";
-import { parse } from "path";
+import { AchievementLevel, Prisma } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { getCurrentCohort } from "src/models/cohorts.db";
 import {
   createProject,
   getManyProjects,
