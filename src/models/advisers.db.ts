@@ -74,14 +74,14 @@ export const createManyAdviserUsers = async (
   users: Prisma.UserCreateInput[]
 ) => {
   try {
-    const createdMentors = await Promise.all(
+    const createdAdvisers = await Promise.all(
       users.map(async (user) => {
         return await prisma.user.create({
           data: { ...user, adviser: { create: {} } },
         });
       })
     );
-    return createdMentors;
+    return createdAdvisers;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;

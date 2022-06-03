@@ -18,37 +18,6 @@ export interface IUser {
 }
 
 /**
- * @function createManyAdviserUsers Function to create adviser users in the database
- * @param users Array of emails to create adviser accounts for
- * @returns The users that were created
- */
-export const createManyAdviserUsers = async (
-  users: Prisma.UserCreateInput[]
-) => {
-  try {
-    const createdAdvisers = await Promise.all(
-      users.map(async (user) => {
-        return await prisma.user.create({
-          data: { ...user, Adviser: { create: {} } },
-        });
-      })
-    );
-    return createdAdvisers;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    if (e.code === "P2002") {
-      throw new SkylabError(
-        "At least one user is not unique",
-        HttpStatusCode.BAD_REQUEST
-      );
-    }
-  }
-};
-
-/**
  * @function getAllUsers Return all users in the database
  * @returns All User Records in the database
  */

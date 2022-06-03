@@ -4,8 +4,10 @@ import {
   getAdviserByEmailParsed,
   getAllAdvisersParsed,
 } from "src/helpers/advisers.helper";
-import { createAdviserUser } from "src/models/advisers.db";
-import { createManyAdviserUsers } from "src/models/users.db";
+import {
+  createAdviserUser,
+  createManyAdviserUsers,
+} from "src/models/advisers.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
