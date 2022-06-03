@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 export const getStudentByEmail = async (email: string) => {
   const studentWithEmail = await prisma.user.findUnique({
     where: { email: email },
-    include: { Student: true },
+    include: { student: true },
     rejectOnNotFound: false,
   });
   if (!studentWithEmail) {
@@ -32,8 +32,8 @@ export const getStudentByEmail = async (email: string) => {
  */
 export const getAllStudents = async () => {
   const allStudents = await prisma.user.findMany({
-    where: { Student: { isNot: null } },
-    include: { Student: true },
+    where: { student: { isNot: null } },
+    include: { student: true },
   });
   return allStudents;
 };
@@ -47,7 +47,7 @@ export const createStudentUser = async (userInfo: ICreateStudentUser) => {
   try {
     const { student, user } = userInfo;
     const newUser = await prisma.user.create({
-      data: { ...user, Student: { create: { ...student } } },
+      data: { ...user, student: { create: { ...student } } },
     });
     return newUser;
   } catch (e) {
@@ -76,7 +76,7 @@ export const createManyStudentUsers = async (
       usersInfo.map(async (userInfo) => {
         const { user, student } = userInfo;
         return await prisma.user.create({
-          data: { ...user, Student: { create: { ...student } } },
+          data: { ...user, student: { create: { ...student } } },
         });
       })
     );
