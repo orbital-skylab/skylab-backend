@@ -49,7 +49,7 @@ export const createManyStudentUsersParsed = async (usersToCreate: any[]) => {
  * @param rawGetInfo Raw student/user information retrieved from the database
  * @returns Parsed student/user data
  */
-export const parseGetInput = (
+export const parseStudentGetInput = (
   rawGetInfo: User & { student?: Student | null }
 ) => {
   const student = rawGetInfo.student;
@@ -64,7 +64,7 @@ export const parseGetInput = (
  */
 export const getStudentByEmailParsed = async (email: string) => {
   const studentByEmail = await getStudentByEmail(email);
-  return parseGetInput(studentByEmail);
+  return parseStudentGetInput(studentByEmail);
 };
 
 /**
@@ -74,7 +74,7 @@ export const getStudentByEmailParsed = async (email: string) => {
 export const getAllStudentsParsed = async () => {
   const allStudents = await getAllStudents();
   const allStudentsParsed = allStudents.map((student) => {
-    return parseGetInput(student);
+    return parseStudentGetInput(student);
   });
   return allStudentsParsed;
 };
