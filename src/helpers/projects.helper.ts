@@ -6,7 +6,6 @@ import {
   getManyProjects,
   updateProject,
 } from "src/models/projects.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 /**
  * @function createProjectHelper Creates a new project with the data provided
