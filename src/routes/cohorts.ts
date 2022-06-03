@@ -14,6 +14,12 @@ router.post("/", async (req: Request, res: Response) => {
 
   const { cohort } = req.body;
 
+  if (!cohort.startDate || !cohort.endDate || !cohort.academicYear) {
+    return res
+      .status(HttpStatusCode.BAD_REQUEST)
+      .send("Parameters missing from request");
+  }
+
   try {
     await createCohort(cohort);
     return res.sendStatus(HttpStatusCode.OK);

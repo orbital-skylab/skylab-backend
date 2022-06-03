@@ -3,7 +3,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   getAllMentorsParsed,
   getMentorByEmailParsed,
-} from "src/helpers/mentors";
+} from "src/helpers/mentors.helper";
 import { createMentorUser, createManyMentorUsers } from "src/models/mentors.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 

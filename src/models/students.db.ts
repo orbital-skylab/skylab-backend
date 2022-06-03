@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { ICreateStudentUser } from "src/helpers/students";
+import { ICreateStudentUser } from "src/helpers/students.helper";
 
 const prisma = new PrismaClient();
 
