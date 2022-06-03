@@ -13,11 +13,11 @@ const prisma = new PrismaClient();
 export const getAdviserByEmail = async (email: string) => {
   const adviserWithEmail = await prisma.user.findUnique({
     where: { email: email },
-    include: { Adviser: true },
+    include: { adviser: true },
     rejectOnNotFound: false,
   });
 
-  if (adviserWithEmail == null || adviserWithEmail?.Adviser == null) {
+  if (adviserWithEmail == null || adviserWithEmail?.adviser == null) {
     throw new SkylabError(
       "Adviser with given email was not found",
       HttpStatusCode.NOT_FOUND
@@ -33,8 +33,8 @@ export const getAdviserByEmail = async (email: string) => {
  */
 export const getAllAdvisers = async () => {
   const allAdvisers = await prisma.user.findMany({
-    where: { Adviser: { isNot: null } },
-    include: { Adviser: true },
+    where: { adviser: { isNot: null } },
+    include: { adviser: true },
   });
 
   return allAdvisers;
@@ -48,7 +48,7 @@ export const getAllAdvisers = async () => {
 export const createAdviserUser = async (user: Prisma.UserCreateInput) => {
   try {
     const newUser = await prisma.user.create({
-      data: { ...user, Adviser: { create: {} } },
+      data: { ...user, adviser: { create: {} } },
     });
 
     return newUser;
@@ -77,7 +77,7 @@ export const createManyAdviserUsers = async (
     const createdMentors = await Promise.all(
       users.map(async (user) => {
         return await prisma.user.create({
-          data: { ...user, Mentor: { create: {} } },
+          data: { ...user, adviser: { create: {} } },
         });
       })
     );

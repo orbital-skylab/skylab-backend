@@ -21,20 +21,20 @@ model User {
   linkedinUrl     String?
   personalSiteUrl String?
   selfIntro       String?
-  Student         Student?
+  student         Student?
   cohort          Cohort?        @relation(fields: [cohortYear], references: [academicYear])
   cohortYear      Int
-  Adviser         Adviser?
-  Mentor          Mentor?
-  Administrator   Administrator?
+  adviser         Adviser?
+  mentor          Mentor?
+  administrator   Administrator?
 }
 
 model Cohort {
   startDate    DateTime
   endDate      DateTime
   academicYear Int       @id
-  User         User[]
-  Project      Project[]
+  users        User[]
+  projects     Project[]
 }
 
 model Student {
@@ -69,6 +69,7 @@ model Project {
   achievement  AchievementLevel
   cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
   cohortYear   Int
+  milestones   Milestone[]
 }
 
 enum AchievementLevel {
@@ -83,4 +84,16 @@ model Administrator {
   userId    Int      @id
   startDate DateTime
   endDate   DateTime
+}
+
+model Milestone {
+  milestoneNo Int
+  project     Project @relation(fields: [projectId], references: [id])
+  projectId   Int
+  videoUrl    String
+  posterUrl   String
+  logUrl      String
+  readmeUrl   String
+
+  @@id([milestoneNo, projectId])
 }

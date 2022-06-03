@@ -2,11 +2,11 @@ import { User, Adviser } from "@prisma/client";
 import { getAllAdvisers, getAdviserByEmail } from "src/models/advisers.db";
 
 export const parseGetInput = (
-  rawGetInfo: User & { Adviser?: Adviser | null }
+  rawGetInfo: User & { adviser?: Adviser | null }
 ) => {
-  const adviser = rawGetInfo.Adviser;
+  const adviser = rawGetInfo.adviser;
 
-  delete rawGetInfo["Adviser"];
+  delete rawGetInfo["adviser"];
 
   return { ...rawGetInfo, ...adviser };
 };

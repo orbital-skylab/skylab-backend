@@ -13,11 +13,11 @@ const prisma = new PrismaClient();
 export const getMentorByEmail = async (email: string) => {
   const mentorWithEmail = await prisma.user.findUnique({
     where: { email: email },
-    include: { Mentor: true },
+    include: { mentor: true },
     rejectOnNotFound: false,
   });
 
-  if (!mentorWithEmail || mentorWithEmail.Mentor == null) {
+  if (!mentorWithEmail || mentorWithEmail.mentor == null) {
     throw new SkylabError(
       "Mentor with given email was not found",
       HttpStatusCode.NOT_FOUND
@@ -33,8 +33,8 @@ export const getMentorByEmail = async (email: string) => {
  */
 export const getAllMentors = async () => {
   const allMentors = await prisma.user.findMany({
-    where: { Mentor: { isNot: null } },
-    include: { Mentor: true },
+    where: { mentor: { isNot: null } },
+    include: { mentor: true },
   });
 
   return allMentors;
@@ -48,7 +48,7 @@ export const getAllMentors = async () => {
 export const createMentorUser = async (user: Prisma.UserCreateInput) => {
   try {
     const newUser = await prisma.user.create({
-      data: { ...user, Mentor: { create: {} } },
+      data: { ...user, mentor: { create: {} } },
     });
     return newUser;
   } catch (e) {
@@ -76,7 +76,7 @@ export const createManyMentorUsers = async (
     const createdMentors = await Promise.all(
       users.map(async (user) => {
         return await prisma.user.create({
-          data: { ...user, Mentor: { create: {} } },
+          data: { ...user, mentor: { create: {} } },
         });
       })
     );
