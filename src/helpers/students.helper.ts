@@ -44,18 +44,16 @@ export const createManyStudentUsersParsed = async (usersToCreate: any[]) => {
   await createManyStudentUsersParsed(parsedUsersToCreate);
 };
 
-export interface IGetStudent {
-  Student?: Student | null;
-}
-
 /**
  * @function parseGetInput Helper function to parse student/user information retrieved from get student/user methods
  * @param rawGetInfo Raw student/user information retrieved from the database
  * @returns Parsed student/user data
  */
-export const parseGetInput = (rawGetInfo: User & IGetStudent) => {
-  const student = rawGetInfo.Student;
-  delete rawGetInfo["Student"];
+export const parseGetInput = (
+  rawGetInfo: User & { student?: Student | null }
+) => {
+  const student = rawGetInfo.student;
+  delete rawGetInfo["student"];
   return { ...rawGetInfo, ...student };
 };
 

@@ -1,7 +1,7 @@
 import { User, Adviser } from "@prisma/client";
 import { getAllAdvisers, getAdviserByEmail } from "src/models/advisers.db";
 
-export const parseGetInput = (
+export const parseAdviserGetInput = (
   rawGetInfo: User & { adviser?: Adviser | null }
 ) => {
   const adviser = rawGetInfo.adviser;
@@ -13,13 +13,13 @@ export const parseGetInput = (
 
 export const getAdviserByEmailParsed = async (email: string) => {
   const adviserByEmail = await getAdviserByEmail(email);
-  return parseGetInput(adviserByEmail);
+  return parseAdviserGetInput(adviserByEmail);
 };
 
 export const getAllAdvisersParsed = async () => {
   const allAdvisers = await getAllAdvisers();
   const allAdvisersParsed = allAdvisers.map((adviser) => {
-    return parseGetInput(adviser);
+    return parseAdviserGetInput(adviser);
   });
   return allAdvisersParsed;
 };
