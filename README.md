@@ -16,8 +16,8 @@ Skylab v2 has the intention of replacing the pre-existing [Skylab](https://nussk
 
 1. Install [Node.js](https://nodejs.org/en/) on your system
    - You can type `node -v` into a terminal to check if you have it installed
-2. Clone the repo into a directory of your choice by typing `git clone https://github.com/orbital-skylab/skylab-frontend` into a terminal
-3. Navigate to the 'skylab-frontend' directory by typing `cd skylab-frontend`
+2. Clone the repo into a directory of your choice by typing `git clone https://github.com/orbital-skylab/skylab-backend` into a terminal
+3. Navigate to the 'skylab-backend' directory by typing `cd skylab-backend`
 4. Install the packages by typing `npm install`
 6. Place the `.env` file in the root directory of the project
 
