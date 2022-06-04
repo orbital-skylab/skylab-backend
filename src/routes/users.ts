@@ -1,11 +1,12 @@
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  deleteUserByEmail,
   getAllUsers,
   getUserByEmail,
+  deleteUserByEmail,
   updateUserByEmail,
-} from "src/models/users.db";
+} from "src/helpers/users.helper";
+
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
@@ -28,39 +29,6 @@ router
       .status(HttpStatusCode.BAD_REQUEST)
       .send("Invalid method to access endpoint");
   });
-
-// router
-//   .post("/batch", async (req: Request, res: Response) => {
-//     try {
-//       if (!req.body.users || !req.body.count) {
-//         res
-//           .status(HttpStatusCode.BAD_REQUEST)
-//           .send("Arguments missing from request");
-//       }
-
-//       const { users, count } = req.body;
-
-//       if (users.length !== count) {
-//         res
-//           .status(HttpStatusCode.BAD_REQUEST)
-//           .send("Number of users do not tally");
-//       }
-//       await createManyUsers(users);
-
-//       res.sendStatus(HttpStatusCode.OK);
-//     } catch (e) {
-//       if (!(e instanceof SkylabError)) {
-//         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-//       } else {
-//         res.status(e.statusCode).send(e.message);
-//       }
-//     }
-//   })
-//   .all("/batch", (_: Request, res: Response) => {
-//     res
-//       .status(HttpStatusCode.BAD_REQUEST)
-//       .send("Invalid method to access endpoint");
-//   });
 
 router
   .get("/:email", async (req: Request, res: Response) => {

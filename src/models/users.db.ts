@@ -5,81 +5,60 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-export interface IUser {
-  nusnetId: string | null | undefined;
-  matricNo: string | null | undefined;
-  name: string;
-  email: string;
-  profilePicUrl: string | null | undefined;
-  githubUrl: string | null | undefined;
-  linkedinUrl: string | null | undefined;
-  personalSiteUrl: string | null | undefined;
-  selfIntro: string | null | undefined;
-}
-
 /**
- * @function getAllUsers Return all users in the database
- * @returns All User Records in the database
+ * @function getFirstUser Find the first user record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The first user record that matches the query conditions
  */
-export const getAllUsers = async () => {
-  const allUsers = await prisma.user.findMany();
-  return allUsers;
-};
-
-/**
- * @function getUsers Return all users that match the given search criteria
- * @param searchCriteria Search Criteria to select upon
- * @returns list of users that match the given search criteria
- */
-export const getUsers = async (searchCriteria: { [key: string]: string }) => {
-  const users = await prisma.user.findMany({
-    where: searchCriteria,
+export const getFirstUser = async (query: Prisma.UserFindFirstArgs) => {
+  const user = await prisma.user.findFirst({
+    ...query,
+    rejectOnNotFound: false,
   });
-  return users;
+  if (!user) {
+    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
+  }
+  return user;
 };
 
 /**
- * @function getUserByEmail Return user with the specified unique email
- * @param email Email of user to be selected
- * @returns User that has the given email
+ * @function getOneUser Find a unique user record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The mentor record that matches the query conditions
  */
-export const getUserByEmail = async (email: string) => {
+export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
   const user = await prisma.user.findUnique({
-    where: { email: email },
+    ...query,
+    rejectOnNotFound: false,
   });
 
-  if (user == null) {
-    throw new SkylabError(
-      "User with given email was not found",
-      HttpStatusCode.BAD_REQUEST
-    );
+  if (!user) {
+    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
 
   return user;
 };
 
-export const updateUserByEmail = async (
-  email: string,
-  updates: Prisma.UserUpdateInput
-) => {
+/**
+ * @function getManyUsers Find all the users that match the given query condtions
+ * @param query The query conditions to be selected upon
+ * @returns The array of user records that match the query conditions
+ */
+export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
+  const users = await prisma.user.findMany(query);
+  return users;
+};
+
+/**
+ * @function updateOneUser Update one user based on the given unique condition
+ * @param query The unique identifier for the user to update
+ */
+export const updateOneUser = async (query: Prisma.UserUpdateArgs) => {
   try {
-    const updateUser = await prisma.user.update({
-      where: {
-        email: email,
-      },
-      data: updates,
-    });
-    return updateUser;
+    await prisma.user.update(query);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
-    }
-
-    if (e.code === "P2025") {
-      throw new SkylabError(
-        "User with given email was not found",
-        HttpStatusCode.BAD_REQUEST
-      );
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
@@ -87,30 +66,32 @@ export const updateUserByEmail = async (
 };
 
 /**
- * @function deleteUserByEmail Delete user with the given email
- * @param email Email of user to be deleted
- * @returns User that was deleted from the database
+ * @function deleteOneUser Delete one user based on the given unique condition
+ * @param query The unique identifier for the user to delte
  */
-export const deleteUserByEmail = async (email: string) => {
+export const deleteOneUser = async (query: Prisma.UserDeleteArgs) => {
   try {
-    const deletedUser = await prisma.user.delete({
-      where: {
-        email: email,
-      },
-    });
-    return deletedUser;
+    await prisma.user.delete(query);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
 
-    if (e.code === "P2025") {
-      throw new SkylabError(
-        "User with given email was not found",
-        HttpStatusCode.BAD_REQUEST
-      );
-    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+  }
+};
 
+/**
+ * @function deleteManyUser Delete many users based on the given query conditions
+ * @param query The query conditions to identify the users to delete
+ */
+export const deleteManyUser = async (query: Prisma.UserDeleteManyArgs) => {
+  try {
+    await prisma.user.deleteMany(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };

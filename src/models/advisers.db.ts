@@ -6,78 +6,113 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 const prisma = new PrismaClient();
 
 /**
- * @function getAdviserByEmail Get adviser record with the given email
- * @param email The email fo the adviser record to be retrieved
- * @returns The adviser with the given email
+ * @function getFirstAdviser Find the first adviser record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The first adviser record that matches the query conditions
  */
-export const getAdviserByEmail = async (email: string) => {
-  const adviserWithEmail = await prisma.user.findUnique({
-    where: { email: email },
-    include: { adviser: true },
+export const getFirstAdviser = async ({
+  include,
+  ...query
+}: Prisma.AdviserFindFirstArgs) => {
+  const adviser = await prisma.adviser.findFirst({
+    include: { ...include, user: true },
+    ...query,
     rejectOnNotFound: false,
   });
 
-  if (adviserWithEmail == null || adviserWithEmail?.adviser == null) {
-    throw new SkylabError(
-      "Adviser with given email was not found",
-      HttpStatusCode.NOT_FOUND
-    );
+  if (!adviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.NOT_FOUND);
   }
 
-  return adviserWithEmail;
+  return adviser;
 };
 
 /**
- * @function getAllAdvisers Return all advisers in the database
- * @returns All Adviser records in the database
+ * @function getOneAdviser Find a unique adviser record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The adviser record that matches the query conditions
  */
-export const getAllAdvisers = async () => {
-  const allAdvisers = await prisma.user.findMany({
-    where: { adviser: { isNot: null } },
-    include: { adviser: true },
+export const getOneAdviser = async ({
+  include,
+  ...query
+}: Prisma.AdviserFindUniqueArgs) => {
+  const adviser = await prisma.adviser.findUnique({
+    include: { ...include, user: true },
+    ...query,
+    rejectOnNotFound: false,
   });
 
-  return allAdvisers;
+  if (!adviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.NOT_FOUND);
+  }
+
+  return adviser;
 };
 
 /**
- * @function createAdviserUser Create User with the associated Adviser Record in the database
- * @param user Information of user to be created
- * @returns User/Adviser Record created in the database
+ * @function getManyAdvisers Find all the advisers that match the given query conditions
+ * @param query The query conditions to be selected upon
+ * @returns The array of adviser records that match the query conditions
  */
-export const createAdviserUser = async (user: Prisma.UserCreateInput) => {
-  try {
-    const newUser = await prisma.user.create({
-      data: { ...user, adviser: { create: {} } },
-    });
+export const getManyAdvisers = async ({
+  include,
+  ...query
+}: Prisma.AdviserFindManyArgs) => {
+  const advisers = await prisma.adviser.findMany({
+    include: { ...include, user: true },
+    ...query,
+  });
 
-    return newUser;
+  return advisers;
+};
+
+/**
+ * @function createAdviser Create an Adviser with an associated User Record
+ * @param user The information to create the User Record
+ * @param adviser The information to create the Adviser Record
+ * @returns The adviser object that was created
+ */
+export const createAdviser = async (
+  user: Prisma.UserCreateInput,
+  adviser: Omit<Prisma.AdviserCreateInput, "user">
+) => {
+  try {
+    const createdAdviser = await prisma.adviser.create({
+      data: { user: { create: user }, ...adviser },
+    });
+    return createdAdviser;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
 
     if (e.code === "P2002") {
-      throw new SkylabError("User is not unique", HttpStatusCode.BAD_REQUEST);
+      throw new SkylabError(
+        "Adviser is not unique",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
+export interface IAdviserCreateMany {
+  user: Prisma.UserCreateInput;
+  adviser: Omit<Prisma.AdviserCreateInput, "user">;
+}
+
 /**
- * @function createManyAdviserUsers Function to create adviser users in the database
- * @param users Array of users to create adviser accounts for
- * @returns The users that were created
+ * @function createManyAdvisers Create many Advisers with associated User Records
+ * @param data The array of data to create the Adviser Records with
+ * @returns The array of adviser objects created
  */
-export const createManyAdviserUsers = async (
-  users: Prisma.UserCreateInput[]
-) => {
+export const createManyAdvisers = async (data: IAdviserCreateMany[]) => {
   try {
     const createdAdvisers = await Promise.all(
-      users.map(async (user) => {
-        return await prisma.user.create({
-          data: { ...user, adviser: { create: {} } },
+      data.map(async (userData) => {
+        return await prisma.adviser.create({
+          data: { user: { create: userData.user }, ...userData.adviser },
         });
       })
     );
@@ -89,11 +124,11 @@ export const createManyAdviserUsers = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        `User with information: ${e.meta} is not unique`,
+        `Adviser ${e.meta} is not unique`,
         HttpStatusCode.BAD_REQUEST
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
