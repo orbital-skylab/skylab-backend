@@ -1,4 +1,3 @@
-import { prisma } from "@prisma/client";
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import { getLatestCohort } from "src/helpers/cohorts.helper";
