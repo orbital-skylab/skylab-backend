@@ -6,77 +6,108 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 const prisma = new PrismaClient();
 
 /**
- * @function getMentorByEmail Get mentor record with the given email
- * @param email The email of the mentor to be retrieved
- * @returns The mentor with the given email
+ * @function getFirstMentor Find the first mentor record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The first mentor record that matches the query conditions
  */
-export const getMentorByEmail = async (email: string) => {
-  const mentorWithEmail = await prisma.user.findUnique({
-    where: { email: email },
-    include: { mentor: true },
+export const getFirstMentor = async ({
+  include,
+  ...query
+}: Prisma.MentorFindFirstArgs) => {
+  const mentor = await prisma.mentor.findFirst({
+    include: { ...include, user: true },
+    ...query,
     rejectOnNotFound: false,
   });
 
-  if (!mentorWithEmail || mentorWithEmail.mentor == null) {
-    throw new SkylabError(
-      "Mentor with given email was not found",
-      HttpStatusCode.NOT_FOUND
-    );
+  if (!mentor) {
+    throw new SkylabError("Mentor was not found", HttpStatusCode.NOT_FOUND);
   }
 
-  return mentorWithEmail;
+  return mentor;
 };
 
 /**
- * @function getAllMentors Return all mentors in the database
- * @returns All Mentor Records in the database
+ * @function getOneMentor Find a unique mentor record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The mentor record that matches the query conditions
  */
-export const getAllMentors = async () => {
-  const allMentors = await prisma.user.findMany({
-    where: { mentor: { isNot: null } },
-    include: { mentor: true },
+export const getOneMentor = async ({
+  include,
+  ...query
+}: Prisma.MentorFindUniqueArgs) => {
+  const mentor = await prisma.mentor.findUnique({
+    include: { ...include, user: true },
+    ...query,
+    rejectOnNotFound: false,
   });
 
-  return allMentors;
+  if (!mentor) {
+    throw new SkylabError("Mentor was not found", HttpStatusCode.NOT_FOUND);
+  }
+  return mentor;
 };
 
 /**
- * @function createMentorUser Create User with associated Mentor Record in the database
- * @param user Information of user to be created
- * @returns Mentor/User record created in the database
+ * @function getManyMentors Find all the mentors that match the given query conditions
+ * @param query The query conditions to be selected upon
+ * @returns The array of mentor records that match the query conditions
  */
-export const createMentorUser = async (user: Prisma.UserCreateInput) => {
+export const getManyAdvisers = async ({
+  include,
+  ...query
+}: Prisma.MentorFindManyArgs) => {
+  const mentors = await prisma.mentor.findMany({
+    include: { ...include, user: true },
+    ...query,
+  });
+  return mentors;
+};
+
+/**
+ * @function createMentor Create a Mentor with an associated User Record
+ * @param user The information to create the User Record
+ * @param mentor The information to create the Mentor Record
+ * @returns The mentor object that was created
+ */
+export const createMentor = async (
+  user: Prisma.UserCreateInput,
+  mentor: Omit<Prisma.MentorCreateInput, "user">
+) => {
   try {
-    const newUser = await prisma.user.create({
-      data: { ...user, mentor: { create: {} } },
+    const createdMentor = await prisma.mentor.create({
+      data: { user: { create: user }, ...mentor },
     });
-    return newUser;
+    return createdMentor;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
 
     if (e.code === "P2002") {
-      throw new SkylabError("User is not unique", HttpStatusCode.BAD_REQUEST);
+      throw new SkylabError("Mentor is not unique", HttpStatusCode.BAD_REQUEST);
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
+export interface IMentorCreateMany {
+  user: Prisma.UserCreateInput;
+  mentor: Omit<Prisma.MentorCreateInput, "user">;
+}
+
 /**
- * @function createManyMentorUsers Function to create mentor users in the database
- * @param users Array of users to create mentor accounts for
- * @returns The users that were created
+ * @function createManyMentor Create many Mentor records with associated User records
+ * @param data The array of data to create the Mentor Records with
+ * @returns The array of mentor objects created
  */
-export const createManyMentorUsers = async (
-  users: Prisma.UserCreateInput[]
-) => {
+export const createManyMentors = async (data: IMentorCreateMany[]) => {
   try {
     const createdMentors = await Promise.all(
-      users.map(async (user) => {
-        return await prisma.user.create({
-          data: { ...user, mentor: { create: {} } },
+      data.map(async (userData) => {
+        return await prisma.adviser.create({
+          data: { user: { create: userData.user }, ...userData.mentor },
         });
       })
     );
@@ -88,11 +119,11 @@ export const createManyMentorUsers = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        `User with information: ${e.meta} is not unique`,
+        `Mentor ${e.meta} is not unique`,
         HttpStatusCode.BAD_REQUEST
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };

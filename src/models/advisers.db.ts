@@ -21,7 +21,7 @@ export const getFirstAdviser = async ({
   });
 
   if (!adviser) {
-    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
+    throw new SkylabError("Adviser was not found", HttpStatusCode.NOT_FOUND);
   }
 
   return adviser;
@@ -43,15 +43,15 @@ export const getOneAdviser = async ({
   });
 
   if (!adviser) {
-    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
+    throw new SkylabError("Adviser was not found", HttpStatusCode.NOT_FOUND);
   }
 
   return adviser;
 };
 
 /**
- * @function getManyAdvisers Find many advisers that match the given query conditions
- * @param query The query conditions for the advisers to be selected
+ * @function getManyAdvisers Find all the advisers that match the given query conditions
+ * @param query The query conditions to be selected upon
  * @returns The array of adviser records that match the query conditions
  */
 export const getManyAdvisers = async ({
@@ -103,8 +103,8 @@ export interface IAdviserCreateMany {
 }
 
 /**
- * @function createAdviser Create many Advisers with associated User Records
- * @param data The array of data to create the Adviser Records With
+ * @function createManyAdvisers Create many Advisers with associated User Records
+ * @param data The array of data to create the Adviser Records with
  * @returns The array of adviser objects created
  */
 export const createManyAdvisers = async (data: IAdviserCreateMany[]) => {
