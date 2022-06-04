@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
 import {
   createAdviser,
   createManyAdvisers,
+  getFirstAdviser,
   getManyAdvisers,
 } from "src/models/advisers.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 /**
  * @function getAdviserInputParser Parse the input returned from the prisma.adviser.find function
@@ -28,22 +27,11 @@ export const getAdviserInputParser = (
  * @returns The adviser record with the given email
  */
 export const getAdviserByEmail = async (email: string) => {
-  const adviser = await getManyAdvisers({ where: { user: { email: email } } });
-
-  if (adviser.length == 0) {
-    throw new SkylabError(
-      "Adviser with this email does not exist",
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  if (adviser.length > 1) {
-    throw new SkylabError(
-      "Database inconsistent, found two users with the same email",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-  return getAdviserInputParser(adviser[0]);
+  const adviser = await getFirstAdviser({
+    where: { user: { email: email } },
+    orderBy: { cohortYear: "desc" },
+  });
+  return getAdviserInputParser(adviser);
 };
 
 /**

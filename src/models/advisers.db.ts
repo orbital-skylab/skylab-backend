@@ -6,6 +6,28 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 const prisma = new PrismaClient();
 
 /**
+ * @function getFirstAdviser Find the first adviser record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The first adviser record that matches the query conditions
+ */
+export const getFirstAdviser = async ({
+  include,
+  ...query
+}: Prisma.AdviserFindFirstArgs) => {
+  const adviser = await prisma.adviser.findFirst({
+    include: { ...include, user: true },
+    ...query,
+    rejectOnNotFound: false,
+  });
+
+  if (!adviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
+  }
+
+  return adviser;
+};
+
+/**
  * @function getOneAdviser Find a unique adviser record with the given query conditions
  * @param query The query conditions for the user
  * @returns The adviser record that matches the query conditions

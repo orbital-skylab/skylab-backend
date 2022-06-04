@@ -5,15 +5,35 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getCurrentCohort Get information on the latest cohort
- * @returns The record containing the latest cohort information
- */
-export const getCurrentCohort = async () => {
-  const currentCohort = await prisma.cohort.findFirst({
-    orderBy: { endDate: "desc" },
+export const getFirstCohort = async (query: Prisma.CohortFindFirstArgs) => {
+  const cohort = await prisma.cohort.findFirst({
+    ...query,
+    rejectOnNotFound: false,
   });
-  return currentCohort;
+
+  if (!cohort) {
+    throw new SkylabError("Cohort was not found", HttpStatusCode.BAD_REQUEST);
+  }
+
+  return cohort;
+};
+
+export const getOneCohort = async (query: Prisma.CohortFindUniqueArgs) => {
+  const cohort = await prisma.cohort.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+
+  if (!cohort) {
+    throw new SkylabError("Cohort was not found", HttpStatusCode.BAD_REQUEST);
+  }
+
+  return cohort;
+};
+
+export const getManyCohorts = async (query: Prisma.CohortFindManyArgs) => {
+  const cohorts = await prisma.cohort.findMany(query);
+  return cohorts;
 };
 
 /**

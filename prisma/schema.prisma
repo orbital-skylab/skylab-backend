@@ -51,6 +51,8 @@ model Student {
   matricNo   String?  @db.VarChar(40)
   cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+
+  @@unique([userId, cohortYear])
 }
 
 model Adviser {
@@ -60,6 +62,8 @@ model Adviser {
   projects   Project[]
   cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+
+  @@unique([userId, cohortYear])
 }
 
 model Mentor {
@@ -69,6 +73,8 @@ model Mentor {
   projects   Project[]
   cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+
+  @@unique([userId, cohortYear])
 }
 
 model Facilitator {
@@ -77,6 +83,8 @@ model Facilitator {
   userId     Int
   cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+
+  @@unique([userId, cohortYear])
 }
 
 model Tutor {
@@ -85,6 +93,8 @@ model Tutor {
   userId     Int
   cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+
+  @@unique([userId, cohortYear])
 }
 
 model Administrator {
