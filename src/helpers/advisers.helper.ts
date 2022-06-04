@@ -15,7 +15,6 @@ import {
 export const getAdviserInputParser = (
   adviser: Prisma.AdviserGetPayload<{ include: { user: true } }>
 ) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user, id, ...data } = adviser;
   return { ...user, ...data, adviserId: id };
 };
