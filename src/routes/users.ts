@@ -1,11 +1,12 @@
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  deleteUserByEmail,
   getAllUsers,
   getUserByEmail,
+  deleteUserByEmail,
   updateUserByEmail,
-} from "src/models/users.db";
+} from "src/helpers/users.helper";
+
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
