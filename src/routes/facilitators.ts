@@ -15,3 +15,5 @@ router.get("/", async (_: Request, res: Response) => {
     }
   }
 });
+
+export default router;
