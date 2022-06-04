@@ -81,7 +81,7 @@ export const createStudentInputParser = (body: any) => {
     student: {
       nusnetId: nusnetId ? String(nusnetId) : undefined,
       matricNo: matricNo ? String(matricNo) : undefined,
-      cohort: { connect: { academicYear: cohortYear } },
+      cohort: { connect: { academicYear: Number(cohortYear) } },
     },
   };
 };

@@ -6,36 +6,75 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 const prisma = new PrismaClient();
 
 /**
- * @function getAllProjects Return all projects in the database
- * @returns All Project Records in the database
+ * @function getFirstProject Find the first project record with the given query conditions
+ * @param query The query conditions for the project
+ * @returns The first project record that matches the query conditions
  */
-export const getAllProjects = async () => {
-  const allProjects = await prisma.project.findMany({
+export const getFirstProject = async ({
+  include,
+  ...query
+}: Prisma.ProjectFindFirstArgs) => {
+  const project = await prisma.project.findFirst({
     include: {
+      ...include,
+      adviser: { include: { user: true } },
       students: { include: { user: true } },
       mentor: { include: { user: true } },
-      adviser: { include: { user: true } },
     },
+    ...query,
+    rejectOnNotFound: false,
   });
-  return allProjects;
+
+  if (!project) {
+    throw new SkylabError("Project was not found", HttpStatusCode.NOT_FOUND);
+  }
+  return project;
 };
 
 /**
- * @function getManyProjects Return all the projects that match the given filter condition
- * @param filter The filter condition to search on
- * @returns The project records that match the given search condition
+ * @function getOneProject Find a unique project record with the given query conditions
+ * @param query The query conditions for the project
+ * @returns The project record that matches the query conditions
  */
-export const getManyProjects = async (filter: Prisma.ProjectFindManyArgs) => {
-  try {
-    const filteredProjects = await prisma.project.findMany(filter);
-    return filteredProjects;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+export const getOneProject = async ({
+  include,
+  ...query
+}: Prisma.ProjectFindUniqueArgs) => {
+  const project = await prisma.project.findUnique({
+    include: {
+      ...include,
+      adviser: { include: { user: true } },
+      students: { include: { user: true } },
+      mentor: { include: { user: true } },
+    },
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!project) {
+    throw new SkylabError("Project was not found", HttpStatusCode.NOT_FOUND);
   }
+  return project;
+};
+
+/**
+ * @function getManyProjects Find all the projects that match the given conditions
+ * @param query The query conditions to be selected upon
+ * @returns The array of project records that match the query conditions
+ */
+export const getManyProjects = async ({
+  include,
+  ...query
+}: Prisma.ProjectFindManyArgs) => {
+  const projects = await prisma.project.findMany({
+    include: {
+      ...include,
+      adviser: { include: { user: true } },
+      students: { include: { user: true } },
+      mentor: { include: { user: true } },
+    },
+    ...query,
+  });
+  return projects;
 };
 
 /**

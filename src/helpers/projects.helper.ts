@@ -1,37 +1,45 @@
-import {
-  AchievementLevel,
-  Adviser,
-  Mentor,
-  Prisma,
-  Project,
-  Student,
-  User,
-} from "@prisma/client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { AchievementLevel, Prisma } from "@prisma/client";
+
 import {
   createProject,
   getManyProjects,
   updateProject,
 } from "src/models/projects.db";
+import { getAdviserInputParser } from "./advisers.helper";
+import { getMentorInputParser } from "./mentors.helper";
+import { getStudentInputParser } from "./students.helper";
 
 /**
- * @function createProjectHelper Creates a new project with the data provided
- * @param projectInfo Project Information
+ * @function getProjectInputParser Parse the input returned from the prisma.project.find function
+ * @param project The payload returned from prisma.project.find
+ * @returns Project Record with flattened user data
  */
-export const createProjectHelper = async (
-  projectInfo: Prisma.ProjectCreateInput & { cohortYear?: number }
+export const getProjectInputParser = (
+  project: Prisma.ProjectGetPayload<{
+    include: {
+      mentor: { include: { user: true } };
+      students: { include: { user: true } };
+      adviser: { include: { user: true } };
+    };
+  }>
 ) => {
-  const { cohortYear } = projectInfo;
-
-  delete projectInfo["cohortYear"];
-
-  await createProject({
-    ...projectInfo,
-    cohort: { connect: { academicYear: cohortYear } },
-  });
+  const { mentor, students, adviser, ...projectData } = project;
+  return {
+    mentor: mentor ? getMentorInputParser(mentor) : undefined,
+    students: students.map((student) => getStudentInputParser(student)),
+    advisers: adviser ? getAdviserInputParser(adviser) : undefined,
+    ...projectData,
+  };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const projectWhereInputParser = (filter: any) => {
+/**
+ * @function getFilteredProjectsWhereInputParser Parse the query from the
+ * HTTP Request and returns a query object for prisma.project.findMany
+ * @param filter The raw filter object from the HTTP Request
+ * @returns A filter object that works with prisma.project.findMany
+ */
+export const getFilteredProjectsWhereInputParser = (filter: any) => {
   let toReturn: Prisma.ProjectFindManyArgs = {
     include: {
       students: { include: { user: true } },
@@ -70,87 +78,87 @@ export const projectWhereInputParser = (filter: any) => {
   return toReturn;
 };
 
-interface IGetProject {
-  mentor?: Mentor | null;
-  adviser?: Adviser | null;
-  students?: Student[] | [];
-}
-
-const flattenProjectUsers = (
-  toParse: (Mentor | Adviser | Student) & { user?: User }
-) => {
-  const user = toParse.user;
-
-  delete toParse["user"];
-  return { ...toParse, ...user };
-};
-
-export const projectsGetInputParser = async (
-  projects: (Project & IGetProject)[]
-) => {
-  const parsedProjects = projects.map(
-    ({ students, mentor, adviser, ...project }) => {
-      return {
-        ...project,
-        students: students
-          ? students.map((student) => flattenProjectUsers(student))
-          : [],
-        mentor: mentor ? flattenProjectUsers(mentor) : undefined,
-        adviser: adviser ? flattenProjectUsers(adviser) : undefined,
-      };
-    }
+/**
+ * @function getFilteredProjects Retrieve a list of projects that match the given query condition
+ * @param query The query parameters retrieved from the HTTP Request
+ * @returns Array of Project Records that match the given query
+ */
+export const getFilteredProjects = async (query: any) => {
+  const filteredQuery = getFilteredProjectsWhereInputParser(query);
+  const projects = await getManyProjects(filteredQuery);
+  const parsedProjects = projects.map((project) =>
+    getProjectInputParser(project)
   );
   return parsedProjects;
 };
 
 /**
- * @function getManyProjectsHelper Helper function to parse input into getManyProjects
- * @param filter The filter condition to search on
- * @returns The records that match the given filter
+ * @function createProjectInputParser Parse the query body received from
+ * the HTTP Request to be passed to prisma.project.create
+ * @param body The raw query body from the HTTP Request
+ * @returns The create input to be passed to prisma.project.create
  */
-export const getManyProjectsHelper = async (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filter: any
-) => {
-  const parsedFilter = projectWhereInputParser(filter);
-  const filteredProjects = await getManyProjects(parsedFilter);
-  return projectsGetInputParser(filteredProjects);
+export const createProjectInputParser = (
+  body: any
+): Prisma.ProjectCreateInput => {
+  const { cohortYear, ...projectInfo } = body;
+  const projectData = <Prisma.ProjectCreateInput>projectInfo;
+  return {
+    ...projectData,
+    cohort: { connect: { academicYear: Number(cohortYear) } },
+  };
 };
 
 /**
- * @function addStudentsToProject Function to connect students to their project
- * @param projectId ID of the project that the students are added to
- * @param studentUserIds Array of User IDs for the students to be added
+ * @function createProjectHelper Helper function to create a project
+ * @param body The raw query body from the HTTP Request
+ * @returns The project record created
  */
-export const addStudentsToProject = async (
-  projectId: number,
-  studentUserIds: number[]
-) => {
-  const studentConnectIds = studentUserIds.map((studentId) => {
-    return { userId: studentId };
-  });
-  await updateProject({
-    where: { id: projectId },
-    data: { students: { connect: studentConnectIds } },
-  });
+export const createProjectHelper = async (body: any) => {
+  const projectCreateInput = createProjectInputParser(body);
+  return await createProject(projectCreateInput);
 };
 
-export const addMentorToProject = async (
-  projectId: number,
-  mentorId: number
-) => {
-  await updateProject({
-    where: { id: projectId },
-    data: { mentor: { connect: { userId: mentorId } } },
-  });
+export const roleUniqueIdentifierParser = (user: {
+  userId: number;
+  cohortYear: number;
+}) => {
+  return {
+    userId_cohortYear: { userId: user.userId, cohortYear: user.cohortYear },
+  };
 };
 
-export const addAdviserToProject = async (
+export interface IAddUsersToProject {
+  students?: Prisma.StudentUserIdCohortYearCompoundUniqueInput[];
+  mentor?: Prisma.MentorUserIdCohortYearCompoundUniqueInput;
+  adviser?: Prisma.AdviserUserIdCohortYearCompoundUniqueInput;
+}
+
+export const addUsersToProjectParser = (
+  users: IAddUsersToProject
+): Prisma.ProjectUpdateInput => {
+  const students = users.students
+    ? users.students.map((student) => roleUniqueIdentifierParser(student))
+    : undefined;
+  const mentor = users.mentor
+    ? roleUniqueIdentifierParser(users.mentor)
+    : undefined;
+  const adviser = users.adviser
+    ? roleUniqueIdentifierParser(users.adviser)
+    : undefined;
+  return {
+    students: { connect: students },
+    mentor: { connect: mentor },
+    adviser: { connect: adviser },
+  };
+};
+
+export const addUsersToProject = async (
   projectId: number,
-  adviserId: number
+  users: IAddUsersToProject
 ) => {
   await updateProject({
     where: { id: projectId },
-    data: { adviser: { connect: { userId: adviserId } } },
+    data: addUsersToProjectParser(users),
   });
 };
