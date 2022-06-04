@@ -26,7 +26,6 @@ export const createCohort = async (cohort: Prisma.CohortCreateInput) => {
     const newCohort = await prisma.cohort.create({ data: cohort });
     return newCohort;
   } catch (e) {
-    console.log(e);
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
