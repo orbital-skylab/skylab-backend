@@ -69,16 +69,24 @@ export const getFilteredAdvisers = async (query: any) => {
   return parsedAdvisers;
 };
 
+export const createAdviserInputParser = (
+  body: any
+): { user: Prisma.UserCreateInput; cohortYear: number } => {
+  const { cohortYear, ...user } = body;
+  const userData = <Prisma.UserCreateInput>user;
+  return {
+    user: userData,
+    cohortYear: Number(cohortYear),
+  };
+};
+
 /**
  * @function createAdviserHelper Helper function to create an adviser
  * @param body The adviser information from the HTTP Request
  * @returns The adviser record created in the database
  */
-export const createAdviserHelper = async (body: {
-  user: Prisma.UserCreateInput;
-  cohortYear: number;
-}) => {
-  const { user, cohortYear } = body;
+export const createAdviserHelper = async (body: any) => {
+  const { user, cohortYear } = createAdviserInputParser(body);
   return await createAdviser(user, {
     cohort: { connect: { academicYear: cohortYear } },
   });

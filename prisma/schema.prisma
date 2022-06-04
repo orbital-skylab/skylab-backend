@@ -47,8 +47,8 @@ model Student {
   userId     Int
   project    Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId     Int?
-  nusnetId   String?  @db.VarChar(40)
-  matricNo   String?  @db.VarChar(40)
+  nusnetId   String?  @unique @db.VarChar(40)
+  matricNo   String?  @unique @db.VarChar(40)
   cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
 

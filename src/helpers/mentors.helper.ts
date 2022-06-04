@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
-import { createAdviser } from "src/models/advisers.db";
 import {
   createManyMentors,
+  createMentor,
   getFirstMentor,
   getManyMentors,
 } from "src/models/mentors.db";
@@ -69,16 +69,33 @@ export const getFilteredMentors = async (query: any) => {
 };
 
 /**
+ * @function createMentorInputParser Parse the query body received from the HTTP Request
+ * to be passed to prisma.mentor.create
+ * @param body The raw query from the HTTP Request
+ * @returns The create input to be passed to prisma.mentor.create
+ */
+export const createMentorInputParser = (
+  body: any
+): {
+  user: Prisma.UserCreateInput;
+  cohortYear: number;
+} => {
+  const { cohortYear, ...user } = body;
+  const userData = <Prisma.UserCreateInput>user;
+  return {
+    user: userData,
+    cohortYear: Number(cohortYear),
+  };
+};
+
+/**
  * Helper function to create a mentor
  * @param body THe mentor information from the HTTP Request
  * @returns The mentor record created in the database
  */
-export const createMentorHelper = async (body: {
-  user: Prisma.UserCreateInput;
-  cohortYear: number;
-}) => {
-  const { user, cohortYear } = body;
-  return await createAdviser(user, {
+export const createMentorHelper = async (body: any) => {
+  const { user, cohortYear } = createMentorInputParser(body);
+  return await createMentor(user, {
     cohort: { connect: { academicYear: cohortYear } },
   });
 };

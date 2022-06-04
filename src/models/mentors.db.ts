@@ -71,12 +71,17 @@ export const getManyMentors = async ({
  * @returns The mentor object that was created
  */
 export const createMentor = async (
-  user: Prisma.UserCreateInput,
+  user: Omit<Prisma.UserCreateInput, "userId">,
   mentor: Omit<Prisma.MentorCreateInput, "user">
 ) => {
   try {
     const createdMentor = await prisma.mentor.create({
-      data: { user: { create: user }, ...mentor },
+      data: {
+        user: {
+          connectOrCreate: { where: { email: user.email }, create: user },
+        },
+        ...mentor,
+      },
     });
     return createdMentor;
   } catch (e) {
@@ -106,7 +111,7 @@ export const createManyMentors = async (data: IMentorCreateMany[]) => {
   try {
     const createdMentors = await Promise.all(
       data.map(async (userData) => {
-        return await prisma.adviser.create({
+        return await prisma.mentor.create({
           data: { user: { create: userData.user }, ...userData.mentor },
         });
       })

@@ -24,7 +24,7 @@ router
     }
   })
   .post("/", async (req: Request, res: Response) => {
-    if (!req.body.user || !req.body.user.email) {
+    if (!req.body.user || !req.body.user.email || !req.body.user.cohortYear) {
       return res
         .status(HttpStatusCode.BAD_REQUEST)
         .send("Arguments missing from request");
