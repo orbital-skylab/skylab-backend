@@ -34,52 +34,42 @@ export const getManyAdvisers = async ({
   return advisers;
 };
 
-export const createAdviser = async (user: Prisma.UserCreateInput, cohortYear: number) => {
+export const createAdviser = async (
+  user: Prisma.UserCreateInput,
+  adviser: Omit<Prisma.AdviserCreateInput, "user">
+) => {
   try {
-    const newAdviser = await prisma.adviser.create({
-      data: { user: { create: user }, cohort: {connectOrCreate: { where: {cohortYear: cohortYear}, connect: {cohortYear: cohortYear}}}}
-    })
-  }
-}
-
-/**
- * @function createAdviserUser Create User with the associated Adviser Record in the database
- * @param user Information of user to be created
- * @returns User/Adviser Record created in the database
- */
-export const createAdviserUser = async (user: Prisma.UserCreateInput) => {
-  try {
-    const newUser = await prisma.user.create({
-      data: { ...user, adviser: { create: {} } },
+    const createdAdviser = await prisma.adviser.create({
+      data: { user: { create: user }, ...adviser },
     });
-
-    return newUser;
+    return createdAdviser;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
 
     if (e.code === "P2002") {
-      throw new SkylabError("User is not unique", HttpStatusCode.BAD_REQUEST);
+      throw new SkylabError(
+        "Adviser is not unique",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
-/**
- * @function createManyAdviserUsers Function to create adviser users in the database
- * @param users Array of users to create adviser accounts for
- * @returns The users that were created
- */
-export const createManyAdviserUsers = async (
-  users: Prisma.UserCreateInput[]
-) => {
+interface IAdviserCreateMany {
+  user: Prisma.UserCreateInput;
+  adviser: Omit<Prisma.AdviserCreateInput, "user">;
+}
+
+export const createManyAdvisers = async (data: IAdviserCreateMany[]) => {
   try {
     const createdAdvisers = await Promise.all(
-      users.map(async (user) => {
-        return await prisma.user.create({
-          data: { ...user, adviser: { create: {} } },
+      data.map(async (userData) => {
+        return await prisma.adviser.create({
+          data: { user: { create: userData.user }, ...userData.adviser },
         });
       })
     );
@@ -91,11 +81,11 @@ export const createManyAdviserUsers = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        `User with information: ${e.meta} is not unique`,
+        `Adviser ${e.meta} is not unique`,
         HttpStatusCode.BAD_REQUEST
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
