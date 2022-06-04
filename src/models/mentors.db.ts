@@ -53,7 +53,7 @@ export const getOneMentor = async ({
  * @param query The query conditions to be selected upon
  * @returns The array of mentor records that match the query conditions
  */
-export const getManyAdvisers = async ({
+export const getManyMentors = async ({
   include,
   ...query
 }: Prisma.MentorFindManyArgs) => {

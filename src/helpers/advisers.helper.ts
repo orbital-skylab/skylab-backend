@@ -9,7 +9,7 @@ import {
 
 /**
  * @function getAdviserInputParser Parse the input returned from the prisma.adviser.find function
- * @param adviser The payload return from prisma.adviser.find
+ * @param adviser The payload returned from prisma.adviser.find
  * @returns Flattened object with both User and Adviser Data
  */
 export const getAdviserInputParser = (
@@ -17,8 +17,7 @@ export const getAdviserInputParser = (
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user, id, ...data } = adviser;
-  const parsedAdviser = { ...user, ...data, adviserId: id };
-  return parsedAdviser;
+  return { ...user, ...data, adviserId: id };
 };
 
 /**
@@ -35,9 +34,10 @@ export const getAdviserByEmail = async (email: string) => {
 };
 
 /**
- * @function getFilteredAdvisersWhereInputParser Parse the query from the HTTP Request and returns a query object for prisma.adviser.findMany
+ * @function getFilteredAdvisersWhereInputParser Parse the query from the HTTP Request and returns a query object
+ * for prisma.adviser.findMany
  * @param query The raw query object from the HTTP Request
- * @returns A filter object that works with the prisma.adviser.findMany function
+ * @returns A filter object that works with prisma.adviser.findMany
  */
 export const getFilteredAdvisersWhereInputParser = (query: any) => {
   let filter: Prisma.AdviserFindManyArgs = {};
@@ -87,7 +87,7 @@ export const createAdviserHelper = async (body: {
 
 /**
  * @function createManyAdvisersHelper Helper function to create many advisers simultaenously
- * @param body The array of adviser records from the HTTP Request
+ * @param body The array of adviser datum from the HTTP Request
  * @returns The adviser records created in the database
  */
 export const createManyAdvisersHelper = async (

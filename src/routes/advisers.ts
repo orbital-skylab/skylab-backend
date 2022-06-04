@@ -55,10 +55,8 @@ router
         .send("Parameters missing from request");
     }
 
-    const { users } = req.body;
-
     try {
-      await createManyAdvisersHelper(users);
+      await createManyAdvisersHelper(req.body.users);
       res.sendStatus(HttpStatusCode.OK);
     } catch (e) {
       if (!(e instanceof SkylabError)) {

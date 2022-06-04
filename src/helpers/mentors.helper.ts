@@ -1,23 +1,102 @@
-import { User, Mentor } from "@prisma/client";
-import { getAllMentors, getMentorByEmail } from "src/models/mentors.db";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Prisma } from "@prisma/client";
+import { createAdviser } from "src/models/advisers.db";
+import {
+  createManyMentors,
+  getFirstMentor,
+  getManyMentors,
+} from "src/models/mentors.db";
 
-export const parseMentorGetInput = (
-  rawGetInfo: User & { mentor?: Mentor | null }
+/**
+ * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
+ * @param mentor The payload returned from prisma.mentor.find
+ * @returns Flattend object with both User and Mentor Data
+ */
+export const getMentorInputParser = (
+  mentor: Prisma.MentorGetPayload<{ include: { user: true } }>
 ) => {
-  const mentor = rawGetInfo.mentor;
-  delete rawGetInfo["mentor"];
-  return { ...rawGetInfo, ...mentor };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { user, id, ...data } = mentor;
+  return { ...user, ...data, mentorId: id };
 };
 
-export const getMentorByEmailParsed = async (email: string) => {
-  const mentorByEmail = await getMentorByEmail(email);
-  return parseMentorGetInput(mentorByEmail);
-};
-
-export const getAllMentorsParsed = async () => {
-  const allMentors = await getAllMentors();
-  const allMentorsParsed = allMentors.map((mentor) => {
-    return parseMentorGetInput(mentor);
+/**
+ * @function getMentorByEmail Retrieve a mentor with the given email
+ * @param email The email of the mentor to retrieve
+ * @returns The mentor record with the given email
+ */
+export const getMentorByEmail = async (email: string) => {
+  const mentor = await getFirstMentor({
+    where: { user: { email: email } },
+    orderBy: { cohortYear: "desc" },
   });
-  return allMentorsParsed;
+  return getMentorInputParser(mentor);
+};
+
+/**
+ * @function getFilteredMentorsWhereInputParser Parse the query from the HTTP Request and returns a query object
+ * for prisma.mentor.findMany
+ * @param query The raw query object from the HTTP Request
+ * @returns A filter object that works with prisma.mentor.findMany
+ */
+export const getFilteredMentorsWhereInputParser = (query: any) => {
+  let filter: Prisma.MentorFindManyArgs = {};
+
+  if (query.page && query.limit) {
+    filter = {
+      take: Number(query.limit),
+      skip: (query.page - 1) * query.limit,
+    };
+  }
+
+  if (query.cohortYear) {
+    filter = { ...filter, where: { cohortYear: Number(query.cohortYear) } };
+  }
+
+  return filter;
+};
+
+/**
+ * Retrieve a list of mentors that match the given query parameters
+ * @param query The query parameters retrieved from the HTTP Request
+ * @returns Array of Mentor Records that match the given query
+ */
+export const getFilteredMentors = async (query: any) => {
+  const filteredQuery = getFilteredMentorsWhereInputParser(query);
+  const mentors = await getManyMentors(filteredQuery);
+  const parsedMentors = mentors.map((mentor) => getMentorInputParser(mentor));
+  return parsedMentors;
+};
+
+/**
+ * Helper function to create a mentor
+ * @param body THe mentor information from the HTTP Request
+ * @returns The mentor record created in the database
+ */
+export const createMentorHelper = async (body: {
+  user: Prisma.UserCreateInput;
+  cohortYear: number;
+}) => {
+  const { user, cohortYear } = body;
+  return await createAdviser(user, {
+    cohort: { connect: { academicYear: cohortYear } },
+  });
+};
+
+/**
+ * @function createManyMentorsHelper Helper function to create many mentors simultaenously
+ * @param body The array of mentor datum from the HTTP Request
+ * @returns The mentor records created in the database
+ */
+export const createManyMentorsHelper = async (
+  body: { user: Prisma.UserCreateInput; cohortYear: number }[]
+) => {
+  const mentors = body.map((data) => {
+    const { user, cohortYear } = data;
+    return {
+      user: user,
+      mentor: { cohort: { connect: { academicYear: cohortYear } } },
+    };
+  });
+  return await createManyMentors(mentors);
 };
