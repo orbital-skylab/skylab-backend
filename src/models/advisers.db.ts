@@ -5,40 +5,42 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getAdviserByEmail Get adviser record with the given email
- * @param email The email fo the adviser record to be retrieved
- * @returns The adviser with the given email
- */
-export const getAdviserByEmail = async (email: string) => {
-  const adviserWithEmail = await prisma.user.findUnique({
-    where: { email: email },
-    include: { adviser: true },
+export const getOneAdviser = async ({
+  include,
+  ...query
+}: Prisma.AdviserFindUniqueArgs) => {
+  const adviser = await prisma.adviser.findUnique({
+    include: { ...include, user: true },
+    ...query,
     rejectOnNotFound: false,
   });
 
-  if (adviserWithEmail == null || adviserWithEmail?.adviser == null) {
-    throw new SkylabError(
-      "Adviser with given email was not found",
-      HttpStatusCode.NOT_FOUND
-    );
+  if (!adviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
   }
 
-  return adviserWithEmail;
+  return adviser;
 };
 
-/**
- * @function getAllAdvisers Return all advisers in the database
- * @returns All Adviser records in the database
- */
-export const getAllAdvisers = async () => {
-  const allAdvisers = await prisma.user.findMany({
-    where: { adviser: { isNot: null } },
-    include: { adviser: true },
+export const getManyAdvisers = async ({
+  include,
+  ...query
+}: Prisma.AdviserFindManyArgs) => {
+  const advisers = await prisma.adviser.findMany({
+    include: { ...include, user: true },
+    ...query,
   });
 
-  return allAdvisers;
+  return advisers;
 };
+
+export const createAdviser = async (user: Prisma.UserCreateInput, cohortYear: number) => {
+  try {
+    const newAdviser = await prisma.adviser.create({
+      data: { user: { create: user }, cohort: {connectOrCreate: { where: {cohortYear: cohortYear}, connect: {cohortYear: cohortYear}}}}
+    })
+  }
+}
 
 /**
  * @function createAdviserUser Create User with the associated Adviser Record in the database

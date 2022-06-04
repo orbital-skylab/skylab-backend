@@ -13,58 +13,96 @@ datasource db {
 }
 
 model User {
-  id              Int            @id @default(autoincrement())
-  name            String?        @db.VarChar(255)
-  email           String         @unique @db.VarChar(255)
+  id              Int             @id @default(autoincrement())
+  name            String?         @db.VarChar(255)
+  email           String          @unique @db.VarChar(255)
   profilePicUrl   String?
   githubUrl       String?
   linkedinUrl     String?
   personalSiteUrl String?
   selfIntro       String?
-  student         Student?
-  cohort          Cohort?        @relation(fields: [cohortYear], references: [academicYear])
-  cohortYear      Int
-  adviser         Adviser?
-  mentor          Mentor?
-  administrator   Administrator?
+  student         Student[]
+  adviser         Adviser[]
+  mentor          Mentor[]
+  administrator   Administrator[]
+  facilitator     Facilitator[]
+  Tutor           Tutor[]
 }
 
 model Cohort {
-  startDate    DateTime
-  endDate      DateTime
-  academicYear Int       @id
-  users        User[]
+  startDate    DateTime?
+  endDate      DateTime?
+  academicYear Int           @id
   projects     Project[]
+  Student      Student[]
+  Adviser      Adviser[]
+  Mentor       Mentor[]
+  Facilitator  Facilitator[]
+  Tutor        Tutor[]
 }
 
 model Student {
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   Int      @id
-  project  Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId   Int?
-  nusnetId String?  @db.VarChar(40)
-  matricNo String?  @db.VarChar(40)
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  project    Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId     Int?
+  nusnetId   String?  @db.VarChar(40)
+  matricNo   String?  @db.VarChar(40)
+  cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear Int
 }
 
 model Adviser {
-  user     User      @relation(fields: [userId], references: [id])
-  userId   Int       @unique
-  projects Project[]
+  id         Int       @id @default(autoincrement())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     Int
+  projects   Project[]
+  cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear Int
 }
 
 model Mentor {
-  user     User      @relation(fields: [userId], references: [id])
-  userId   Int       @unique
-  projects Project[]
+  id         Int       @id @default(autoincrement())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     Int
+  projects   Project[]
+  cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear Int
+}
+
+model Facilitator {
+  id         Int    @id @default(autoincrement())
+  user       User   @relation(fields: [userId], references: [id])
+  userId     Int
+  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear Int
+}
+
+model Tutor {
+  id         Int    @id @default(autoincrement())
+  user       User   @relation(fields: [userId], references: [id])
+  userId     Int
+  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear Int
+}
+
+model Administrator {
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  startDate DateTime
+  endDate   DateTime
+
+  @@id([userId, startDate, endDate])
 }
 
 model Project {
   id           Int              @id @default(autoincrement())
   name         String
   students     Student[]
-  adviser      Adviser?         @relation(fields: [adviserId], references: [userId])
+  adviser      Adviser?         @relation(fields: [adviserId], references: [id])
   adviserId    Int?
-  mentor       Mentor?          @relation(fields: [mentorUserId], references: [userId])
+  mentor       Mentor?          @relation(fields: [mentorUserId], references: [id])
   mentorUserId Int?
   achievement  AchievementLevel
   cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
@@ -77,13 +115,6 @@ enum AchievementLevel {
   Gemini
   Apollo
   Artemis
-}
-
-model Administrator {
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int      @id
-  startDate DateTime
-  endDate   DateTime
 }
 
 model Milestone {

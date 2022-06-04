@@ -1,5 +1,5 @@
-import { User, Adviser } from "@prisma/client";
-import { getAllAdvisers, getAdviserByEmail } from "src/models/advisers.db";
+import { User, Adviser, PrismaClient, Prisma } from "@prisma/client";
+import { getAllAdvisers, getOneAdviser } from "src/models/advisers.db";
 
 export const parseAdviserGetInput = (
   rawGetInfo: User & { adviser?: Adviser | null }
@@ -23,3 +23,5 @@ export const getAllAdvisersParsed = async () => {
   });
   return allAdvisersParsed;
 };
+
+export const getAdviserByEmail = async (email: string) => {};
