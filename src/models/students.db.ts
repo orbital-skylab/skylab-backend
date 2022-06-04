@@ -1,82 +1,118 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { ICreateStudentUser } from "src/helpers/students.helper";
 
 const prisma = new PrismaClient();
 
 /**
- * @function getStudentByEmail Get student record with a particular email
- * @param email The email of the student to be retrieved
- * @returns The student with the given email
+ * @function getFirstStudent Find the first student record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The first student record that matches the query conditions
  */
-export const getStudentByEmail = async (email: string) => {
-  const studentWithEmail = await prisma.user.findUnique({
-    where: { email: email },
-    include: { student: true },
+export const getFirstStudent = async ({
+  include,
+  ...query
+}: Prisma.StudentFindFirstArgs) => {
+  const student = await prisma.student.findFirst({
+    include: { ...include, user: true },
+    ...query,
     rejectOnNotFound: false,
   });
-  if (!studentWithEmail) {
-    throw new SkylabError(
-      "User with given email was not found",
-      HttpStatusCode.BAD_REQUEST
-    );
+
+  if (!student) {
+    throw new SkylabError("Student was not found", HttpStatusCode.NOT_FOUND);
   }
-  return studentWithEmail;
+
+  return student;
 };
 
 /**
- * @function getAllStudents Return all students in the database
- * @returns All Student Records in the database
+ * @function getOneStudent Find a unique student recod with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The student record that matches the query conditions
  */
-export const getAllStudents = async () => {
-  const allStudents = await prisma.user.findMany({
-    where: { student: { isNot: null } },
-    include: { student: true },
+export const getOneStudent = async ({
+  include,
+  ...query
+}: Prisma.StudentFindUniqueArgs) => {
+  const student = await prisma.student.findUnique({
+    include: { ...include, user: true },
+    ...query,
+    rejectOnNotFound: false,
   });
-  return allStudents;
+
+  if (!student) {
+    throw new SkylabError("Student was not found", HttpStatusCode.NOT_FOUND);
+  }
+
+  return student;
 };
 
 /**
- * @function createStudentUser Create User with associated Student Record in the database
- * @param userInfo Information of user to be created
- * @returns
+ * @function getManyStudents Find all the students that match the given query condition
+ * @param query The query conditions to be selected upon
+ * @returns The array of student records that match the query conditions
  */
-export const createStudentUser = async (userInfo: ICreateStudentUser) => {
+export const getManyStudents = async ({
+  include,
+  ...query
+}: Prisma.StudentFindManyArgs) => {
+  const students = await prisma.student.findMany({
+    include: { ...include, user: true },
+    ...query,
+  });
+
+  return students;
+};
+
+/**
+ * @function createStudent Create a student with an associated User Record
+ * @param user The information to create the User Record
+ * @param student The information to creat the Student Record
+ * @returns The student object that was created
+ */
+export const createStudent = async (
+  user: Prisma.UserCreateInput,
+  student: Omit<Prisma.StudentCreateInput, "user">
+) => {
   try {
-    const { student, user } = userInfo;
-    const newUser = await prisma.user.create({
-      data: { ...user, student: { create: { ...student } } },
+    const createdStudent = await prisma.student.create({
+      data: { user: { create: user }, ...student },
     });
-    return newUser;
+    return createdStudent;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
 
     if (e.code === "P2002") {
-      throw new SkylabError("User is not unique", HttpStatusCode.BAD_REQUEST);
+      throw new SkylabError(
+        "Student is not unique",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
+export interface IStudentCreateMany {
+  user: Prisma.UserCreateInput;
+  student: Omit<Prisma.StudentCreateInput, "user">;
+}
+
 /**
- * @function createManyStudentUsers Function to create student users in the database
- * @param usersInfo Array of users to create student accounts for
- * @returns The users that were created
+ * @function createManyStudents Create many Students with associated User Records simultaenously
+ * @param data The array of data to create the Student Records with
+ * @returns The array of student objects created
  */
-export const createManyStudentUsers = async (
-  usersInfo: ICreateStudentUser[]
-) => {
+export const createManyStudents = async (data: IStudentCreateMany[]) => {
   try {
     const createdStudents = await Promise.all(
-      usersInfo.map(async (userInfo) => {
-        const { user, student } = userInfo;
-        return await prisma.user.create({
-          data: { ...user, student: { create: { ...student } } },
+      data.map(async (userData) => {
+        return await prisma.student.create({
+          data: { user: { create: userData.user }, ...userData.student },
         });
       })
     );
@@ -88,11 +124,11 @@ export const createManyStudentUsers = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        `User with information: ${e.meta} is not unique`,
+        `Student ${e.meta} is not unique`,
         HttpStatusCode.BAD_REQUEST
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
