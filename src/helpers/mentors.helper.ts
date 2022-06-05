@@ -10,12 +10,11 @@ import {
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
  * @param mentor The payload returned from prisma.mentor.find
- * @returns Flattend object with both User and Mentor Data
+ * @returns Flattened object with both User and Mentor Data
  */
 export const getMentorInputParser = (
   mentor: Prisma.MentorGetPayload<{ include: { user: true } }>
 ) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user, id, ...data } = mentor;
   return { ...user, ...data, mentorId: id };
 };
@@ -57,7 +56,7 @@ export const getFilteredMentorsWhereInputParser = (query: any) => {
 };
 
 /**
- * Retrieve a list of mentors that match the given query parameters
+ * @function getFilteredMentors Retrieve a list of mentors that match the given query parameters
  * @param query The query parameters retrieved from the HTTP Request
  * @returns Array of Mentor Records that match the given query
  */
@@ -89,7 +88,7 @@ export const createMentorInputParser = (
 };
 
 /**
- * Helper function to create a mentor
+ * @function createMentorHelper Helper function to create a mentor
  * @param body THe mentor information from the HTTP Request
  * @returns The mentor record created in the database
  */
