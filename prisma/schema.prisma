@@ -26,7 +26,7 @@ model User {
   mentor          Mentor[]
   administrator   Administrator[]
   facilitator     Facilitator[]
-  Tutor           Tutor[]
+  tutor           Tutor[]
 }
 
 model Cohort {
