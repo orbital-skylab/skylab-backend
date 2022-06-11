@@ -52,7 +52,7 @@ export const getFilteredProjectsWhereInputParser = (filter: any) => {
     toReturn = {
       ...toReturn,
       take: Number(filter.limit),
-      skip: (filter.page - 1) * filter.limit,
+      skip: Number(filter.page) * Number(filter.limit),
     };
   }
 
