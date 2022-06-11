@@ -85,7 +85,7 @@ export const getManyProjects = async ({
 export const createProject = async (project: Prisma.ProjectCreateInput) => {
   try {
     const newProject = await prisma.project.create({
-      data: { ...project },
+      data: project,
     });
     return newProject;
   } catch (e) {

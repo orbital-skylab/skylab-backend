@@ -13,5 +13,5 @@ export const getLatestCohort = async () => {
  * @returns All the cohort records in the database
  */
 export const getAllCohorts = async () => {
-  return await getManyCohorts({});
+  return await getManyCohorts({ orderBy: { academicYear: "asc" } });
 };
