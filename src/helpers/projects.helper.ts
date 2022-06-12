@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, Prisma } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
 
 import {
   createProject,
   getManyProjects,
   updateProject,
 } from "src/models/projects.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { getAdviserInputParser } from "./advisers.helper";
 import { getMentorInputParser } from "./mentors.helper";
 import { getStudentInputParser } from "./students.helper";
@@ -47,6 +49,15 @@ export const getFilteredProjectsWhereInputParser = (filter: any) => {
       adviser: { include: { user: true } },
     },
   };
+
+  if ((filter.page && !filter.limit) || (filter.limit && !filter.page)) {
+    throw new SkylabError(
+      `${
+        filter.limit ? "Page" : "Limit"
+      } parameter missing in a pagination query`,
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
 
   if (filter.page && filter.limit) {
     toReturn = {
