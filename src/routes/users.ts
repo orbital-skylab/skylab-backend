@@ -5,6 +5,8 @@ import {
   getUserByEmail,
   deleteUserByEmail,
   updateUserByEmail,
+  hashPassword,
+  userLogin,
 } from "src/helpers/users.helper";
 
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
@@ -50,6 +52,26 @@ router
       }
     }
   })
+  .post("/:email", async (req: Request, res: Response) => {
+    try {
+      if (!req.params.email || !req.body.password) {
+        res
+          .status(HttpStatusCode.BAD_REQUEST)
+          .send("Missing request parameters");
+      }
+
+      const email = req.params.email;
+      const password = req.body.password;
+      const loginResponse = await userLogin(email, password);
+      res.status(HttpStatusCode.OK).json(loginResponse);
+    } catch (e) {
+      if (!(e instanceof SkylabError)) {
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+      } else {
+        res.status(e.statusCode).send(e.message);
+      }
+    }
+  })
   .delete("/:email", async (req: Request, res: Response) => {
     try {
       if (!req.params.email) {
@@ -79,6 +101,9 @@ router
 
       const email = req.params.email;
       const user = req.body.user;
+      if (user.password) {
+        user.password = hashPassword(user.password);
+      }
       await updateUserByEmail(email, user);
       res.sendStatus(HttpStatusCode.OK);
     } catch (e) {

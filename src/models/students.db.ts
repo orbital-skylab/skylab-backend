@@ -74,13 +74,14 @@ export const getManyStudents = async ({
  */
 export const createStudent = async (
   user: Prisma.UserCreateInput,
-  student: Omit<Prisma.StudentCreateInput, "user">
+  student: Omit<Prisma.StudentCreateInput, "user">,
+  password: string
 ) => {
   try {
-    const createdStudent = await prisma.student.create({
+    await prisma.student.create({
       data: { user: { create: user }, ...student },
     });
-    return createdStudent;
+    return { email: user.email, password };
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -93,13 +94,20 @@ export const createStudent = async (
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    throw new SkylabError(
+      e.message +
+        `\n user: ${JSON.stringify(user)} \n student: ${JSON.stringify(
+          student
+        )}`,
+      HttpStatusCode.BAD_REQUEST
+    );
   }
 };
 
 export interface IStudentCreateMany {
   user: Prisma.UserCreateInput;
   student: Omit<Prisma.StudentCreateInput, "user">;
+  password: string;
 }
 
 /**
@@ -111,9 +119,10 @@ export const createManyStudents = async (data: IStudentCreateMany[]) => {
   try {
     const createdStudents = await Promise.all(
       data.map(async (userData) => {
-        return await prisma.student.create({
+        await prisma.student.create({
           data: { user: { create: userData.user }, ...userData.student },
         });
+        return { email: userData.user.email, password: userData.password };
       })
     );
     return createdStudents;

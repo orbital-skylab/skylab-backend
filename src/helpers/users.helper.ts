@@ -5,6 +5,8 @@ import {
   getOneUser,
   updateOneUser,
 } from "src/models/users.db";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 /**
  * @function getAllUsers Get all user records in the database
@@ -43,4 +45,37 @@ export const updateUserByEmail = async (
  */
 export const deleteUserByEmail = async (email: string) => {
   return await deleteOneUser({ where: { email: email } });
+};
+
+export const userLogin = async (email: string, password: string) => {
+  const user = await getUserByEmail(email);
+  const validPassword = await bcrypt.compare(password, user.password);
+  return {
+    user,
+    token: validPassword
+      ? jwt.sign(email, process.env.JWT_SECRET ?? "jwt_secret")
+      : null,
+  };
+};
+
+export const generateRandomPasswordWithHash = async () => {
+  const length = 16;
+  const chars =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$";
+
+  let plainTextPassword = "";
+  for (let i = 0; i < length; i++) {
+    plainTextPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  const hashedPassword = await hashPassword(plainTextPassword);
+  return {
+    plainTextPassword,
+    hashedPassword,
+  };
+};
+
+export const hashPassword = async (plainTextPassword: string) => {
+  const saltRounds = 10;
+  return await bcrypt.hash(plainTextPassword, saltRounds);
 };
