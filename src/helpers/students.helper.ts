@@ -6,7 +6,7 @@ import {
   getFirstStudent,
   getManyStudents,
 } from "src/models/students.db";
-import { generateRandomPasswordWithHash } from "./users.helper";
+import { generateRandomHashedPassword } from "./users.helper";
 
 /**
  * @function getStudentInputParser Parse the input returned from the prisma.student.find function
@@ -77,8 +77,7 @@ export const getFilteredStudents = async (query: any) => {
  */
 export const createStudentInputParser = async (body: any) => {
   const { nusnetId, matricNo, cohortYear, ...userWithoutPassword } = body;
-  const { plainTextPassword, hashedPassword } =
-    await generateRandomPasswordWithHash();
+  const hashedPassword = await generateRandomHashedPassword();
   const user = { ...userWithoutPassword, password: hashedPassword };
   const userData = <Prisma.UserCreateInput>user;
   return {
@@ -88,7 +87,6 @@ export const createStudentInputParser = async (body: any) => {
       matricNo: matricNo ? String(matricNo) : undefined,
       cohort: { connect: { academicYear: Number(cohortYear) } },
     },
-    password: plainTextPassword,
   };
 };
 
@@ -98,8 +96,8 @@ export const createStudentInputParser = async (body: any) => {
  * @returns The student record created
  */
 export const createStudentHelper = async (body: any) => {
-  const { user, student, password } = await createStudentInputParser(body);
-  return await createStudent(user, student, password);
+  const { user, student } = await createStudentInputParser(body);
+  return await createStudent(user, student);
 };
 
 /**

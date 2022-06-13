@@ -1,18 +1,23 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 
 const authorize = async (req: Request, res: Response, next: NextFunction) => {
-  const { token } = req.headers;
+  const token = req?.cookies?.token;
   if (!token || typeof token !== "string") {
-    return res.status(HttpStatusCode.UNAUTHORIZED).send("Not Authenticated");
+    return res
+      .status(HttpStatusCode.UNAUTHORIZED)
+      .send("Authentication failed");
   }
 
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET ?? "jwt_secret");
-    if (req?.body?.user !== user) {
-      throw new SkylabError("User does not match", HttpStatusCode.UNAUTHORIZED);
+    const { email } = jwt.verify(
+      token,
+      process.env.JWT_SECRET ?? "jwt_secret"
+    ) as JwtPayload;
+    if (req?.params?.email !== email) {
+      throw new SkylabError("Verification failed", HttpStatusCode.UNAUTHORIZED);
     }
     next();
   } catch (e) {

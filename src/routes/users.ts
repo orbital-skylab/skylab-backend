@@ -8,6 +8,7 @@ import {
   hashPassword,
   userLogin,
 } from "src/helpers/users.helper";
+import authorize from "src/middleware/jwtAuth";
 
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
@@ -33,7 +34,7 @@ router
   });
 
 router
-  .get("/:email", async (req: Request, res: Response) => {
+  .get("/:email", authorize, async (req: Request, res: Response) => {
     try {
       if (!req.params.email) {
         res
@@ -62,8 +63,15 @@ router
 
       const email = req.params.email;
       const password = req.body.password;
-      const loginResponse = await userLogin(email, password);
-      res.status(HttpStatusCode.OK).json(loginResponse);
+      const { token } = await userLogin(email, password);
+      if (token) {
+        res
+          .status(HttpStatusCode.OK)
+          .cookie("token", token, { httpOnly: true })
+          .json({ email });
+      } else {
+        res.status(HttpStatusCode.UNAUTHORIZED).send("Password is incorrect");
+      }
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);

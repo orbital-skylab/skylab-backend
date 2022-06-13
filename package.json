@@ -54,6 +54,7 @@
   ],
   "dependencies": {
     "@prisma/client": "^3.14.0",
+    "@sendinblue/client": "^3.2.1",
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",
     "bcrypt": "^5.0.1",
@@ -63,6 +64,7 @@
     "dotenv": "^16.0.1",
     "express": "^4.17.3",
     "express-async-errors": "^3.1.1",
+    "express-jwt": "^7.7.5",
     "helmet": "^5.0.2",
     "http-status-codes": "^2.2.0",
     "jet-logger": "^1.1.5",

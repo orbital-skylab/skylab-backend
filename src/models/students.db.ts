@@ -74,14 +74,14 @@ export const getManyStudents = async ({
  */
 export const createStudent = async (
   user: Prisma.UserCreateInput,
-  student: Omit<Prisma.StudentCreateInput, "user">,
-  password: string
+  student: Omit<Prisma.StudentCreateInput, "user">
 ) => {
   try {
-    await prisma.student.create({
+    const createdStudent = await prisma.student.create({
       data: { user: { create: user }, ...student },
     });
-    return { email: user.email, password };
+    console.log(createdStudent);
+    return createdStudent;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -107,7 +107,6 @@ export const createStudent = async (
 export interface IStudentCreateMany {
   user: Prisma.UserCreateInput;
   student: Omit<Prisma.StudentCreateInput, "user">;
-  password: string;
 }
 
 /**
@@ -119,10 +118,9 @@ export const createManyStudents = async (data: IStudentCreateMany[]) => {
   try {
     const createdStudents = await Promise.all(
       data.map(async (userData) => {
-        await prisma.student.create({
+        return await prisma.student.create({
           data: { user: { create: userData.user }, ...userData.student },
         });
-        return { email: userData.user.email, password: userData.password };
       })
     );
     return createdStudents;

@@ -10,14 +10,31 @@ const prisma = new PrismaClient();
  * @param query The query conditions for the user
  * @returns The first user record that matches the query conditions
  */
-export const getFirstUser = async (query: Prisma.UserFindFirstArgs) => {
-  const user = await prisma.user.findFirst({
-    ...query,
-    rejectOnNotFound: false,
-  });
+export const getFirstUser = async (
+  query: Prisma.UserFindUniqueArgs,
+  selectAll?: boolean
+) => {
+  let queryParams = { ...query, rejectOnNotFound: false };
+  if (!selectAll) {
+    queryParams = {
+      ...queryParams,
+      // exclude password
+      select: {
+        name: true,
+        email: true,
+        profilePicUrl: true,
+        githubUrl: true,
+        linkedinUrl: true,
+        personalSiteUrl: true,
+        selfIntro: true,
+      },
+    };
+  }
+  const user = await prisma.user.findFirst(queryParams);
   if (!user) {
     throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
+
   return user;
 };
 
@@ -26,11 +43,27 @@ export const getFirstUser = async (query: Prisma.UserFindFirstArgs) => {
  * @param query The query conditions for the user
  * @returns The mentor record that matches the query conditions
  */
-export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
-  const user = await prisma.user.findUnique({
-    ...query,
-    rejectOnNotFound: false,
-  });
+export const getOneUser = async (
+  query: Prisma.UserFindUniqueArgs,
+  selectAll?: boolean
+) => {
+  let queryParams = { ...query, rejectOnNotFound: false };
+  if (!selectAll) {
+    queryParams = {
+      ...queryParams,
+      // exclude password
+      select: {
+        name: true,
+        email: true,
+        profilePicUrl: true,
+        githubUrl: true,
+        linkedinUrl: true,
+        personalSiteUrl: true,
+        selfIntro: true,
+      },
+    };
+  }
+  const user = await prisma.user.findUnique(queryParams);
 
   if (!user) {
     throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
@@ -44,8 +77,26 @@ export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
  * @param query The query conditions to be selected upon
  * @returns The array of user records that match the query conditions
  */
-export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
-  const users = await prisma.user.findMany(query);
+export const getManyUsers = async (
+  query: Prisma.UserFindManyArgs,
+  selectAll?: boolean
+) => {
+  const queryParams = selectAll
+    ? query
+    : {
+        ...query,
+        // exclude password
+        select: {
+          name: true,
+          email: true,
+          profilePicUrl: true,
+          githubUrl: true,
+          linkedinUrl: true,
+          personalSiteUrl: true,
+          selfIntro: true,
+        },
+      };
+  const users = await prisma.user.findMany(queryParams);
   return users;
 };
 
