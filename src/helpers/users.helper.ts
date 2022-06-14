@@ -83,8 +83,10 @@ export const hashPassword = async (plainTextPassword: string) => {
 export const sendPasswordResetEmail = async (emails: Array<Email>) => {
   const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-  const apiKey = apiInstance.authentications["apiKey"];
-  apiKey.apiKey = process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key";
+  apiInstance.setApiKey(
+    SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
+    process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key"
+  );
 
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
 
