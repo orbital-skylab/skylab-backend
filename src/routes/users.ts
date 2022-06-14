@@ -5,7 +5,10 @@ import {
   getUserByEmail,
   deleteUserByEmail,
   updateUserByEmail,
+  hashPassword,
+  userLogin,
 } from "src/helpers/users.helper";
+import authorize from "src/middleware/jwtAuth";
 
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
@@ -31,7 +34,7 @@ router
   });
 
 router
-  .get("/:email", async (req: Request, res: Response) => {
+  .get("/:email", authorize, async (req: Request, res: Response) => {
     try {
       if (!req.params.email) {
         res
@@ -42,6 +45,33 @@ router
       const email = req.params.email;
       const user = await getUserByEmail(email);
       res.status(HttpStatusCode.OK).json(user);
+    } catch (e) {
+      if (!(e instanceof SkylabError)) {
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+      } else {
+        res.status(e.statusCode).send(e.message);
+      }
+    }
+  })
+  .post("/:email", async (req: Request, res: Response) => {
+    try {
+      if (!req.params.email || !req.body.password) {
+        res
+          .status(HttpStatusCode.BAD_REQUEST)
+          .send("Missing request parameters");
+      }
+
+      const email = req.params.email;
+      const password = req.body.password;
+      const { token } = await userLogin(email, password);
+      if (token) {
+        res
+          .status(HttpStatusCode.OK)
+          .cookie("token", token, { httpOnly: true })
+          .json({ email });
+      } else {
+        res.status(HttpStatusCode.UNAUTHORIZED).send("Password is incorrect");
+      }
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
@@ -79,6 +109,9 @@ router
 
       const email = req.params.email;
       const user = req.body.user;
+      if (user.password) {
+        user.password = hashPassword(user.password);
+      }
       await updateUserByEmail(email, user);
       res.sendStatus(HttpStatusCode.OK);
     } catch (e) {

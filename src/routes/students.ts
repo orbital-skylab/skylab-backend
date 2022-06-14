@@ -31,8 +31,8 @@ router
     }
 
     try {
-      await createStudentHelper(req.body.user);
-      res.sendStatus(HttpStatusCode.OK);
+      const createdStudent = await createStudentHelper(req.body.user);
+      res.status(HttpStatusCode.OK).json(createdStudent);
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
@@ -56,8 +56,8 @@ router
     }
 
     try {
-      await await createManyStudentsHelper(req.body.users);
-      res.sendStatus(HttpStatusCode.OK);
+      const createdStudents = await createManyStudentsHelper(req.body.users);
+      res.status(HttpStatusCode.OK).json(createdStudents);
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.BAD_REQUEST).send(e.message);

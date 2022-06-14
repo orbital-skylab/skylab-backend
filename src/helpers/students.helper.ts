@@ -6,6 +6,8 @@ import {
   getFirstStudent,
   getManyStudents,
 } from "src/models/students.db";
+import { generateRandomHashedPassword } from "./users.helper";
+
 /**
  * @function getStudentInputParser Parse the input returned from the prisma.student.find function
  * @param student The payload returned from prisma.student.find
@@ -73,8 +75,10 @@ export const getFilteredStudents = async (query: any) => {
  * @param body The raw query body from the HTTP Request
  * @returns The create input to be passed to prisma.student.create
  */
-export const createStudentInputParser = (body: any) => {
-  const { nusnetId, matricNo, cohortYear, ...user } = body;
+export const createStudentInputParser = async (body: any) => {
+  const { nusnetId, matricNo, cohortYear, ...userWithoutPassword } = body;
+  const hashedPassword = await generateRandomHashedPassword();
+  const user = { ...userWithoutPassword, password: hashedPassword };
   const userData = <Prisma.UserCreateInput>user;
   return {
     user: userData,
@@ -92,7 +96,7 @@ export const createStudentInputParser = (body: any) => {
  * @returns The student record created
  */
 export const createStudentHelper = async (body: any) => {
-  const { user, student } = createStudentInputParser(body);
+  const { user, student } = await createStudentInputParser(body);
   return await createStudent(user, student);
 };
 
@@ -102,6 +106,8 @@ export const createStudentHelper = async (body: any) => {
  * @returns The student records created in the database
  */
 export const createManyStudentsHelper = async (body: any[]) => {
-  const students = body.map((data) => createStudentInputParser(data));
+  const students = await Promise.all(
+    body.map((data) => createStudentInputParser(data))
+  );
   return await createManyStudents(students);
 };

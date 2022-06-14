@@ -5,6 +5,13 @@ import {
   getOneUser,
   updateOneUser,
 } from "src/models/users.db";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import SibApiV3Sdk from "@sendinblue/client";
+
+type Email = {
+  email: string;
+};
 
 /**
  * @function getAllUsers Get all user records in the database
@@ -43,4 +50,58 @@ export const updateUserByEmail = async (
  */
 export const deleteUserByEmail = async (email: string) => {
   return await deleteOneUser({ where: { email: email } });
+};
+
+export const userLogin = async (email: string, password: string) => {
+  const user = await getUserByEmail(email);
+  const validPassword = await bcrypt.compare(password, user.password);
+  return {
+    token: validPassword
+      ? jwt.sign({ email }, process.env.JWT_SECRET ?? "jwt_secret")
+      : null,
+  };
+};
+
+export const generateRandomHashedPassword = async () => {
+  const length = 16;
+  const chars =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$";
+
+  let plainTextPassword = "";
+  for (let i = 0; i < length; i++) {
+    plainTextPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  return await hashPassword(plainTextPassword);
+};
+
+export const hashPassword = async (plainTextPassword: string) => {
+  const saltRounds = 10;
+  return await bcrypt.hash(plainTextPassword, saltRounds);
+};
+
+export const sendPasswordResetEmail = async (emails: Array<Email>) => {
+  const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+
+  const apiKey = apiInstance.authentications["apiKey"];
+  apiKey.apiKey = process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key";
+
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+  sendSmtpEmail.subject = "Reset Password for Orbital Skylab";
+  sendSmtpEmail.sender = { email: "nvjn37@gmail.com" };
+  sendSmtpEmail.to = emails;
+  sendSmtpEmail.bcc = [{ email: "nvjn37@gmail.com" }];
+  sendSmtpEmail.replyTo = { email: "nvjn37@gmail.com" };
+
+  apiInstance.sendTransacEmail(sendSmtpEmail).then(
+    function (data) {
+      console.log(
+        "API called successfully. Returned data: " + JSON.stringify(data)
+      );
+    },
+    function (error) {
+      console.error(error);
+    }
+  );
 };

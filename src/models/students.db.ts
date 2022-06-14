@@ -80,6 +80,7 @@ export const createStudent = async (
     const createdStudent = await prisma.student.create({
       data: { user: { create: user }, ...student },
     });
+    console.log(createdStudent);
     return createdStudent;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
@@ -93,7 +94,13 @@ export const createStudent = async (
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    throw new SkylabError(
+      e.message +
+        `\n user: ${JSON.stringify(user)} \n student: ${JSON.stringify(
+          student
+        )}`,
+      HttpStatusCode.BAD_REQUEST
+    );
   }
 };
 

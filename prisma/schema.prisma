@@ -16,6 +16,7 @@ model User {
   id              Int             @id @default(autoincrement())
   name            String?         @db.VarChar(255)
   email           String          @unique @db.VarChar(255)
+  password        String          @unique @db.VarChar(255)
   profilePicUrl   String?
   githubUrl       String?
   linkedinUrl     String?
@@ -32,14 +33,13 @@ model User {
 model Cohort {
   startDate    DateTime?
   endDate      DateTime?
-  academicYear Int            @id
+  academicYear Int           @id
   projects     Project[]
   Student      Student[]
   Adviser      Adviser[]
   Mentor       Mentor[]
   Facilitator  Facilitator[]
   Tutor        Tutor[]
-  MilestoneNew MilestoneNew[]
 }
 
 model Student {
@@ -121,8 +121,6 @@ model Project {
   milestones   Milestone[]
 }
 
-// full text search project name, member name, advisor name, mentor name
-
 enum AchievementLevel {
   Vostok
   Gemini
@@ -141,16 +139,3 @@ model Milestone {
 
   @@id([milestoneNo, projectId])
 }
-
-model MilestoneNew {
-  name       String
-  deadline   DateTime
-  cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
-  cohortYear Int
-
-  @@id([name, cohortYear])
-}
-
-// Milestone > Milestone Submission
-// Peer Evaluation: How it relates to actual users using it
-// Team A Can evaluate X amount of teams

@@ -4,6 +4,7 @@ import cors from "cors";
 
 import apiRouter from "./routes/api";
 import { HttpStatusCode } from "./utils/HTTP_Status_Codes";
+import cookieParser from "cookie-parser";
 
 dotenv.config({
   path: "../.env",
@@ -22,6 +23,7 @@ app.disable("x-powered-by");
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 /***********************************************************************************
  *                         API routes and error handling
  **********************************************************************************/
