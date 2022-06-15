@@ -29,16 +29,16 @@ jobs:
 
       ## TODO: Add test scripts when Jest is configured
 
-  Deploy:
-    needs: [Lint-Test]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
-    steps:
-      - uses: actions/checkout@v2
-      - uses: akhileshns/heroku-deploy@v3.12.12
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          remote_branch: "main"
-          procfile: "web: ./node_modules/.bin/ts-node -r tsconfig-paths/register ./src"
+#   Deploy:
+#     needs: [Lint-Test]
+#     runs-on: ubuntu-latest
+#     if: github.ref == 'refs/heads/staging'
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: akhileshns/heroku-deploy@v3.12.12
+#         with:
+#           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+#           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+#           heroku_email: ${{ secrets.HEROKU_EMAIL }}
+#           remote_branch: "main"
+#           procfile: "web: ./node_modules/.bin/ts-node -r tsconfig-paths/register ./src"
