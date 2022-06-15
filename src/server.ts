@@ -1,10 +1,10 @@
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import apiRouter from "./routes/api";
 import { HttpStatusCode } from "./utils/HTTP_Status_Codes";
-import cookieParser from "cookie-parser";
 
 dotenv.config({
   path: "../.env",
