@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearch"]
@@ -16,17 +13,17 @@ model User {
   id              Int             @id @default(autoincrement())
   name            String?         @db.VarChar(255)
   email           String          @unique @db.VarChar(255)
-  password        String          @unique @db.VarChar(255)
   profilePicUrl   String?
   githubUrl       String?
   linkedinUrl     String?
   personalSiteUrl String?
   selfIntro       String?
-  student         Student[]
-  adviser         Adviser[]
-  mentor          Mentor[]
+  password        String          @unique @db.VarChar(255)
   administrator   Administrator[]
+  adviser         Adviser[]
   facilitator     Facilitator[]
+  mentor          Mentor[]
+  student         Student[]
   tutor           Tutor[]
 }
 
@@ -34,75 +31,76 @@ model Cohort {
   startDate    DateTime?
   endDate      DateTime?
   academicYear Int           @id
+  Adviser      Adviser[]
+  Facilitator  Facilitator[]
+  Mentor       Mentor[]
   projects     Project[]
   Student      Student[]
-  Adviser      Adviser[]
-  Mentor       Mentor[]
-  Facilitator  Facilitator[]
   Tutor        Tutor[]
+  Deadline     Deadline[]
 }
 
 model Student {
   id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
-  project    Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId     Int?
   nusnetId   String?  @unique @db.VarChar(40)
   matricNo   String?  @unique @db.VarChar(40)
-  cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+  cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
+  project    Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, cohortYear])
 }
 
 model Adviser {
   id         Int       @id @default(autoincrement())
-  user       User      @relation(fields: [userId], references: [id])
   userId     Int
-  projects   Project[]
-  cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+  cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
+  user       User      @relation(fields: [userId], references: [id])
+  projects   Project[]
 
   @@unique([userId, cohortYear])
 }
 
 model Mentor {
   id         Int       @id @default(autoincrement())
-  user       User      @relation(fields: [userId], references: [id])
   userId     Int
-  projects   Project[]
-  cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+  cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
+  user       User      @relation(fields: [userId], references: [id])
+  projects   Project[]
 
   @@unique([userId, cohortYear])
 }
 
 model Facilitator {
   id         Int    @id @default(autoincrement())
-  user       User   @relation(fields: [userId], references: [id])
   userId     Int
-  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
+  user       User   @relation(fields: [userId], references: [id])
 
   @@unique([userId, cohortYear])
 }
 
 model Tutor {
   id         Int    @id @default(autoincrement())
-  user       User   @relation(fields: [userId], references: [id])
   userId     Int
-  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
+  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
+  user       User   @relation(fields: [userId], references: [id])
 
   @@unique([userId, cohortYear])
 }
 
 model Administrator {
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
   startDate DateTime
   endDate   DateTime
+  user      User     @relation(fields: [userId], references: [id])
 
   @@id([userId, startDate, endDate])
 }
@@ -110,15 +108,76 @@ model Administrator {
 model Project {
   id           Int              @id @default(autoincrement())
   name         String
-  students     Student[]
-  adviser      Adviser?         @relation(fields: [adviserId], references: [id])
   adviserId    Int?
-  mentor       Mentor?          @relation(fields: [mentorUserId], references: [id])
   mentorUserId Int?
   achievement  AchievementLevel
-  cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
   cohortYear   Int
-  milestones   Milestone[]
+  adviser      Adviser?         @relation(fields: [adviserId], references: [id])
+  cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
+  mentor       Mentor?          @relation(fields: [mentorUserId], references: [id])
+  students     Student[]
+}
+
+model Deadline {
+  id         Int          @id @default(autoincrement())
+  name       String
+  cohort     Cohort       @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear Int
+  createdOn  DateTime
+  dueBy      DateTime
+  type       DeadlineType
+
+  Questions Question[]
+  @@unique([name, cohortYear])
+}
+
+model Question {
+  id             Int          @id @default(autoincrement())
+  deadline       Deadline     @relation(fields: [deadlineId], references: [id])
+  deadlineId     Int
+  questionNumber Int
+  question       String
+  type           QuestionType
+
+  Answer Answer[]
+  Option Option[] //for MCQ/Multi-select questions
+  @@unique([deadlineId, questionNumber])
+}
+
+model Option {
+  question   Question @relation(fields: [questionId], references: [id])
+  questionId Int
+  option     String
+
+  @@unique([questionId, option])
+}
+
+model Answer {
+  question   Question @relation(fields: [questionId], references: [id])
+  questionId Int
+  answer     String
+
+  @@id([questionId, answer])
+}
+
+enum DeadlineType {
+  Liftoff
+  Splashdown
+  MilestoneOne
+  MilestoneTwo
+  MilestoneThree
+  Evaluation
+  Feedback
+  Survey
+  Other
+}
+
+enum QuestionType {
+  ShortAnswer
+  LongAnswer
+  MultiSelect
+  Url
+  MultipleChoice
 }
 
 enum AchievementLevel {
@@ -126,16 +185,4 @@ enum AchievementLevel {
   Gemini
   Apollo
   Artemis
-}
-
-model Milestone {
-  milestoneNo Int
-  project     Project @relation(fields: [projectId], references: [id])
-  projectId   Int
-  videoUrl    String
-  posterUrl   String
-  logUrl      String
-  readmeUrl   String
-
-  @@id([milestoneNo, projectId])
 }
