@@ -123,7 +123,7 @@ model Deadline {
   name       String
   cohort     Cohort       @relation(fields: [cohortYear], references: [academicYear])
   cohortYear Int
-  createdOn  DateTime
+  createdOn  DateTime     @default(now())
   dueBy      DateTime
   type       DeadlineType
 

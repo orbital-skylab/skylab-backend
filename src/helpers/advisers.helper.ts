@@ -41,10 +41,20 @@ export const getAdviserByEmail = async (email: string) => {
 export const getFilteredAdvisersWhereInputParser = (query: any) => {
   let filter: Prisma.AdviserFindManyArgs = {};
 
+  if ((query.page && !query.limit) || (query.limit && !query.page)) {
+    throw new SkylabError(
+      `${
+        query.limit ? "Page" : "Limit"
+      } parameter missing in a pagination query`,
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
   if (query.page && query.limit) {
     filter = {
+      ...filter,
       take: Number(query.limit),
-      skip: (query.page - 1) * query.limit,
+      skip: Number(query.page) * Number(query.limit),
     };
   }
 
