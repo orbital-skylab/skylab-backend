@@ -6,6 +6,7 @@ import {
   getFirstAdviser,
   getManyAdvisers,
 } from "src/models/advisers.db";
+import { generateRandomHashedPassword, hashPassword } from "./users.helper";
 
 /**
  * @function getAdviserInputParser Parse the input returned from the prisma.adviser.find function
@@ -69,10 +70,16 @@ export const getFilteredAdvisers = async (query: any) => {
   return parsedAdvisers;
 };
 
-export const createAdviserInputParser = (
+export const createAdviserInputParser = async (
   body: any
-): { user: Prisma.UserCreateInput; cohortYear: number } => {
-  const { cohortYear, ...user } = body;
+): Promise<{ user: Prisma.UserCreateInput; cohortYear: number }> => {
+  const { cohortYear, password, ...userWithoutPassword } = body;
+
+  const hashedPassword = password
+    ? hashPassword(password)
+    : await generateRandomHashedPassword();
+  const user = { ...userWithoutPassword, password: hashedPassword };
+
   const userData = <Prisma.UserCreateInput>user;
   return {
     user: userData,
@@ -86,7 +93,7 @@ export const createAdviserInputParser = (
  * @returns The adviser record created in the database
  */
 export const createAdviserHelper = async (body: any) => {
-  const { user, cohortYear } = createAdviserInputParser(body);
+  const { user, cohortYear } = await createAdviserInputParser(body);
   return await createAdviser(user, {
     cohort: { connect: { academicYear: cohortYear } },
   });

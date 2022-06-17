@@ -6,6 +6,7 @@ import {
   getFirstMentor,
   getManyMentors,
 } from "src/models/mentors.db";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -73,13 +74,20 @@ export const getFilteredMentors = async (query: any) => {
  * @param body The raw query from the HTTP Request
  * @returns The create input to be passed to prisma.mentor.create
  */
-export const createMentorInputParser = (
+export const createMentorInputParser = async (
   body: any
-): {
+): Promise<{
   user: Prisma.UserCreateInput;
   cohortYear: number;
-} => {
-  const { cohortYear, ...user } = body;
+}> => {
+  const { cohortYear, password, ...userWithoutPassword } = body;
+
+  const hashedPassword = password
+    ? hashPassword(password)
+    : await generateRandomHashedPassword();
+
+  const user = { ...userWithoutPassword, password: hashedPassword };
+
   const userData = <Prisma.UserCreateInput>user;
   return {
     user: userData,
@@ -93,7 +101,7 @@ export const createMentorInputParser = (
  * @returns The mentor record created in the database
  */
 export const createMentorHelper = async (body: any) => {
-  const { user, cohortYear } = createMentorInputParser(body);
+  const { user, cohortYear } = await createMentorInputParser(body);
   return await createMentor(user, {
     cohort: { connect: { academicYear: cohortYear } },
   });

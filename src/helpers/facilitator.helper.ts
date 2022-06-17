@@ -7,6 +7,7 @@ import {
   getFirstFacilitator,
   getManyFacilitators,
 } from "src/models/facilitator.db";
+import { generateRandomHashedPassword, hashPassword } from "./users.helper";
 
 /**
  * @function getFacilitatorInputParser Parse the input returned from the prisma.facilitator.find function
@@ -71,13 +72,19 @@ export const getFilteredFacilitators = async (query: any) => {
  * @param body The raw query from the HTTP Request
  * @return The create input to be passed to prisma.facilitator.create
  */
-export const createFacilitatorInputParser = (
+export const createFacilitatorInputParser = async (
   body: any
-): {
+): Promise<{
   user: Prisma.UserCreateInput;
   cohortYear: number;
-} => {
-  const { cohortYear, ...user } = body;
+}> => {
+  const { cohortYear, password, ...userWithoutPassword } = body;
+
+  const hashedPassword = password
+    ? hashPassword(password)
+    : await generateRandomHashedPassword();
+  const user = { ...userWithoutPassword, password: hashedPassword };
+
   const userData = <Prisma.UserCreateInput>user;
   return {
     user: userData,
@@ -91,7 +98,7 @@ export const createFacilitatorInputParser = (
  * @returns The facilitator record created in the database
  */
 export const createFacilitatorHelper = async (body: any) => {
-  const { user, cohortYear } = createFacilitatorInputParser(body);
+  const { user, cohortYear } = await createFacilitatorInputParser(body);
   return await createFacilitator(user, {
     cohort: { connect: { academicYear: cohortYear } },
   });
