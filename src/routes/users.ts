@@ -34,7 +34,7 @@ router
   });
 
 router
-  .get("/:email", authorize, async (req: Request, res: Response) => {
+  .get("/:email", async (req: Request, res: Response) => {
     try {
       if (!req.params.email) {
         res
@@ -55,14 +55,15 @@ router
   })
   .post("/:email", async (req: Request, res: Response) => {
     try {
-      if (!req.params.email || !req.body.password) {
+      const { email } = req.params;
+      const { password } = req.body;
+
+      if (!password) {
         res
           .status(HttpStatusCode.BAD_REQUEST)
           .send("Missing request parameters");
       }
 
-      const email = req.params.email;
-      const password = req.body.password;
       const { token } = await userLogin(email, password);
       if (token) {
         res
@@ -80,7 +81,7 @@ router
       }
     }
   })
-  .delete("/:email", async (req: Request, res: Response) => {
+  .delete("/:email", authorize, async (req: Request, res: Response) => {
     try {
       if (!req.params.email) {
         res
@@ -99,7 +100,7 @@ router
       }
     }
   })
-  .put("/:email", async (req: Request, res: Response) => {
+  .put("/:email", authorize, async (req: Request, res: Response) => {
     try {
       if (!req.params.email || !req.body.user) {
         res
