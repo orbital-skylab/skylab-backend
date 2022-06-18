@@ -152,7 +152,7 @@ model Question {
 }
 
 model Option {
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   questionId Int
   option     String
   order      Int
