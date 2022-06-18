@@ -8,6 +8,7 @@ import {
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import SibApiV3Sdk from "@sendinblue/client";
+import { bcc, replyTo, sender, subject } from "src/utils/Emails";
 
 type Email = {
   email: string;
@@ -28,7 +29,9 @@ export const getAllUsers = async () => {
  * @returns The User Record with the given email
  */
 export const getUserByEmail = async (email: string) => {
-  const user = await getOneUser({ where: { email: email } });
+  const user = await getOneUser({
+    where: { email: email },
+  });
   return user;
 };
 
@@ -90,11 +93,11 @@ export const sendPasswordResetEmail = async (emails: Array<Email>) => {
 
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
 
-  sendSmtpEmail.subject = "Reset Password for Orbital Skylab";
-  sendSmtpEmail.sender = { email: "nvjn37@gmail.com" };
+  sendSmtpEmail.subject = subject;
+  sendSmtpEmail.sender = { email: sender };
   sendSmtpEmail.to = emails;
-  sendSmtpEmail.bcc = [{ email: "nvjn37@gmail.com" }];
-  sendSmtpEmail.replyTo = { email: "nvjn37@gmail.com" };
+  sendSmtpEmail.bcc = [{ email: bcc }];
+  sendSmtpEmail.replyTo = { email: replyTo };
 
   apiInstance.sendTransacEmail(sendSmtpEmail).then(
     function (data) {

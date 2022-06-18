@@ -7,6 +7,7 @@ import cohortRouter from "./cohorts";
 import projectRouter from "./projects";
 import adviserRouter from "./advisers";
 import facilitatorRouter from "./facilitators";
+import deadlineRouter from "./deadlines";
 
 // Export the base-router
 const baseRouter = Router();
@@ -19,6 +20,7 @@ baseRouter.use("/cohorts", cohortRouter);
 baseRouter.use("/projects", projectRouter);
 baseRouter.use("/advisers", adviserRouter);
 baseRouter.use("/facilitators", facilitatorRouter);
+baseRouter.use("/deadlines", deadlineRouter);
 
 // Export default.
 export default baseRouter;

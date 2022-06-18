@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyStudents,
   createStudent,
   getFirstStudent,
   getManyStudents,
 } from "src/models/students.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomHashedPassword } from "./users.helper";
 
 /**
@@ -41,10 +43,20 @@ export const getStudentByEmail = async (email: string) => {
  */
 export const getFilteredStudentsWhereInputParser = (query: any) => {
   let filter: Prisma.StudentFindManyArgs = {};
+  if ((query.page && !query.limit) || (query.limit && !query.page)) {
+    throw new SkylabError(
+      `${
+        query.limit ? "Page" : "Limit"
+      } parameter missing in a pagination query`,
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
   if (query.page && query.limit) {
     filter = {
-      take: Number(query.page),
-      skip: (query.page - 1) * query.limit,
+      ...filter,
+      take: Number(query.limit),
+      skip: Number(query.page) * Number(query.limit),
     };
   }
 

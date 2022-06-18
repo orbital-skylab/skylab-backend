@@ -112,12 +112,39 @@ export const getFilteredProjects = async (query: any) => {
 export const createProjectInputParser = (
   body: any
 ): Prisma.ProjectCreateInput => {
-  const { cohortYear, ...projectInfo } = body;
+  const { cohortYear, students, adviser, mentor, ...projectInfo } = body;
   const projectData = <Prisma.ProjectCreateInput>projectInfo;
-  return {
+  let createProjectInput = {
     ...projectData,
     cohort: { connect: { academicYear: Number(cohortYear) } },
   };
+
+  if (adviser) {
+    createProjectInput = {
+      ...createProjectInput,
+      adviser: { connect: { id: adviser } },
+    };
+  }
+
+  if (mentor) {
+    createProjectInput = {
+      ...createProjectInput,
+      mentor: { connect: { id: mentor } },
+    };
+  }
+
+  if (students) {
+    createProjectInput = {
+      ...createProjectInput,
+      students: {
+        connect: students.map((student: number) => {
+          return { id: student };
+        }),
+      },
+    };
+  }
+
+  return createProjectInput;
 };
 
 /**
