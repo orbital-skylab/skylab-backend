@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, Prisma } from "@prisma/client";
+import { create } from "domain";
 import { SkylabError } from "src/errors/SkylabError";
 
 import {
@@ -114,10 +115,37 @@ export const createProjectInputParser = (
 ): Prisma.ProjectCreateInput => {
   const { cohortYear, students, adviser, mentor, ...projectInfo } = body;
   const projectData = <Prisma.ProjectCreateInput>projectInfo;
-  const createProjectInput = {
+  let createProjectInput = {
     ...projectData,
     cohort: { connect: { academicYear: Number(cohortYear) } },
   };
+
+  if (adviser) {
+    createProjectInput = {
+      ...createProjectInput,
+      adviser: { connect: { id: adviser } },
+    };
+  }
+
+  if (mentor) {
+    createProjectInput = {
+      ...createProjectInput,
+      mentor: { connect: { id: mentor } },
+    };
+  }
+
+  if (students) {
+    createProjectInput = {
+      ...createProjectInput,
+      students: {
+        connect: students.map((student: number) => {
+          return { id: student };
+        }),
+      },
+    };
+  }
+
+  return createProjectInput;
 };
 
 /**

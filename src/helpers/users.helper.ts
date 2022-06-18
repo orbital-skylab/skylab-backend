@@ -29,7 +29,9 @@ export const getAllUsers = async () => {
  * @returns The User Record with the given email
  */
 export const getUserByEmail = async (email: string) => {
-  const user = await getOneUser({ where: { email: email } });
+  const user = await getOneUser({
+    where: { email: email },
+  });
   return user;
 };
 

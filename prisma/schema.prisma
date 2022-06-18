@@ -25,7 +25,7 @@ model User {
   mentor          Mentor[]
   student         Student[]
   tutor           Tutor[]
-  submitter       Submitter?      @relation(fields: [submittedId], references: [id])
+  submitter       Submitter?      @relation(fields: [submitterId], references: [id])
   submitterId     Int?
 }
 
@@ -33,24 +33,24 @@ model Cohort {
   startDate    DateTime?
   endDate      DateTime?
   academicYear Int           @id
-  Adviser      Adviser[]
-  Facilitator  Facilitator[]
-  Mentor       Mentor[]
+  advisers     Adviser[]
+  facilitators Facilitator[]
+  mentors      Mentor[]
   projects     Project[]
-  Student      Student[]
-  Tutor        Tutor[]
-  Deadline     Deadline[]
+  students     Student[]
+  tutors       Tutor[]
+  deadlines    Deadline[]
 }
 
 model Student {
   id         Int      @id @default(autoincrement())
   userId     Int
-  teamId     Int?
+  projectId  Int?
   nusnetId   String?  @unique @db.VarChar(40)
   matricNo   String?  @unique @db.VarChar(40)
   cohortYear Int
   cohort     Cohort   @relation(fields: [cohortYear], references: [academicYear])
-  project    Project? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, cohortYear])
@@ -59,6 +59,8 @@ model Student {
 model Adviser {
   id         Int       @id @default(autoincrement())
   userId     Int
+  nusnetId   String?
+  matricNo   String?
   cohortYear Int
   cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
   user       User      @relation(fields: [userId], references: [id])
@@ -99,12 +101,12 @@ model Tutor {
 }
 
 model Administrator {
+  id        Int      @id @default(autoincrement())
   userId    Int
   startDate DateTime
   endDate   DateTime
   user      User     @relation(fields: [userId], references: [id])
 
-  @@id([userId, startDate, endDate])
 }
 
 model Project {
@@ -118,6 +120,8 @@ model Project {
   cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
   mentor       Mentor?          @relation(fields: [mentorUserId], references: [id])
   students     Student[]
+  submitter    Submitter?       @relation(fields: [submitterId], references: [id])
+  submitterId  Int?
 }
 
 model Deadline {
@@ -158,11 +162,11 @@ model Option {
 
 model Submission {
   id          Int        @id @default(autoincrement())
-  submitter   Submitter  @relation(fields: [submitterId], references: [id])
-  evaluatee   Submitter? @relation(fields: [evaluteeId], references: [id])
+  submitter   Submitter? @relation(fields: [submitterId], references: [id], name: "submitter")
+  evaluatee   Submitter? @relation(fields: [evaluateeId], references: [id], name: "evaluatee")
   answers     Answer[]
-  submitterId Int
   evaluateeId Int?
+  submitterId Int?
 }
 
 model Answer {
@@ -176,18 +180,15 @@ model Answer {
 }
 
 model Submitter {
-  id         Int          @id @default(autoincrement())
-  users      User[]
-  projects   Project[]
-  Submission Submission[]
+  id        Int          @id @default(autoincrement())
+  users     User[]
+  projects  Project[]
+  submitter Submission[] @relation("submitter")
+  evaluatee Submission[] @relation("evaluatee")
 }
 
 enum DeadlineType {
-  Liftoff
-  Splashdown
-  MilestoneOne
-  MilestoneTwo
-  MilestoneThree
+  Milestone
   Evaluation
   Survey
   Other
