@@ -1,64 +1,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
-import { createDeadline, getManyDeadlines } from "src/models/deadline.db";
-
-export const getFilteredDeadlinesWhereInputParser = (query: any) => {
-  let filter: Prisma.DeadlineFindManyArgs = {};
-
-  if (query.page && query.limit) {
-    filter = {
-      take: Number(query.limit),
-      skip: (query.page - 1) & query.limit,
-    };
-  }
-
-  if (query.cohortYear) {
-    filter = {
-      ...filter,
-      where: { cohortYear: Number(query.cohortYear) },
-    };
-  }
-
-  if (query.type) {
-    const { where, ...data } = filter;
-    filter = {
-      ...data,
-      where: { ...where, type: query.type },
-    };
-  }
-
-  if (query.id) {
-    const { where, ...data } = filter;
-    filter = {
-      ...data,
-      where: { ...where, id: Number(query.id) },
-    };
-  }
-
-  return filter;
-};
-
-export const getFilteredDeadlines = async (query: any) => {
-  const filteredQuery = getFilteredDeadlinesWhereInputParser(query);
-  const deadlines = await getManyDeadlines(filteredQuery);
-  return deadlines;
-};
-
-export const createDeadlineInputParser = (
-  body: any
-): {
-  deadline: Omit<Prisma.DeadlineCreateInput, "cohort">;
-  cohortYear: number;
-} => {
-  const { cohortYear, ...deadline } = body;
-  const deadlineData = <Omit<Prisma.DeadlineCreateInput, "cohort">>deadline;
-  return {
-    cohortYear: Number(cohortYear),
-    deadline: deadlineData,
-  };
-};
+import { SkylabError } from "src/errors/SkylabError";
+import { createDeadline } from "src/models/deadline.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export const createDeadlineHelper = async (body: any) => {
-  const { deadline, cohortYear } = createDeadlineInputParser(body);
-  return await createDeadline(deadline, cohortYear);
+  const { deadline } = body;
+
+  if (
+    !deadline ||
+    !(deadline.cohortYear && deadline.name && deadline.dueBy && deadline.type)
+  ) {
+    throw new SkylabError(
+      "Data missing from request body",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const { cohortYear, ...deadlineData } = deadline;
+
+  try {
+    return await createDeadline(deadlineData, Number(cohortYear));
+  } catch (e) {
+    if (!(e instanceof SkylabError)) {
+      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
+    } else {
+      throw e;
+    }
+  }
 };

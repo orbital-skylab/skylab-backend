@@ -53,10 +53,11 @@ export const createDeadline = async (
     if (e.code === "P2002") {
       throw new SkylabError(
         "Deadline is not unique",
-        HttpStatusCode.BAD_REQUEST
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 };
