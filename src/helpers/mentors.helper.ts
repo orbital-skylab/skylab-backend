@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyMentors,
   createMentor,
   getFirstMentor,
   getManyMentors,
 } from "src/models/mentors.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -41,10 +43,20 @@ export const getMentorByEmail = async (email: string) => {
 export const getFilteredMentorsWhereInputParser = (query: any) => {
   let filter: Prisma.MentorFindManyArgs = {};
 
+  if ((query.page && !query.limit) || (query.limit && !query.page)) {
+    throw new SkylabError(
+      `${
+        query.limit ? "Page" : "Limit"
+      } parameter missing in a pagination query`,
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
   if (query.page && query.limit) {
     filter = {
+      ...filter,
       take: Number(query.limit),
-      skip: (query.page - 1) * query.limit,
+      skip: Number(query.page) * Number(query.limit),
     };
   }
 

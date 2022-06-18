@@ -18,13 +18,15 @@ model User {
   linkedinUrl     String?
   personalSiteUrl String?
   selfIntro       String?
-  password        String          @unique @db.VarChar(255)
+  password        String          @db.VarChar(255) //Hashed
   administrator   Administrator[]
   adviser         Adviser[]
   facilitator     Facilitator[]
   mentor          Mentor[]
   student         Student[]
   tutor           Tutor[]
+  submitter       Submitter?      @relation(fields: [submittedId], references: [id])
+  submitterId     Int?
 }
 
 model Cohort {
@@ -127,7 +129,7 @@ model Deadline {
   dueBy      DateTime
   type       DeadlineType
 
-  Questions Question[]
+  questions Question[]
   @@unique([name, cohortYear])
 }
 
@@ -137,10 +139,11 @@ model Question {
   deadlineId     Int
   questionNumber Int
   question       String
+  desc           String
   type           QuestionType
 
-  Answer Answer[]
-  Option Option[] //for MCQ/Multi-select questions
+  answers Answer[]
+  options Option[] //for MCQ/Multi-select questions
   @@unique([deadlineId, questionNumber])
 }
 
@@ -148,16 +151,35 @@ model Option {
   question   Question @relation(fields: [questionId], references: [id])
   questionId Int
   option     String
+  order      Int
 
-  @@unique([questionId, option])
+  @@unique([questionId, order])
+}
+
+model Submission {
+  id          Int        @id @default(autoincrement())
+  submitter   Submitter  @relation(fields: [submitterId], references: [id])
+  evaluatee   Submitter? @relation(fields: [evaluteeId], references: [id])
+  answers     Answer[]
+  submitterId Int
+  evaluateeId Int?
 }
 
 model Answer {
-  question   Question @relation(fields: [questionId], references: [id])
-  questionId Int
-  answer     String
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  question     Question   @relation(fields: [questionId], references: [id])
+  questionId   Int
+  answer       String
+  submissionId Int
 
-  @@id([questionId, answer])
+  @@id([submissionId, questionId, answer])
+}
+
+model Submitter {
+  id         Int          @id @default(autoincrement())
+  users      User[]
+  projects   Project[]
+  Submission Submission[]
 }
 
 enum DeadlineType {
@@ -167,17 +189,19 @@ enum DeadlineType {
   MilestoneTwo
   MilestoneThree
   Evaluation
-  Feedback
   Survey
   Other
 }
 
 enum QuestionType {
   ShortAnswer
-  LongAnswer
-  MultiSelect
-  Url
+  Paragraph
   MultipleChoice
+  Checkboxes
+  Dropdown
+  Url
+  Date
+  Time
 }
 
 enum AchievementLevel {

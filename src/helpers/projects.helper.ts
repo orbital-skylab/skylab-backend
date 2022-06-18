@@ -112,9 +112,9 @@ export const getFilteredProjects = async (query: any) => {
 export const createProjectInputParser = (
   body: any
 ): Prisma.ProjectCreateInput => {
-  const { cohortYear, ...projectInfo } = body;
+  const { cohortYear, students, adviser, mentor, ...projectInfo } = body;
   const projectData = <Prisma.ProjectCreateInput>projectInfo;
-  return {
+  const createProjectInput = {
     ...projectData,
     cohort: { connect: { academicYear: Number(cohortYear) } },
   };

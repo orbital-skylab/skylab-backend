@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createAdviser,
   createManyAdvisers,
   getFirstAdviser,
   getManyAdvisers,
 } from "src/models/advisers.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 /**
  * @function getAdviserInputParser Parse the input returned from the prisma.adviser.find function
