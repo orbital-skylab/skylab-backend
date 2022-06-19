@@ -56,7 +56,7 @@ export const getOneFacilitator = async ({
 };
 
 /**
- * @function getManyMentors Find all the facilitators that match the given query conditions
+ * @function getManyFacilitators Find all the facilitators that match the given query conditions
  * @param query The query conditions to be selected upon
  * @returns The array of facilitator records that match the query conditions
  */
@@ -71,26 +71,11 @@ export const getManyFacilitators = async ({
   return facilitators;
 };
 
-/**
- * @function createFacilitator Create a Facilitator with an associated Facilitator Record
- * @param user The information to create the User Record
- * @param facilitator The information to create the Facilitator Record
- * @returns The facilitator object that was created
- */
-export const createFacilitator = async (
-  user: Omit<Prisma.UserCreateInput, "userId">,
-  facilitator: Omit<Prisma.FacilitatorCreateInput, "user">
+export const createOneFacilitator = async (
+  facilitator: Prisma.FacilitatorCreateArgs
 ) => {
   try {
-    const createdFacilitator = await prisma.facilitator.create({
-      data: {
-        user: {
-          connectOrCreate: { where: { email: user.email }, create: user },
-        },
-        ...facilitator,
-      },
-    });
-    return createdFacilitator;
+    return await prisma.facilitator.create(facilitator);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -98,32 +83,21 @@ export const createFacilitator = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        "Facilitator is not unique",
-        HttpStatusCode.BAD_REQUEST
+        "Student is not unique",
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
       );
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 };
 
-export interface IFacilitatorCreateMany {
-  user: Prisma.UserCreateInput;
-  facilitator: Omit<Prisma.FacilitatorCreateInput, "user">;
-}
-
 export const createManyFacilitators = async (
-  data: IFacilitatorCreateMany[]
+  facilitators: Prisma.FacilitatorCreateManyArgs
 ) => {
   try {
-    const createdFacilitators = await Promise.all(
-      data.map(async (userData) => {
-        return await prisma.facilitator.create({
-          data: { user: { create: userData.user }, ...userData.facilitator },
-        });
-      })
-    );
-    return createdFacilitators;
+    return await prisma.student.createMany(facilitators);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -131,11 +105,10 @@ export const createManyFacilitators = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        `Facilitator ${e.meta} is not unique`,
-        HttpStatusCode.BAD_REQUEST
+        "One of the students are not unique",
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
       );
     }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };

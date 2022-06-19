@@ -1,8 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
+import { Mentor, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { getManyMentors, getOneMentor } from "src/models/mentors.db";
+import {
+  createOneMentor,
+  getManyMentors,
+  getOneMentor,
+} from "src/models/mentors.db";
+import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -64,4 +70,123 @@ export const getFilteredMentors = async (query: any) => {
   const mentors = await getManyMentors(filteredQuery);
   const parsedMentors = mentors.map((mentor) => getMentorInputParser(mentor));
   return parsedMentors;
+};
+
+export const createNewMentorParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<{
+  user: Prisma.UserCreateInput;
+  mentor: Prisma.MentorCreateInput;
+}> => {
+  const { mentor, user } = body;
+  if (!mentor || !user || (isAdmin && !user.password)) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  user.password = user.password
+    ? await hashPassword(user.password)
+    : await generateRandomHashedPassword();
+
+  return {
+    user,
+    mentor,
+  };
+};
+
+export const createNewMentor = async (body: any, isAdmin?: boolean) => {
+  const account = await createNewMentorParser(body, isAdmin ?? false);
+
+  return await createOneUser({
+    data: { ...account.user, mentor: { create: account.mentor } },
+  });
+};
+
+export const createManyMentorsParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<
+  {
+    user: Prisma.UserCreateInput;
+    mentor: Prisma.MentorCreateInput;
+  }[]
+> => {
+  const { count, accounts } = body;
+
+  if (!count || !accounts) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+  if (count !== accounts.length) {
+    throw new SkylabError(
+      "Count and Accounts Data do not match",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const promises: Promise<string>[] = [];
+  accounts.forEach((account: { mentor: Mentor; user: User }) => {
+    const { user } = account;
+
+    if (isAdmin && !user.password) {
+      throw new SkylabError(
+        "All accounts should have a password input",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    promises.push(
+      user.password
+        ? hashPassword(user.password)
+        : generateRandomHashedPassword()
+    );
+  });
+
+  await Promise.all(promises);
+  return accounts;
+};
+
+export const createManyMentors = async (body: any, isAdmin?: boolean) => {
+  const accounts = await createManyMentorsParser(body, isAdmin ?? false);
+  return await createManyUsers({
+    data: accounts.map((account) => {
+      return {
+        ...account.user,
+        mentor: { create: account.mentor },
+      };
+    }),
+  });
+};
+
+export const addMentorToAccountParser = (
+  body: any
+): Prisma.MentorCreateInput & { cohortYear: number } => {
+  if (!body.mentor) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  return body.mentor;
+};
+
+export const addMentorToAccount = async (userId: string, body: any) => {
+  const mentor = addMentorToAccountParser(body);
+  const { cohortYear, ...mentorData } = mentor;
+  return await createOneMentor({
+    data: {
+      ...mentorData,
+      cohort: { connect: { academicYear: cohortYear } },
+      user: { connect: { id: Number(userId) } },
+    },
+  });
 };

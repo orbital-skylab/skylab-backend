@@ -36,9 +36,8 @@ export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
   if (!user) {
     throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+
+  return user;
 };
 
 /**

@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Prisma } from "@prisma/client";
+import { Facilitator, Prisma, User } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
 import {
-  createFacilitator,
-  createManyFacilitators,
+  createOneFacilitator,
   getFirstFacilitator,
   getManyFacilitators,
 } from "src/models/facilitator.db";
-import { generateRandomHashedPassword, hashPassword } from "./users.helper";
+import { createOneUser, createManyUsers } from "src/models/users.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 /**
  * @function getFacilitatorInputParser Parse the input returned from the prisma.facilitator.find function
@@ -66,58 +68,121 @@ export const getFilteredFacilitators = async (query: any) => {
   return parsedFacilitators;
 };
 
-/**
- * @function createFacilitatorInputParser Parse the query body received from the
- * HTTP Request to be passed to prisma.facilitator.create
- * @param body The raw query from the HTTP Request
- * @return The create input to be passed to prisma.facilitator.create
- */
-export const createFacilitatorInputParser = async (
-  body: any
+export const createNewFacilitatorParser = async (
+  body: any,
+  isAdmin: boolean
 ): Promise<{
   user: Prisma.UserCreateInput;
-  cohortYear: number;
+  facilitator: Prisma.FacilitatorCreateInput;
 }> => {
-  const { cohortYear, password, ...userWithoutPassword } = body;
+  const { facilitator, user } = body;
+  if (!facilitator || !user || (isAdmin && !user.password)) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
 
-  const hashedPassword = password
-    ? hashPassword(password)
+  user.password = user.password
+    ? await hashPassword(user.password)
     : await generateRandomHashedPassword();
-  const user = { ...userWithoutPassword, password: hashedPassword };
 
-  const userData = <Prisma.UserCreateInput>user;
   return {
-    user: userData,
-    cohortYear: Number(cohortYear),
+    user,
+    facilitator,
   };
 };
 
-/**
- * @function createFacilitatorHelper Helper function to create a facilitator
- * @param body The facilitator information from the HTTP Request
- * @returns The facilitator record created in the database
- */
-export const createFacilitatorHelper = async (body: any) => {
-  const { user, cohortYear } = await createFacilitatorInputParser(body);
-  return await createFacilitator(user, {
-    cohort: { connect: { academicYear: cohortYear } },
+export const createNewFacilitator = async (body: any, isAdmin?: boolean) => {
+  const account = await createNewFacilitatorParser(body, isAdmin ?? false);
+
+  return await createOneUser({
+    data: { ...account.user, facilitator: { create: account.facilitator } },
   });
 };
 
-/**
- * @function createManyFacilitatorHelper Helper function to create many facilitators simultaenously
- * @param body The array of facilitator data objects from the HTTP Request
- * @returns The facilitator records created in the database
- */
-export const createManyFacilitatorsHelper = async (
-  body: { user: Prisma.UserCreateInput; cohortYear: number }[]
-) => {
-  const facilitators = body.map((data) => {
-    const { user, cohortYear } = data;
-    return {
-      user: user,
-      facilitator: { cohort: { connect: { academicYear: cohortYear } } },
-    };
+export const createManyFacilitatorsParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<
+  {
+    user: Prisma.UserCreateInput;
+    facilitator: Prisma.FacilitatorCreateInput;
+  }[]
+> => {
+  const { count, accounts } = body;
+
+  if (!count || !accounts) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+  if (count !== accounts.length) {
+    throw new SkylabError(
+      "Count and Accounts Data do not match",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const promises: Promise<string>[] = [];
+  accounts.forEach((account: { facilitator: Facilitator; user: User }) => {
+    const { user } = account;
+
+    if (isAdmin && !user.password) {
+      throw new SkylabError(
+        "All accounts should have a password input",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    promises.push(
+      user.password
+        ? hashPassword(user.password)
+        : generateRandomHashedPassword()
+    );
   });
-  return await createManyFacilitators(facilitators);
+
+  await Promise.all(promises);
+  return accounts;
+};
+
+export const createManyFacilitators = async (body: any, isAdmin?: boolean) => {
+  const accounts = await createManyFacilitatorsParser(body, isAdmin ?? false);
+  return await createManyUsers({
+    data: accounts.map((account) => {
+      return {
+        ...account.user,
+        facilitator: { create: account.facilitator },
+      };
+    }),
+  });
+};
+
+export const addFacilitatorToAccountParser = (
+  body: any
+): Prisma.FacilitatorCreateInput & { cohortYear: number } => {
+  if (!body.facilitator) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  return body.facilitator;
+};
+
+export const addFacilitatorToAccount = async (userId: string, body: any) => {
+  const facilitator = addFacilitatorToAccountParser(body);
+  const { cohortYear, ...facilitatorData } = facilitator;
+  return await createOneFacilitator({
+    data: {
+      ...facilitatorData,
+      cohort: { connect: { academicYear: cohortYear } },
+      user: { connect: { id: Number(userId) } },
+    },
+  });
 };

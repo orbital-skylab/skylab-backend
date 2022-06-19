@@ -1,98 +1,70 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
-import { createOneStudent } from "src/models/students.db";
-import { createManyUsers, createOneUser } from "src/models/users.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import SibApiV3Sdk from "@sendinblue/client";
+import { getOneUser, getOneUserWithRoleData } from "src/models/users.db";
 
-export const createNewStudentParser = (
-  body: any
-): {
-  user: Prisma.UserCreateInput;
-  student: Prisma.StudentCreateInput;
-} => {
-  if (!body.student || !body.user) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
+const getUserById = async (email: string) => {
+  return await getOneUser({ where: { email: email } });
+};
 
+export const getOneUserWithRoleDataByEmail = async (email: string) => {
+  return await getOneUserWithRoleData({ where: { email: email } });
+};
+
+export const userLogin = async (email: string, password: string) => {
+  const user = await getUserById(email);
+  const validPassword = await bcrypt.compare(password, user.password);
   return {
-    user: body.user,
-    student: body.student,
+    token: validPassword
+      ? jwt.sign({ user }, process.env.JWT_SECRET ?? "jwt_secret")
+      : null,
   };
 };
 
-export const createNewStudent = async (body: any) => {
-  const account = createNewStudentParser(body);
-
-  return await createOneUser({
-    data: { ...account.user, student: { create: account.student } },
-  });
+export const hashPassword = async (plainTextPassword: string) => {
+  const saltRounds = 10;
+  return await bcrypt.hash(plainTextPassword, saltRounds);
 };
 
-export const createManyStudentsParser = (
-  body: any
-): {
-  user: Prisma.UserCreateInput;
-  student: Prisma.StudentCreateInput;
-}[] => {
-  if (!body.count || !body.accounts) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
+export const generateRandomHashedPassword = async () => {
+  const length = 16;
+  const chars =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$";
+
+  let plainTextPassword = "";
+  for (let i = 0; i < length; i++) {
+    plainTextPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  const { count, accounts } = body;
-
-  if (count !== accounts.length) {
-    throw new SkylabError(
-      "Count and Accounts Data do not match",
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  return accounts;
+  return await hashPassword(plainTextPassword);
 };
 
-export const createManyStudents = async (body: any) => {
-  const accounts = createManyStudentsParser(body);
-  return await createManyUsers({
-    data: accounts.map((account) => {
-      return {
-        ...account.user,
-        student: { create: account.student },
-      };
-    }),
-  });
-};
+export const sendPasswordResetEmail = async (
+  emails: Array<{ email: string }>
+) => {
+  const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-export const addStudentToAccountParser = (
-  body: any
-): Prisma.StudentCreateInput & { cohortYear: number } => {
-  if (!body.student) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
+  apiInstance.setApiKey(
+    SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
+    process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key"
+  );
 
-  return body.student;
-};
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
 
-export const addStudentToAccount = async (userId: string, body: any) => {
-  const student = addStudentToAccountParser(body);
-  const { cohortYear, ...studentData } = student;
-  return await createOneStudent({
-    data: {
-      ...studentData,
-      cohort: { connect: { academicYear: cohortYear } },
-      user: { connect: { id: Number(userId) } },
+  sendSmtpEmail.subject = "Reset Password for Orbital Skylab";
+  sendSmtpEmail.sender = { email: "nvjn37@gmail.com" };
+  sendSmtpEmail.to = emails;
+  sendSmtpEmail.bcc = [{ email: "nvjn37@gmail.com" }];
+  sendSmtpEmail.replyTo = { email: "nvjn37@gmail.com" };
+
+  apiInstance.sendTransacEmail(sendSmtpEmail).then(
+    function (data) {
+      console.log(
+        "API called successfully. Returned data: " + JSON.stringify(data)
+      );
     },
-  });
+    function (error) {
+      console.error(error);
+    }
+  );
 };
