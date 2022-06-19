@@ -1,22 +1,14 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import SibApiV3Sdk from "@sendinblue/client";
-import { getOneUser, getOneUserWithRoleData } from "src/models/users.db";
-
-const getUserById = async (email: string) => {
-  return await getOneUser({ where: { email: email } });
-};
-
-export const getOneUserWithRoleDataByEmail = async (email: string) => {
-  return await getOneUserWithRoleData({ where: { email: email } });
-};
+import { getOneUser } from "src/models/users.db";
 
 export const userLogin = async (email: string, password: string) => {
-  const user = await getUserById(email);
-  const validPassword = await bcrypt.compare(password, user.password);
+  const user = await getOneUser({ where: { email: email } });
+  const isValidPassword = await bcrypt.compare(password, user.password);
   return {
-    token: validPassword
-      ? jwt.sign({ user }, process.env.JWT_SECRET ?? "jwt_secret")
+    token: isValidPassword
+      ? jwt.sign(user, process.env.JWT_SECRET ?? "jwt_secret")
       : null,
   };
 };
