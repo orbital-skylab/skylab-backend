@@ -76,15 +76,11 @@ export const updateDeadline = async (query: Prisma.DeadlineUpdateArgs) => {
   }
 };
 
-export const createDeadline = async (
-  deadline: Omit<Prisma.DeadlineCreateInput, "cohort">,
-  cohortYear: number
+export const createOneDeadline = async (
+  deadline: Prisma.DeadlineCreateArgs
 ) => {
   try {
-    const createdDeadline = await prisma.deadline.create({
-      data: { cohort: { connect: { academicYear: cohortYear } }, ...deadline },
-    });
-    return createdDeadline;
+    return await prisma.deadline.create(deadline);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;

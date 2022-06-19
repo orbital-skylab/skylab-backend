@@ -2,7 +2,7 @@
 import { Prisma, Question } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createDeadline,
+  createOneDeadline,
   deleteOneDeadline,
   getManyDeadlines,
   getOneDeadline,
@@ -14,23 +14,43 @@ import {
 } from "src/models/questions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
-export const createNewDeadline = async (body: any) => {
-  const { deadline } = body;
-
-  if (
-    !deadline ||
-    !(deadline.cohortYear && deadline.name && deadline.dueBy && deadline.type)
-  ) {
+export const createNewDeadlineParser = (
+  body: any
+): Prisma.DeadlineCreateInput => {
+  if (!body.deadline) {
     throw new SkylabError(
-      "Data missing from request body",
-      HttpStatusCode.BAD_REQUEST
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
     );
   }
 
-  const { cohortYear, ...deadlineData } = deadline;
+  const { deadline } = body;
+
+  if (
+    !(deadline.cohortYear && deadline.name && deadline.dueBy && deadline.type)
+  ) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  const { cohortYear, dueBy, ...deadlineData } = deadline;
+
+  return {
+    cohort: { connect: { academicYear: cohortYear } },
+    dueBy: new Date(dueBy),
+    ...deadlineData,
+  };
+};
+
+export const createNewDeadline = async (body: any) => {
+  const deadline = createNewDeadlineParser(body);
 
   try {
-    return { deadline: await createDeadline(deadlineData, Number(cohortYear)) };
+    return await createOneDeadline({ data: deadline });
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);

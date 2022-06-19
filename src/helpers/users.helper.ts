@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { prisma, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { createOneStudent } from "src/models/students.db";
 import { createManyUsers, createOneUser } from "src/models/users.db";
