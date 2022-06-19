@@ -5,6 +5,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneFacilitator,
   getManyFacilitators,
+  getOneFacilitator,
 } from "src/models/facilitator.db";
 import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
@@ -20,6 +21,13 @@ export const getFacilitatorInputParser = (
 ) => {
   const { user, id, ...data } = facilitator;
   return { ...user, ...data, facilitatorId: id };
+};
+
+export const getFacilitatorById = async (facilitatorId: string) => {
+  const facilitator = await getOneFacilitator({
+    where: { id: Number(facilitatorId) },
+  });
+  return getFacilitatorInputParser(facilitator);
 };
 
 /**

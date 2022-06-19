@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Adviser, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { createOneAdviser, getManyAdvisers } from "src/models/advisers.db";
+import {
+  createOneAdviser,
+  getManyAdvisers,
+  getOneAdviser,
+} from "src/models/advisers.db";
 import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { hashPassword, generateRandomHashedPassword } from "./users.helper";
@@ -16,6 +20,11 @@ export const getAdviserInputParser = (
 ) => {
   const { user, id, ...data } = adviser;
   return { ...user, ...data, adviserId: id };
+};
+
+export const getAdviserById = async (adviserId: string) => {
+  const adviser = await getOneAdviser({ where: { id: Number(adviserId) } });
+  return getAdviserInputParser(adviser);
 };
 
 /**
