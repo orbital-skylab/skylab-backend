@@ -41,31 +41,15 @@ export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
 };
 
 /**
- * @function getUserPassword Find a unique user record with the given query conditions
+ * @function getOneUserWithRoleData Find a unique user record (including role data) with the given query conditions
  * @param query The query conditions for the user
  * @returns The mentor record that matches the query conditions
  */
-export const getUserPassword = async (query: Prisma.UserFindUniqueArgs) => {
-  const queryParams = { ...query, rejectOnNotFound: false };
-  const user = await prisma.user.findUnique(queryParams);
-
-  if (!user) {
-    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
-  }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  return user.password;
-};
-
-/**
- * @function getOneUser Find a unique user record with the given query conditions
- * @param query The query conditions for the user
- * @returns The mentor record that matches the query conditions
- */
+// TODO: cache in node memory
 export const getOneUserWithRoleData = async (
   query: Prisma.UserFindUniqueArgs
 ) => {
   const { academicYear } = await getLatestCohort();
-
   const queryParams = {
     ...query,
     include: {
@@ -80,6 +64,11 @@ export const getOneUserWithRoleData = async (
         },
       },
       adviser: {
+        where: {
+          cohortYear: academicYear,
+        },
+      },
+      facilitator: {
         where: {
           cohortYear: academicYear,
         },
