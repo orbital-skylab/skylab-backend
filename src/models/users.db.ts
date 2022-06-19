@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
+import { getLatestCohort } from "src/helpers/cohorts.helper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
@@ -10,32 +11,17 @@ const prisma = new PrismaClient();
  * @param query The query conditions for the user
  * @returns The first user record that matches the query conditions
  */
-export const getFirstUser = async (
-  query: Prisma.UserFindUniqueArgs,
-  selectAll?: boolean
-) => {
-  let queryParams = { ...query, rejectOnNotFound: false };
-  if (!selectAll) {
-    queryParams = {
-      ...queryParams,
-      // exclude password
-      select: {
-        name: true,
-        email: true,
-        profilePicUrl: true,
-        githubUrl: true,
-        linkedinUrl: true,
-        personalSiteUrl: true,
-        selfIntro: true,
-      },
-    };
-  }
+export const getFirstUser = async (query: Prisma.UserFindUniqueArgs) => {
+  const queryParams = { ...query, rejectOnNotFound: false };
   const user = await prisma.user.findFirst(queryParams);
+
   if (!user) {
     throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
 
-  return user;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
 };
 
 /**
@@ -43,33 +29,74 @@ export const getFirstUser = async (
  * @param query The query conditions for the user
  * @returns The mentor record that matches the query conditions
  */
-export const getOneUser = async (
-  query: Prisma.UserFindUniqueArgs,
-  selectAll?: boolean
-) => {
-  let queryParams = { ...query, rejectOnNotFound: false };
-  if (!selectAll) {
-    queryParams = {
-      ...queryParams,
-      // exclude password
-      select: {
-        name: true,
-        email: true,
-        profilePicUrl: true,
-        githubUrl: true,
-        linkedinUrl: true,
-        personalSiteUrl: true,
-        selfIntro: true,
-      },
-    };
+export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
+  const queryParams = { ...query, rejectOnNotFound: false };
+  const user = await prisma.user.findUnique(queryParams);
+
+  if (!user) {
+    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+};
+
+/**
+ * @function getUserPassword Find a unique user record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The mentor record that matches the query conditions
+ */
+export const getUserPassword = async (query: Prisma.UserFindUniqueArgs) => {
+  const queryParams = { ...query, rejectOnNotFound: false };
+  const user = await prisma.user.findUnique(queryParams);
+
+  if (!user) {
+    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  return user.password;
+};
+
+/**
+ * @function getOneUser Find a unique user record with the given query conditions
+ * @param query The query conditions for the user
+ * @returns The mentor record that matches the query conditions
+ */
+export const getOneUserWithRoleData = async (
+  query: Prisma.UserFindUniqueArgs
+) => {
+  const { academicYear } = await getLatestCohort();
+
+  const queryParams = {
+    ...query,
+    include: {
+      student: {
+        where: {
+          cohortYear: academicYear,
+        },
+      },
+      mentor: {
+        where: {
+          cohortYear: academicYear,
+        },
+      },
+      adviser: {
+        where: {
+          cohortYear: academicYear,
+        },
+      },
+    },
+    rejectOnNotFound: false,
+  };
   const user = await prisma.user.findUnique(queryParams);
 
   if (!user) {
     throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
 
-  return user;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
 };
 
 /**
@@ -77,25 +104,20 @@ export const getOneUser = async (
  * @param query The query conditions to be selected upon
  * @returns The array of user records that match the query conditions
  */
-export const getManyUsers = async (
-  query: Prisma.UserFindManyArgs,
-  selectAll?: boolean
-) => {
-  const queryParams = selectAll
-    ? query
-    : {
-        ...query,
-        // exclude password
-        select: {
-          name: true,
-          email: true,
-          profilePicUrl: true,
-          githubUrl: true,
-          linkedinUrl: true,
-          personalSiteUrl: true,
-          selfIntro: true,
-        },
-      };
+export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
+  const queryParams = {
+    ...query,
+    // exclude password
+    select: {
+      name: true,
+      email: true,
+      profilePicUrl: true,
+      githubUrl: true,
+      linkedinUrl: true,
+      personalSiteUrl: true,
+      selfIntro: true,
+    },
+  };
   const users = await prisma.user.findMany(queryParams);
   return users;
 };

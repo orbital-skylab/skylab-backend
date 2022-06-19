@@ -6,7 +6,6 @@ import {
   deleteUserByEmail,
   updateUserByEmail,
   hashPassword,
-  userLogin,
 } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
 
@@ -45,34 +44,6 @@ router
       const email = req.params.email;
       const user = await getUserByEmail(email);
       res.status(HttpStatusCode.OK).json(user);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
-    }
-  })
-  .post("/:email", async (req: Request, res: Response) => {
-    try {
-      const { email } = req.params;
-      const { password } = req.body;
-
-      if (!password) {
-        res
-          .status(HttpStatusCode.BAD_REQUEST)
-          .send("Missing request parameters");
-      }
-
-      const { token } = await userLogin(email, password);
-      if (token) {
-        res
-          .status(HttpStatusCode.OK)
-          .cookie("token", token, { httpOnly: true })
-          .json({ email });
-      } else {
-        res.status(HttpStatusCode.UNAUTHORIZED).send("Password is incorrect");
-      }
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);

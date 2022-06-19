@@ -3,6 +3,8 @@ import {
   deleteOneUser,
   getManyUsers,
   getOneUser,
+  getOneUserWithRoleData,
+  getUserPassword,
   updateOneUser,
 } from "src/models/users.db";
 import bcrypt from "bcrypt";
@@ -33,6 +35,26 @@ export const getUserByEmail = async (email: string) => {
 };
 
 /**
+ * @function getUserPasswordByEmail Get the user with the specified email
+ * @param email The email of the user to retrieve
+ * @returns The User Record with the given email
+ */
+export const getUserPasswordByEmail = async (email: string) => {
+  const password = await getUserPassword({ where: { email: email } });
+  return password;
+};
+
+/**
+ * @function getUserWithRoleDataByEmail Get the user with the specified email and role data
+ * @param email The email of the user to retrieve
+ * @returns The User Record with the given email
+ */
+export const getUserWithRoleDataByEmail = async (email: string) => {
+  const user = await getOneUserWithRoleData({ where: { email: email } });
+  return user;
+};
+
+/**
  * @function updateUserByEmail Update the user with the specified email
  * @param email The email of the user to update
  * @param updates The updates required for the user record
@@ -53,8 +75,8 @@ export const deleteUserByEmail = async (email: string) => {
 };
 
 export const userLogin = async (email: string, password: string) => {
-  const user = await getUserByEmail(email);
-  const validPassword = await bcrypt.compare(password, user.password);
+  const userPassword = await getUserPasswordByEmail(email);
+  const validPassword = await bcrypt.compare(password, userPassword);
   return {
     token: validPassword
       ? jwt.sign({ email }, process.env.JWT_SECRET ?? "jwt_secret")
