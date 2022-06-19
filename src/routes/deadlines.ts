@@ -58,11 +58,8 @@ router
         .json("Parameters missing from request");
     }
     try {
-      const insertQuestionsToDeadline = await replaceQuestionsOfDeadline(
-        deadlineId,
-        req.body.questions
-      );
-      return res.status(HttpStatusCode.OK).json(insertQuestionsToDeadline);
+      await replaceQuestionsOfDeadline(deadlineId, req.body.questions);
+      return res.sendStatus(HttpStatusCode.OK);
     } catch (e) {
       return routeErrorHandler(res, e);
     }

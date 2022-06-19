@@ -12,11 +12,15 @@ const authorize = async (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
-    const { email } = jwt.verify(
+    const { id } = jwt.verify(
       token,
       process.env.JWT_SECRET ?? "jwt_secret"
     ) as JwtPayload;
-    if (req?.params?.email !== email) {
+    const userId = req?.params?.userId;
+    if (!userId) {
+      throw new SkylabError("Missing User Id", HttpStatusCode.BAD_REQUEST);
+    }
+    if (Number(userId) !== id) {
       throw new SkylabError("Verification failed", HttpStatusCode.UNAUTHORIZED);
     }
     next();

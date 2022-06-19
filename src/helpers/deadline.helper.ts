@@ -69,7 +69,7 @@ export const getFilteredDeadlines = async (filter: any) => {
         name: name ? name : undefined,
       },
     });
-    return deadlines;
+    return { deadlines: deadlines };
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -80,7 +80,9 @@ export const getFilteredDeadlines = async (filter: any) => {
 
 export const getDeadlineById = async (deadlineId: string) => {
   try {
-    return await getOneDeadline({ where: { id: Number(deadlineId) } });
+    return {
+      deadline: await getOneDeadline({ where: { id: Number(deadlineId) } }),
+    };
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -103,7 +105,7 @@ export const updateOneDeadline = async (
       where: { id: Number(deadlineId) },
       data: updates,
     });
-    return deadline;
+    return { deadline: deadline };
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -114,7 +116,9 @@ export const updateOneDeadline = async (
 
 export const deleteDeadlineById = async (deadlineId: string) => {
   try {
-    return await deleteOneDeadline({ where: { id: Number(deadlineId) } });
+    return {
+      deadline: await deleteOneDeadline({ where: { id: Number(deadlineId) } }),
+    };
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -127,8 +131,18 @@ export const getAllQuestionsOfDeadline = async (deadlineId: string) => {
   try {
     const rawDeadlinePayload = await getOneDeadline({
       where: { id: Number(deadlineId) },
-      include: { questions: true },
+      include: {
+        questions: {
+          orderBy: { questionNumber: "asc" },
+          include: {
+            options: {
+              select: { option: true },
+            },
+          },
+        },
+      },
     });
+
     if (!rawDeadlinePayload) {
       throw new SkylabError(
         `Could not find deadline of ID: ${deadlineId}`,
@@ -136,9 +150,11 @@ export const getAllQuestionsOfDeadline = async (deadlineId: string) => {
       );
     }
     return getAllQuestionsOfDeadlineParser(
-      <Prisma.DeadlineGetPayload<{ include: { questions: true } }>>(
-        rawDeadlinePayload
-      )
+      <
+        Prisma.DeadlineGetPayload<{
+          include: { questions: { include: { options: true } } };
+        }>
+      >rawDeadlinePayload
     );
   } catch (e) {
     if (!(e instanceof SkylabError)) {
@@ -150,11 +166,20 @@ export const getAllQuestionsOfDeadline = async (deadlineId: string) => {
 
 export const getAllQuestionsOfDeadlineParser = async (
   deadlineWithQuestions: Prisma.DeadlineGetPayload<{
-    include: { questions: true };
+    include: { questions: { include: { options: true } } };
   }>
 ) => {
   const { questions, ...deadline } = deadlineWithQuestions;
-  return { questions: questions, deadline: deadline };
+  return {
+    questions: questions.map((question) => {
+      const { options, ...questionData } = question;
+      return {
+        options: options.map((option) => option.option),
+        ...questionData,
+      };
+    }),
+    deadline: deadline,
+  };
 };
 
 export const replaceQuestionsOfDeadline = async (

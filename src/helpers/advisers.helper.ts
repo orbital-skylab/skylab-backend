@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
+import { Adviser, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createAdviser,
-  createManyAdvisers,
-  getFirstAdviser,
+  createOneAdviser,
   getManyAdvisers,
+  getOneAdviser,
 } from "src/models/advisers.db";
+import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 /**
  * @function getAdviserInputParser Parse the input returned from the prisma.adviser.find function
@@ -21,16 +22,8 @@ export const getAdviserInputParser = (
   return { ...user, ...data, adviserId: id };
 };
 
-/**
- * @function getAdviserByEmail Retrieve an adviser with the given email
- * @param email The email of the adviser to retrieve
- * @returns The adviser record with the given email
- */
-export const getAdviserByEmail = async (email: string) => {
-  const adviser = await getFirstAdviser({
-    where: { user: { email: email } },
-    orderBy: { cohortYear: "desc" },
-  });
+export const getAdviserById = async (adviserId: string) => {
+  const adviser = await getOneAdviser({ where: { id: Number(adviserId) } });
   return getAdviserInputParser(adviser);
 };
 
@@ -81,43 +74,117 @@ export const getFilteredAdvisers = async (query: any) => {
   return parsedAdvisers;
 };
 
-export const createAdviserInputParser = (
-  body: any
-): { user: Prisma.UserCreateInput; cohortYear: number } => {
-  const { cohortYear, ...user } = body;
-  const userData = <Prisma.UserCreateInput>user;
+export const createNewAdviserParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<{
+  user: Prisma.UserCreateInput;
+  adviser: Prisma.AdviserCreateInput;
+}> => {
+  const { adviser, user } = body;
+  if (!adviser || !user || (isAdmin && !user.password)) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  user.password = user.password
+    ? await hashPassword(user.password)
+    : await generateRandomHashedPassword();
+
   return {
-    user: userData,
-    cohortYear: Number(cohortYear),
+    user,
+    adviser,
   };
 };
 
-/**
- * @function createAdviserHelper Helper function to create an adviser
- * @param body The adviser information from the HTTP Request
- * @returns The adviser record created in the database
- */
-export const createAdviserHelper = async (body: any) => {
-  const { user, cohortYear } = createAdviserInputParser(body);
-  return await createAdviser(user, {
-    cohort: { connect: { academicYear: cohortYear } },
+export const createNewAdviser = async (body: any, isAdmin?: boolean) => {
+  const account = await createNewAdviserParser(body, isAdmin ?? false);
+
+  return await createOneUser({
+    data: { ...account.user, adviser: { create: account.adviser } },
   });
 };
 
-/**
- * @function createManyAdvisersHelper Helper function to create many advisers simultaenously
- * @param body The array of adviser datum from the HTTP Request
- * @returns The adviser records created in the database
- */
-export const createManyAdvisersHelper = async (
-  body: { user: Prisma.UserCreateInput; cohortYear: number }[]
-) => {
-  const advisers = body.map((data) => {
-    const { user, cohortYear } = data;
-    return {
-      user: user,
-      adviser: { cohort: { connect: { academicYear: cohortYear } } },
-    };
+export const createManyAdvisersParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<
+  {
+    user: Prisma.UserCreateInput;
+    adviser: Prisma.AdviserCreateInput;
+  }[]
+> => {
+  const { count, accounts } = body;
+
+  if (!count || !accounts) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+  if (count !== accounts.length) {
+    throw new SkylabError(
+      "Count and Accounts Data do not match",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const promises: Promise<string>[] = [];
+  accounts.forEach((account: { adviser: Adviser; user: User }) => {
+    const { user } = account;
+
+    if (isAdmin && !user.password) {
+      throw new SkylabError(
+        "All accounts should have a password input",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    promises.push(
+      user.password
+        ? hashPassword(user.password)
+        : generateRandomHashedPassword()
+    );
   });
-  return await createManyAdvisers(advisers);
+
+  await Promise.all(promises);
+  return accounts;
+};
+
+export const createManyAdvisers = async (body: any, isAdmin?: boolean) => {
+  const accounts = await createManyAdvisersParser(body, isAdmin ?? false);
+  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
+    return { data: { ...account.user, adviser: { create: account.adviser } } };
+  });
+  return await createManyUsers(prismaArgsArray);
+};
+
+export const addAdviserToAccountParser = (
+  body: any
+): Prisma.AdviserCreateInput & { cohortYear: number } => {
+  if (!body.adviser) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  return body.adviser;
+};
+
+export const addAdviserToAccount = async (userId: string, body: any) => {
+  const adviser = addAdviserToAccountParser(body);
+  const { cohortYear, ...adviserData } = adviser;
+  return await createOneAdviser({
+    data: {
+      ...adviserData,
+      cohort: { connect: { academicYear: cohortYear } },
+      user: { connect: { id: Number(userId) } },
+    },
+  });
 };

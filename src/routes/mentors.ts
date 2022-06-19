@@ -1,89 +1,29 @@
 import { Router, Request, Response } from "express";
-import { SkylabError } from "src/errors/SkylabError";
+import { getFilteredMentors, getMentorById } from "src/helpers/mentors.helper";
 import {
-  createManyMentorsHelper,
-  createMentorHelper,
-  getFilteredMentors,
-  getMentorByEmail,
-} from "src/helpers/mentors.helper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+  apiResponseWrapper,
+  routeErrorHandler,
+} from "src/utils/ApiResponseWrapper";
 
 const router = Router();
 
-router
-  .get("/", async (req: Request, res: Response) => {
-    try {
-      const allMentors = await getFilteredMentors(req.query);
-      res.status(HttpStatusCode.OK).json(allMentors);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
-    }
-  })
-  .post("/", async (req: Request, res: Response) => {
-    if (!req.body.user || !req.body.user.email || !req.body.user.cohortYear) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .send("Arguments missing from request");
-    }
-
-    try {
-      await createMentorHelper(req.body.user);
-      res.sendStatus(HttpStatusCode.OK);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
-    }
-  })
-  .all("/", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
-  });
-
-router.post("/batch", async (req: Request, res: Response) => {
-  if (!req.body.users) {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Parameters missing from request");
-  }
-
+router.get("/", async (req: Request, res: Response) => {
   try {
-    await createManyMentorsHelper(req.body.users);
-    res.sendStatus(HttpStatusCode.OK);
+    const mentors = await getFilteredMentors(req.query);
+    return apiResponseWrapper(res, { mentors: mentors });
   } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      res.status(HttpStatusCode.BAD_REQUEST).send(e.message);
-    } else {
-      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-    }
+    return routeErrorHandler(res, e);
   }
 });
 
-router
-  .get("/:email", async (req: Request, res: Response) => {
-    const { email } = req.params;
-    try {
-      const mentorWithEmail = await getMentorByEmail(email);
-      res.status(HttpStatusCode.OK).json(mentorWithEmail);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
-    }
-  })
-  .all("/:email", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
-  });
+router.get("/:mentorId", async (req: Request, res: Response) => {
+  const { mentorId } = req.params;
+  try {
+    const mentor = await getMentorById(mentorId);
+    return apiResponseWrapper(res, { mentor: mentor });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 export default router;

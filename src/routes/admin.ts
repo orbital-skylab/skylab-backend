@@ -28,8 +28,8 @@ const router = Router();
 
 router.post("/create-student/batch", async (req: Request, res: Response) => {
   try {
-    const createdStudents = await createManyStudents(req.body);
-    return apiResponseWrapper(res, { students: createdStudents });
+    const createdStudents = await createManyStudents(req.body, true);
+    return apiResponseWrapper(res, createdStudents);
   } catch (e) {
     routeErrorHandler(res, e);
   }
@@ -37,7 +37,7 @@ router.post("/create-student/batch", async (req: Request, res: Response) => {
 
 router.post("/create-student", async (req: Request, res: Response) => {
   try {
-    const createdStudent = await createNewStudent(req.body);
+    const createdStudent = await createNewStudent(req.body, true);
     return apiResponseWrapper(res, createdStudent);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -56,7 +56,7 @@ router.post("/:userId/student", async (req: Request, res: Response) => {
 
 router.post("/create-mentor/batch", async (req: Request, res: Response) => {
   try {
-    const createdMentors = await createManyMentors(req.body);
+    const createdMentors = await createManyMentors(req.body, true);
     return apiResponseWrapper(res, createdMentors);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -65,7 +65,7 @@ router.post("/create-mentor/batch", async (req: Request, res: Response) => {
 
 router.post("/create-mentor", async (req: Request, res: Response) => {
   try {
-    const createdMentor = await createNewMentor(req.body);
+    const createdMentor = await createNewMentor(req.body, true);
     return apiResponseWrapper(res, createdMentor);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -84,7 +84,7 @@ router.post("/:userId/mentor", async (req: Request, res: Response) => {
 
 router.post("/create-adviser/batch", async (req: Request, res: Response) => {
   try {
-    const createdAdvisers = await createManyAdvisers(req.body);
+    const createdAdvisers = await createManyAdvisers(req.body, true);
     return apiResponseWrapper(res, createdAdvisers);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -93,7 +93,7 @@ router.post("/create-adviser/batch", async (req: Request, res: Response) => {
 
 router.post("/create-adviser", async (req: Request, res: Response) => {
   try {
-    const createdAdviser = await createNewAdviser(req.body);
+    const createdAdviser = await createNewAdviser(req.body, true);
     return apiResponseWrapper(res, createdAdviser);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -114,7 +114,7 @@ router.post(
   "/create-facilitator/batch",
   async (req: Request, res: Response) => {
     try {
-      const createdFacilitators = await createManyFacilitators(req.body);
+      const createdFacilitators = await createManyFacilitators(req.body, true);
       return apiResponseWrapper(res, createdFacilitators);
     } catch (e) {
       routeErrorHandler(res, e);
@@ -124,7 +124,7 @@ router.post(
 
 router.post("/create-facilitator", async (req: Request, res: Response) => {
   try {
-    const createdFacilitator = await createNewFacilitator(req.body);
+    const createdFacilitator = await createNewFacilitator(req.body, true);
     return apiResponseWrapper(res, createdFacilitator);
   } catch (e) {
     routeErrorHandler(res, e);

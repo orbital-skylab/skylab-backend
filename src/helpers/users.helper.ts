@@ -1,68 +1,21 @@
-import { Prisma } from "@prisma/client";
-import {
-  deleteOneUser,
-  getManyUsers,
-  getOneUser,
-  updateOneUser,
-} from "src/models/users.db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import SibApiV3Sdk from "@sendinblue/client";
-import { bcc, replyTo, sender, subject } from "src/utils/Emails";
-
-type Email = {
-  email: string;
-};
-
-/**
- * @function getAllUsers Get all user records in the database
- * @returns An array of all user records in the database
- */
-export const getAllUsers = async () => {
-  const allUsers = await getManyUsers({});
-  return allUsers;
-};
-
-/**
- * @function getUserByEmail Get the user with the specified email
- * @param email The email of the user to retrieve
- * @returns The User Record with the given email
- */
-export const getUserByEmail = async (email: string) => {
-  const user = await getOneUser({
-    where: { email: email },
-  });
-  return user;
-};
-
-/**
- * @function updateUserByEmail Update the user with the specified email
- * @param email The email of the user to update
- * @param updates The updates required for the user record
- */
-export const updateUserByEmail = async (
-  email: string,
-  updates: Prisma.UserUpdateInput
-) => {
-  return await updateOneUser({ where: { email: email }, data: updates });
-};
-
-/**
- * @function deleteUserByEmail Delete the user with the specified email
- * @param email The email of the user to delete
- */
-export const deleteUserByEmail = async (email: string) => {
-  return await deleteOneUser({ where: { email: email } });
-};
+import { getOneUser } from "src/models/users.db";
 
 export const userLogin = async (email: string, password: string) => {
-  const user = await getUserByEmail(email);
-  const validPassword = await bcrypt.compare(password, user.password);
+  const user = await getOneUser({ where: { email: email } });
+  const isValidPassword = await bcrypt.compare(password, user.password);
   return {
-    token: validPassword
-      ? jwt.sign({ email }, process.env.JWT_SECRET ?? "jwt_secret")
+    token: isValidPassword
+      ? jwt.sign(user, process.env.JWT_SECRET ?? "jwt_secret")
       : null,
   };
+};
+
+export const hashPassword = async (plainTextPassword: string) => {
+  const saltRounds = 10;
+  return await bcrypt.hash(plainTextPassword, saltRounds);
 };
 
 export const generateRandomHashedPassword = async () => {
@@ -78,12 +31,9 @@ export const generateRandomHashedPassword = async () => {
   return await hashPassword(plainTextPassword);
 };
 
-export const hashPassword = async (plainTextPassword: string) => {
-  const saltRounds = 10;
-  return await bcrypt.hash(plainTextPassword, saltRounds);
-};
-
-export const sendPasswordResetEmail = async (emails: Array<Email>) => {
+export const sendPasswordResetEmail = async (
+  emails: Array<{ email: string }>
+) => {
   const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
   apiInstance.setApiKey(
@@ -93,11 +43,11 @@ export const sendPasswordResetEmail = async (emails: Array<Email>) => {
 
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
 
-  sendSmtpEmail.subject = subject;
-  sendSmtpEmail.sender = { email: sender };
+  sendSmtpEmail.subject = "Reset Password for Orbital Skylab";
+  sendSmtpEmail.sender = { email: "nvjn37@gmail.com" };
   sendSmtpEmail.to = emails;
-  sendSmtpEmail.bcc = [{ email: bcc }];
-  sendSmtpEmail.replyTo = { email: replyTo };
+  sendSmtpEmail.bcc = [{ email: "nvjn37@gmail.com" }];
+  sendSmtpEmail.replyTo = { email: "nvjn37@gmail.com" };
 
   apiInstance.sendTransacEmail(sendSmtpEmail).then(
     function (data) {

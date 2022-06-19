@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
+import { Prisma, Student, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createManyStudents,
-  createStudent,
-  getFirstStudent,
+  createOneStudent,
   getManyStudents,
+  getOneStudent,
 } from "src/models/students.db";
+import { createManyUsers, createOneUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { generateRandomHashedPassword } from "./users.helper";
+import { generateRandomHashedPassword, hashPassword } from "./users.helper";
 
 /**
  * @function getStudentInputParser Parse the input returned from the prisma.student.find function
@@ -22,26 +22,7 @@ export const getStudentInputParser = (
   return { ...user, ...data, studentId: id };
 };
 
-/**
- * Retrieve a student with the given email
- * @param email The email of the student to retrieve
- * @returns The student record with the given email
- */
-export const getStudentByEmail = async (email: string) => {
-  const student = await getFirstStudent({
-    where: { user: { email: email } },
-    orderBy: { cohortYear: "desc" },
-  });
-  return getStudentInputParser(student);
-};
-
-/**
- * @function getFilteredStudentsWhereInputParser Parse the query from the
- * HTTP Request and returns a query object for prisma.student.findMany
- * @param query The raw query object from the HTTP Request
- * @returns A filter object that works with prisma.student.findMany
- */
-export const getFilteredStudentsWhereInputParser = (query: any) => {
+export const getStudentsFilterParser = (query: any) => {
   let filter: Prisma.StudentFindManyArgs = {};
   if ((query.page && !query.limit) || (query.limit && !query.page)) {
     throw new SkylabError(
@@ -73,7 +54,7 @@ export const getFilteredStudentsWhereInputParser = (query: any) => {
  * @returns Array of Student Records that match the given query
  */
 export const getFilteredStudents = async (query: any) => {
-  const filteredQuery = getFilteredStudentsWhereInputParser(query);
+  const filteredQuery = getStudentsFilterParser(query);
   const students = await getManyStudents(filteredQuery);
   const parsedStudents = students.map((student) =>
     getStudentInputParser(student)
@@ -81,45 +62,121 @@ export const getFilteredStudents = async (query: any) => {
   return parsedStudents;
 };
 
-/**
- * @function createStudentInputParser Parse the query body received from
- * the HTTP Request to be passed to prisma.student.create
- * @param body The raw query body from the HTTP Request
- * @returns The create input to be passed to prisma.student.create
- */
-export const createStudentInputParser = async (body: any) => {
-  const { nusnetId, matricNo, cohortYear, ...userWithoutPassword } = body;
-  const hashedPassword = await generateRandomHashedPassword();
-  const user = { ...userWithoutPassword, password: hashedPassword };
-  const userData = <Prisma.UserCreateInput>user;
+export const getStudentById = async (studentId: string) => {
+  const student = await getOneStudent({ where: { id: Number(studentId) } });
+  return getStudentInputParser(student);
+};
+
+export const createNewStudentParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<{
+  user: Prisma.UserCreateInput;
+  student: Prisma.StudentCreateInput;
+}> => {
+  const { student, user } = body;
+  if (!student || !user || (isAdmin && !user.password)) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  user.password = user.password
+    ? await hashPassword(user.password)
+    : await generateRandomHashedPassword();
+
   return {
-    user: userData,
-    student: {
-      nusnetId: nusnetId ? String(nusnetId) : undefined,
-      matricNo: matricNo ? String(matricNo) : undefined,
-      cohort: { connect: { academicYear: Number(cohortYear) } },
-    },
+    user,
+    student,
   };
 };
 
-/**
- * @function createStudentHelper Helper function to create a student
- * @param body The raw query body from the HTTP Request
- * @returns The student record created
- */
-export const createStudentHelper = async (body: any) => {
-  const { user, student } = await createStudentInputParser(body);
-  return await createStudent(user, student);
+export const createNewStudent = async (body: any, isAdmin?: boolean) => {
+  const account = await createNewStudentParser(body, isAdmin ?? false);
+  return await createOneUser({
+    data: { ...account.user, student: { create: account.student } },
+  });
 };
 
-/**
- * @function createManyStudentsHelper Helper function to create many students simultaenously
- * @param body The array of student datum from the HTTP Request
- * @returns The student records created in the database
- */
-export const createManyStudentsHelper = async (body: any[]) => {
-  const students = await Promise.all(
-    body.map((data) => createStudentInputParser(data))
-  );
-  return await createManyStudents(students);
+export const createManyStudentsParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<
+  {
+    user: Prisma.UserCreateInput;
+    student: Prisma.StudentCreateInput;
+  }[]
+> => {
+  const { count, accounts } = body;
+
+  if (!count || !accounts) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+  if (count !== accounts.length) {
+    throw new SkylabError(
+      "Count and Accounts Data do not match",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const promises: Promise<string>[] = [];
+  accounts.forEach((account: { student: Student; user: User }) => {
+    const { user } = account;
+
+    if (isAdmin && !user.password) {
+      throw new SkylabError(
+        "All accounts should have a password input",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    promises.push(
+      user.password
+        ? hashPassword(user.password)
+        : generateRandomHashedPassword()
+    );
+  });
+
+  await Promise.all(promises);
+  return accounts;
+};
+
+export const createManyStudents = async (body: any, isAdmin?: boolean) => {
+  const accounts = await createManyStudentsParser(body, isAdmin ?? false);
+  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
+    return { data: { ...account.user, student: { create: account.student } } };
+  });
+  return await createManyUsers(prismaArgsArray);
+};
+
+export const addStudentToAccountParser = (
+  body: any
+): Prisma.StudentCreateInput & { cohortYear: number } => {
+  if (!body.student) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  return body.student;
+};
+
+export const addStudentToAccount = async (userId: string, body: any) => {
+  const student = addStudentToAccountParser(body);
+  const { cohortYear, ...studentData } = student;
+  return await createOneStudent({
+    data: {
+      ...studentData,
+      cohort: { connect: { academicYear: cohortYear } },
+      user: { connect: { id: Number(userId) } },
+    },
+  });
 };

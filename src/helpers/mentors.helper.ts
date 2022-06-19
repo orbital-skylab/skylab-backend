@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
+import { Mentor, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createManyMentors,
-  createMentor,
-  getFirstMentor,
+  createOneMentor,
   getManyMentors,
+  getOneMentor,
 } from "src/models/mentors.db";
+import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -21,26 +22,18 @@ export const getMentorInputParser = (
   return { ...user, ...data, mentorId: id };
 };
 
-/**
- * @function getMentorByEmail Retrieve a mentor with the given email
- * @param email The email of the mentor to retrieve
- * @returns The mentor record with the given email
- */
-export const getMentorByEmail = async (email: string) => {
-  const mentor = await getFirstMentor({
-    where: { user: { email: email } },
-    orderBy: { cohortYear: "desc" },
-  });
+export const getMentorById = async (mentorId: string) => {
+  const mentor = await getOneMentor({ where: { id: Number(mentorId) } });
   return getMentorInputParser(mentor);
 };
 
 /**
- * @function getFilteredMentorsWhereInputParser Parse the query from the HTTP Request and returns a query object
+ * @function getMentorsFilterParser Parse the query from the HTTP Request and returns a query object
  * for prisma.mentor.findMany
  * @param query The raw query object from the HTTP Request
  * @returns A filter object that works with prisma.mentor.findMany
  */
-export const getFilteredMentorsWhereInputParser = (query: any) => {
+export const getMentorsFilterParser = (query: any) => {
   let filter: Prisma.MentorFindManyArgs = {};
 
   if ((query.page && !query.limit) || (query.limit && !query.page)) {
@@ -73,58 +66,123 @@ export const getFilteredMentorsWhereInputParser = (query: any) => {
  * @returns Array of Mentor Records that match the given query
  */
 export const getFilteredMentors = async (query: any) => {
-  const filteredQuery = getFilteredMentorsWhereInputParser(query);
+  const filteredQuery = getMentorsFilterParser(query);
   const mentors = await getManyMentors(filteredQuery);
   const parsedMentors = mentors.map((mentor) => getMentorInputParser(mentor));
   return parsedMentors;
 };
 
-/**
- * @function createMentorInputParser Parse the query body received from the HTTP Request
- * to be passed to prisma.mentor.create
- * @param body The raw query from the HTTP Request
- * @returns The create input to be passed to prisma.mentor.create
- */
-export const createMentorInputParser = (
-  body: any
-): {
+export const createNewMentorParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<{
   user: Prisma.UserCreateInput;
-  cohortYear: number;
-} => {
-  const { cohortYear, ...user } = body;
-  const userData = <Prisma.UserCreateInput>user;
+  mentor: Prisma.MentorCreateInput;
+}> => {
+  const { mentor, user } = body;
+  if (!mentor || !user || (isAdmin && !user.password)) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  user.password = user.password
+    ? await hashPassword(user.password)
+    : await generateRandomHashedPassword();
+
   return {
-    user: userData,
-    cohortYear: Number(cohortYear),
+    user,
+    mentor,
   };
 };
 
-/**
- * @function createMentorHelper Helper function to create a mentor
- * @param body THe mentor information from the HTTP Request
- * @returns The mentor record created in the database
- */
-export const createMentorHelper = async (body: any) => {
-  const { user, cohortYear } = createMentorInputParser(body);
-  return await createMentor(user, {
-    cohort: { connect: { academicYear: cohortYear } },
+export const createNewMentor = async (body: any, isAdmin?: boolean) => {
+  const account = await createNewMentorParser(body, isAdmin ?? false);
+
+  return await createOneUser({
+    data: { ...account.user, mentor: { create: account.mentor } },
   });
 };
 
-/**
- * @function createManyMentorsHelper Helper function to create many mentors simultaenously
- * @param body The array of mentor datum from the HTTP Request
- * @returns The mentor records created in the database
- */
-export const createManyMentorsHelper = async (
-  body: { user: Prisma.UserCreateInput; cohortYear: number }[]
-) => {
-  const mentors = body.map((data) => {
-    const { user, cohortYear } = data;
-    return {
-      user: user,
-      mentor: { cohort: { connect: { academicYear: cohortYear } } },
-    };
+export const createManyMentorsParser = async (
+  body: any,
+  isAdmin: boolean
+): Promise<
+  {
+    user: Prisma.UserCreateInput;
+    mentor: Prisma.MentorCreateInput;
+  }[]
+> => {
+  const { count, accounts } = body;
+
+  if (!count || !accounts) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+  if (count !== accounts.length) {
+    throw new SkylabError(
+      "Count and Accounts Data do not match",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const promises: Promise<string>[] = [];
+  accounts.forEach((account: { mentor: Mentor; user: User }) => {
+    const { user } = account;
+
+    if (isAdmin && !user.password) {
+      throw new SkylabError(
+        "All accounts should have a password input",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    promises.push(
+      user.password
+        ? hashPassword(user.password)
+        : generateRandomHashedPassword()
+    );
   });
-  return await createManyMentors(mentors);
+
+  await Promise.all(promises);
+  return accounts;
+};
+
+export const createManyMentors = async (body: any, isAdmin?: boolean) => {
+  const accounts = await createManyMentorsParser(body, isAdmin ?? false);
+  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
+    return { data: { ...account.user, mentor: { create: account.mentor } } };
+  });
+  return await createManyUsers(prismaArgsArray);
+};
+
+export const addMentorToAccountParser = (
+  body: any
+): Prisma.MentorCreateInput & { cohortYear: number } => {
+  if (!body.mentor) {
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST,
+      body
+    );
+  }
+
+  return body.mentor;
+};
+
+export const addMentorToAccount = async (userId: string, body: any) => {
+  const mentor = addMentorToAccountParser(body);
+  const { cohortYear, ...mentorData } = mentor;
+  return await createOneMentor({
+    data: {
+      ...mentorData,
+      cohort: { connect: { academicYear: cohortYear } },
+      user: { connect: { id: Number(userId) } },
+    },
+  });
 };
