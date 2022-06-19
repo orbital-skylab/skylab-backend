@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import {
-  createDeadlineHelper,
+  createNewDeadline,
   deleteDeadlineById,
   getAllQuestionsOfDeadline,
   getDeadlineById,
@@ -19,7 +19,7 @@ const router = Router();
 router
   .post("/", async (req: Request, res: Response) => {
     try {
-      const createdDeadline = await createDeadlineHelper(req.body);
+      const createdDeadline = await createNewDeadline(req.body);
       return apiResponseWrapper(res, createdDeadline);
     } catch (e) {
       return routeErrorHandler(res, e);
