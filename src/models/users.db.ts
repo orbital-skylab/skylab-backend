@@ -128,7 +128,7 @@ export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
  */
 export const updateOneUser = async (query: Prisma.UserUpdateArgs) => {
   try {
-    await prisma.user.update(query);
+    return await prisma.user.update(query);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -138,33 +138,42 @@ export const updateOneUser = async (query: Prisma.UserUpdateArgs) => {
   }
 };
 
-/**
- * @function deleteOneUser Delete one user based on the given unique condition
- * @param query The unique identifier for the user to delte
- */
-export const deleteOneUser = async (query: Prisma.UserDeleteArgs) => {
+export const createOneUser = async (query: Prisma.UserCreateArgs) => {
   try {
-    await prisma.user.delete(query);
+    return await prisma.user.create(query);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    if (e.code === "P2002") {
+      throw new SkylabError(
+        "User is not unique",
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
+      );
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 };
 
-/**
- * @function deleteManyUser Delete many users based on the given query conditions
- * @param query The query conditions to identify the users to delete
- */
-export const deleteManyUser = async (query: Prisma.UserDeleteManyArgs) => {
+export const createManyUsers = async (query: Prisma.UserCreateManyArgs) => {
   try {
-    await prisma.user.deleteMany(query);
+    return await prisma.user.createMany(query);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+
+    if (e.code === "P2002") {
+      throw new SkylabError(
+        "Some users are not unique",
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
+      );
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 };

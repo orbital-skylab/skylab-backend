@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, Prisma } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
+import { getOneAdviser } from "src/models/advisers.db";
+import { getOneMentor } from "src/models/mentors.db";
 
 import {
   createProject,
   getManyProjects,
   updateProject,
 } from "src/models/projects.db";
+import { getOneStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { getAdviserInputParser } from "./advisers.helper";
 import { getMentorInputParser } from "./mentors.helper";
@@ -112,12 +115,39 @@ export const getFilteredProjects = async (query: any) => {
 export const createProjectInputParser = (
   body: any
 ): Prisma.ProjectCreateInput => {
-  const { cohortYear, ...projectInfo } = body;
+  const { cohortYear, students, adviser, mentor, ...projectInfo } = body;
   const projectData = <Prisma.ProjectCreateInput>projectInfo;
-  return {
+  let createProjectInput = {
     ...projectData,
     cohort: { connect: { academicYear: Number(cohortYear) } },
   };
+
+  if (adviser) {
+    createProjectInput = {
+      ...createProjectInput,
+      adviser: { connect: { id: adviser } },
+    };
+  }
+
+  if (mentor) {
+    createProjectInput = {
+      ...createProjectInput,
+      mentor: { connect: { id: mentor } },
+    };
+  }
+
+  if (students) {
+    createProjectInput = {
+      ...createProjectInput,
+      students: {
+        connect: students.map((student: number) => {
+          return { id: student };
+        }),
+      },
+    };
+  }
+
+  return createProjectInput;
 };
 
 /**
@@ -172,4 +202,44 @@ export const addUsersToProject = async (
     where: { id: projectId },
     data: addUsersToProjectParser(users),
   });
+};
+
+export const getProjectsViaIds = async (users: {
+  student?: number;
+  adviser?: number;
+  mentor?: number;
+}) => {
+  const { student, adviser, mentor } = users;
+
+  if (student) {
+    return await getOneStudent({
+      where: { id: student },
+      include: {
+        project: { include: { students: true, mentor: true, adviser: true } },
+      },
+      select: { project: true },
+    });
+  }
+
+  if (adviser) {
+    return getOneAdviser({
+      where: { id: adviser },
+      include: {
+        projects: {
+          include: { students: true, mentor: true, adviser: true },
+        },
+      },
+      select: { projects: true },
+    });
+  }
+
+  if (mentor) {
+    return getOneMentor({
+      where: { id: mentor },
+      include: {
+        projects: { include: { students: true, mentor: true, adviser: true } },
+      },
+      select: { projects: true },
+    });
+  }
 };

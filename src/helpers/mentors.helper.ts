@@ -1,12 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
-import {
-  createManyMentors,
-  createMentor,
-  getFirstMentor,
-  getManyMentors,
-} from "src/models/mentors.db";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import { SkylabError } from "src/errors/SkylabError";
+import { getManyMentors, getOneMentor } from "src/models/mentors.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -20,32 +16,34 @@ export const getMentorInputParser = (
   return { ...user, ...data, mentorId: id };
 };
 
-/**
- * @function getMentorByEmail Retrieve a mentor with the given email
- * @param email The email of the mentor to retrieve
- * @returns The mentor record with the given email
- */
-export const getMentorByEmail = async (email: string) => {
-  const mentor = await getFirstMentor({
-    where: { user: { email: email } },
-    orderBy: { cohortYear: "desc" },
-  });
+export const getMentorById = async (mentorId: string) => {
+  const mentor = await getOneMentor({ where: { id: Number(mentorId) } });
   return getMentorInputParser(mentor);
 };
 
 /**
- * @function getFilteredMentorsWhereInputParser Parse the query from the HTTP Request and returns a query object
+ * @function getMentorsFilterParser Parse the query from the HTTP Request and returns a query object
  * for prisma.mentor.findMany
  * @param query The raw query object from the HTTP Request
  * @returns A filter object that works with prisma.mentor.findMany
  */
-export const getFilteredMentorsWhereInputParser = (query: any) => {
+export const getMentorsFilterParser = (query: any) => {
   let filter: Prisma.MentorFindManyArgs = {};
+
+  if ((query.page && !query.limit) || (query.limit && !query.page)) {
+    throw new SkylabError(
+      `${
+        query.limit ? "Page" : "Limit"
+      } parameter missing in a pagination query`,
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
 
   if (query.page && query.limit) {
     filter = {
+      ...filter,
       take: Number(query.limit),
-      skip: (query.page - 1) * query.limit,
+      skip: Number(query.page) * Number(query.limit),
     };
   }
 
@@ -62,65 +60,8 @@ export const getFilteredMentorsWhereInputParser = (query: any) => {
  * @returns Array of Mentor Records that match the given query
  */
 export const getFilteredMentors = async (query: any) => {
-  const filteredQuery = getFilteredMentorsWhereInputParser(query);
+  const filteredQuery = getMentorsFilterParser(query);
   const mentors = await getManyMentors(filteredQuery);
   const parsedMentors = mentors.map((mentor) => getMentorInputParser(mentor));
   return parsedMentors;
-};
-
-/**
- * @function createMentorInputParser Parse the query body received from the HTTP Request
- * to be passed to prisma.mentor.create
- * @param body The raw query from the HTTP Request
- * @returns The create input to be passed to prisma.mentor.create
- */
-export const createMentorInputParser = async (
-  body: any
-): Promise<{
-  user: Prisma.UserCreateInput;
-  cohortYear: number;
-}> => {
-  const { cohortYear, password, ...userWithoutPassword } = body;
-
-  const hashedPassword = password
-    ? hashPassword(password)
-    : await generateRandomHashedPassword();
-
-  const user = { ...userWithoutPassword, password: hashedPassword };
-
-  const userData = <Prisma.UserCreateInput>user;
-  return {
-    user: userData,
-    cohortYear: Number(cohortYear),
-  };
-};
-
-/**
- * @function createMentorHelper Helper function to create a mentor
- * @param body THe mentor information from the HTTP Request
- * @returns The mentor record created in the database
- */
-export const createMentorHelper = async (body: any) => {
-  const { user, cohortYear } = await createMentorInputParser(body);
-  return await createMentor(user, {
-    cohort: { connect: { academicYear: cohortYear } },
-  });
-};
-
-/**
- * @function createManyMentorsHelper Helper function to create many mentors simultaenously
- * @param body The array of mentor datum from the HTTP Request
- * @returns The mentor records created in the database
- */
-export const createManyMentorsHelper = async (
-  body: { user: Prisma.UserCreateInput; cohortYear: number }[]
-) => {
-  const mentors = body.map((data) => {
-    const { user, cohortYear } = data;
-    return {
-      user: user,
-      mentor: { cohort: { connect: { academicYear: cohortYear } } },
-    };
-  });
-  return await createManyMentors(mentors);
 };

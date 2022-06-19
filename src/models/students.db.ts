@@ -66,22 +66,9 @@ export const getManyStudents = async ({
   return students;
 };
 
-/**
- * @function createStudent Create a student with an associated User Record
- * @param user The information to create the User Record
- * @param student The information to creat the Student Record
- * @returns The student object that was created
- */
-export const createStudent = async (
-  user: Prisma.UserCreateInput,
-  student: Omit<Prisma.StudentCreateInput, "user">
-) => {
+export const createOneStudent = async (student: Prisma.StudentCreateArgs) => {
   try {
-    const createdStudent = await prisma.student.create({
-      data: { user: { create: user }, ...student },
-    });
-    console.log(createdStudent);
-    return createdStudent;
+    return await prisma.student.create(student);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -90,40 +77,20 @@ export const createStudent = async (
     if (e.code === "P2002") {
       throw new SkylabError(
         "Student is not unique",
-        HttpStatusCode.BAD_REQUEST
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
       );
     }
 
-    throw new SkylabError(
-      e.message +
-        `\n user: ${JSON.stringify(user)} \n student: ${JSON.stringify(
-          student
-        )}`,
-      HttpStatusCode.BAD_REQUEST
-    );
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 };
 
-export interface IStudentCreateMany {
-  user: Prisma.UserCreateInput;
-  student: Omit<Prisma.StudentCreateInput, "user">;
-}
-
-/**
- * @function createManyStudents Create many Students with associated User Records simultaenously
- * @param data The array of data to create the Student Records with
- * @returns The array of student objects created
- */
-export const createManyStudents = async (data: IStudentCreateMany[]) => {
+export const createManyStudent = async (
+  students: Prisma.StudentCreateManyArgs
+) => {
   try {
-    const createdStudents = await Promise.all(
-      data.map(async (userData) => {
-        return await prisma.student.create({
-          data: { user: { create: userData.user }, ...userData.student },
-        });
-      })
-    );
-    return createdStudents;
+    return await prisma.student.createMany(students);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -131,11 +98,10 @@ export const createManyStudents = async (data: IStudentCreateMany[]) => {
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        `Student ${e.meta} is not unique`,
-        HttpStatusCode.BAD_REQUEST
+        "One of the students are not unique",
+        HttpStatusCode.BAD_REQUEST,
+        e.meta
       );
     }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
