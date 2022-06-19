@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
+import { prisma, Prisma } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { createOneStudent } from "src/models/students.db";
 import { createManyUsers, createOneUser } from "src/models/users.db";
@@ -27,10 +27,10 @@ export const createNewStudentParser = (
 
 export const createNewStudent = async (body: any) => {
   const account = createNewStudentParser(body);
-
-  return await createOneUser({
+  const prismaArg: Prisma.UserCreateArgs = {
     data: { ...account.user, student: { create: account.student } },
-  });
+  };
+  return await createOneUser(prismaArg);
 };
 
 export const createManyStudentsParser = (
@@ -61,14 +61,12 @@ export const createManyStudentsParser = (
 
 export const createManyStudents = async (body: any) => {
   const accounts = createManyStudentsParser(body);
-  return await createManyUsers({
-    data: accounts.map((account) => {
-      return {
-        ...account.user,
-        student: { create: account.student },
-      };
-    }),
+  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
+    return {
+      data: { ...account.user, student: { create: account.student } },
+    };
   });
+  return await createManyUsers(prismaArgsArray);
 };
 
 export const addStudentToAccountParser = (
