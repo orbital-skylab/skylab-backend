@@ -1,11 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Adviser, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import {
-  createOneAdviser,
-  getFirstAdviser,
-  getManyAdvisers,
-} from "src/models/advisers.db";
+import { createOneAdviser, getManyAdvisers } from "src/models/advisers.db";
 import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { hashPassword, generateRandomHashedPassword } from "./users.helper";
@@ -20,19 +16,6 @@ export const getAdviserInputParser = (
 ) => {
   const { user, id, ...data } = adviser;
   return { ...user, ...data, adviserId: id };
-};
-
-/**
- * @function getAdviserByEmail Retrieve an adviser with the given email
- * @param email The email of the adviser to retrieve
- * @returns The adviser record with the given email
- */
-export const getAdviserByEmail = async (email: string) => {
-  const adviser = await getFirstAdviser({
-    where: { user: { email: email } },
-    orderBy: { cohortYear: "desc" },
-  });
-  return getAdviserInputParser(adviser);
 };
 
 /**

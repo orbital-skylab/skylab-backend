@@ -4,7 +4,6 @@ import { Facilitator, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneFacilitator,
-  getFirstFacilitator,
   getManyFacilitators,
 } from "src/models/facilitator.db";
 import { createOneUser, createManyUsers } from "src/models/users.db";
@@ -21,14 +20,6 @@ export const getFacilitatorInputParser = (
 ) => {
   const { user, id, ...data } = facilitator;
   return { ...user, ...data, facilitatorId: id };
-};
-
-export const getFacilitatorByEmail = async (email: string) => {
-  const facilitator = await getFirstFacilitator({
-    where: { user: { email: email } },
-    orderBy: { cohortYear: "desc" },
-  });
-  return getFacilitatorInputParser(facilitator);
 };
 
 /**
