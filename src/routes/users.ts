@@ -29,7 +29,7 @@ const router = Router();
 router.post("/create-student/batch", async (req: Request, res: Response) => {
   try {
     const createdStudents = await createManyStudents(req.body);
-    return apiResponseWrapper(res, createdStudents);
+    return apiResponseWrapper(res, { students: createdStudents });
   } catch (e) {
     routeErrorHandler(res, e);
   }

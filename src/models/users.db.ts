@@ -157,9 +157,9 @@ export const createOneUser = async (query: Prisma.UserCreateArgs) => {
   }
 };
 
-export const createManyUsers = async (query: Prisma.UserCreateManyArgs) => {
+export const createManyUsers = async (queries: Prisma.UserCreateArgs[]) => {
   try {
-    return await prisma.user.createMany(query);
+    return await Promise.all(queries.map((query) => prisma.user.create(query)));
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
