@@ -149,14 +149,10 @@ export const createManyStudentsParser = async (
 
 export const createManyStudents = async (body: any, isAdmin?: boolean) => {
   const accounts = await createManyStudentsParser(body, isAdmin ?? false);
-  return await createManyUsers({
-    data: accounts.map((account) => {
-      return {
-        ...account.user,
-        student: { create: account.student },
-      };
-    }),
+  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
+    return { data: { ...account.user, student: { create: account.student } } };
   });
+  return await createManyUsers(prismaArgsArray);
 };
 
 export const addStudentToAccountParser = (
