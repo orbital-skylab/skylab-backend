@@ -20,7 +20,7 @@ router
   .post("/", async (req: Request, res: Response) => {
     try {
       const createdDeadline = await createNewDeadline(req.body);
-      return apiResponseWrapper(res, createdDeadline);
+      return apiResponseWrapper(res, { deadline: createdDeadline });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -28,7 +28,7 @@ router
   .get("/", async (req: Request, res: Response) => {
     try {
       const deadlines = await getFilteredDeadlines(req.query);
-      return apiResponseWrapper(res, deadlines);
+      return apiResponseWrapper(res, { deadlines: deadlines });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -44,7 +44,7 @@ router
     const { deadlineId } = req.params;
     try {
       const deadlineWithQuestions = await getAllQuestionsOfDeadline(deadlineId);
-      return res.status(HttpStatusCode.OK).json(deadlineWithQuestions);
+      return apiResponseWrapper(res, deadlineWithQuestions);
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -58,8 +58,11 @@ router
         .json("Parameters missing from request");
     }
     try {
-      await replaceQuestionsOfDeadline(deadlineId, req.body.questions);
-      return res.sendStatus(HttpStatusCode.OK);
+      const newQuestions = await replaceQuestionsOfDeadline(
+        deadlineId,
+        req.body.questions
+      );
+      return apiResponseWrapper(res, { questions: newQuestions });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -71,7 +74,7 @@ router
 
     try {
       const deadline = await getDeadlineById(deadlineId);
-      return res.status(HttpStatusCode.OK).json(deadline);
+      return apiResponseWrapper(res, { deadline: deadline });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -82,7 +85,7 @@ router
 
     try {
       const updatedDeadline = await updateOneDeadline(deadlineId, deadline);
-      return res.status(HttpStatusCode.OK).json(updatedDeadline);
+      return apiResponseWrapper(res, { deadline: updatedDeadline });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -91,7 +94,7 @@ router
     const { deadlineId } = req.params;
     try {
       const deletedDeadline = await deleteDeadlineById(deadlineId);
-      return res.status(HttpStatusCode.OK).json(deletedDeadline);
+      return apiResponseWrapper(res, { deadline: deletedDeadline });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
