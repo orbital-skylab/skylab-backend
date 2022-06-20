@@ -63,7 +63,7 @@ export const createNewDeadline = async (body: any) => {
 export const getFilteredDeadlines = async (filter: any) => {
   const { cohortYear, name } = filter;
   try {
-    const deadlines = getManyDeadlines({
+    const deadlines = await getManyDeadlines({
       where: {
         cohortYear: cohortYear ? Number(cohortYear) : undefined,
         name: name ? name : undefined,
