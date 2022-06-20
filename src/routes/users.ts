@@ -149,6 +149,7 @@ router.get("/:email", async (req: Request, res: Response) => {
   const { email } = req.params;
   try {
     const user = await getUserByEmail(email);
+    console.log(user);
     return apiResponseWrapper(res, { user: user });
   } catch (e) {
     return routeErrorHandler(res, e);
