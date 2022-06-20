@@ -69,7 +69,7 @@ export const getFilteredDeadlines = async (filter: any) => {
         name: name ? name : undefined,
       },
     });
-    return { deadlines: deadlines };
+    return deadlines;
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -80,9 +80,7 @@ export const getFilteredDeadlines = async (filter: any) => {
 
 export const getDeadlineById = async (deadlineId: string) => {
   try {
-    return {
-      deadline: await getOneDeadline({ where: { id: Number(deadlineId) } }),
-    };
+    return await getOneDeadline({ where: { id: Number(deadlineId) } });
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -101,11 +99,10 @@ export const updateOneDeadline = async (
   }
 ) => {
   try {
-    const deadline = await updateDeadline({
+    return await updateDeadline({
       where: { id: Number(deadlineId) },
       data: updates,
     });
-    return { deadline: deadline };
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -116,9 +113,7 @@ export const updateOneDeadline = async (
 
 export const deleteDeadlineById = async (deadlineId: string) => {
   try {
-    return {
-      deadline: await deleteOneDeadline({ where: { id: Number(deadlineId) } }),
-    };
+    return await deleteOneDeadline({ where: { id: Number(deadlineId) } });
   } catch (e) {
     if (!(e instanceof SkylabError)) {
       throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
@@ -193,7 +188,7 @@ export const replaceQuestionsOfDeadline = async (
     const createQuestions = await Promise.all(
       questions.map(async (question) => {
         const { options, ...questionData } = question;
-        await createOneQuestion({
+        return await createOneQuestion({
           data: {
             ...questionData,
             deadlineId: Number(deadlineId),
@@ -206,9 +201,6 @@ export const replaceQuestionsOfDeadline = async (
                   },
                 }
               : undefined,
-            // options: options ? options.map((option, index) => {
-            //   { }
-            // }): undefined
           },
         });
       })

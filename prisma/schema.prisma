@@ -139,7 +139,7 @@ model Deadline {
 
 model Question {
   id             Int          @id @default(autoincrement())
-  deadline       Deadline     @relation(fields: [deadlineId], references: [id])
+  deadline       Deadline     @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
   deadlineId     Int
   questionNumber Int
   question       String
