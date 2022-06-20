@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
 import { userLogin } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
@@ -62,11 +63,15 @@ router.get(
   }
 );
 
-router.get("/:userId/info", authorize, async (req: Request, res: Response) => {
+router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const { token } = req.cookies;
+    const { id } = jwt.verify(
+      token,
+      process.env.JWT_SECRET ?? "jwt_secret"
+    ) as JwtPayload;
     const userData = await getOneUserWithRoleData({
-      where: { id: Number(userId) },
+      where: { id: Number(id) },
     });
     res.status(HttpStatusCode.OK).json(userData);
   } catch (e) {
