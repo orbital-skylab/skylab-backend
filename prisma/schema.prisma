@@ -131,6 +131,7 @@ model Deadline {
   cohortYear Int
   createdOn  DateTime     @default(now())
   dueBy      DateTime
+  desc       String?
   type       DeadlineType
 
   questions Question[]

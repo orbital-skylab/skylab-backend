@@ -92,11 +92,7 @@ export const getDeadlineById = async (deadlineId: string) => {
 
 export const updateOneDeadline = async (
   deadlineId: string,
-  updates: {
-    name?: string;
-    dueBy?: string;
-    type?: Prisma.EnumDeadlineTypeFieldUpdateOperationsInput;
-  }
+  updates: Omit<Prisma.DeadlineUpdateInput, "questions">
 ) => {
   try {
     return await updateDeadline({

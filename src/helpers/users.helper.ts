@@ -60,3 +60,9 @@ export const sendPasswordResetEmail = async (
     }
   );
 };
+
+export const getUserByEmail = async (email: string) => {
+  try {
+    return await getOneUser({ where: { email: email } });
+  } catch (e) {}
+};
