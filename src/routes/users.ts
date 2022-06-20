@@ -19,6 +19,7 @@ import {
   createNewStudent,
   addStudentToAccount,
 } from "src/helpers/students.helper";
+import { getUserByEmail } from "src/helpers/users.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -140,7 +141,18 @@ router.post("/:userId/facilitator", async (req: Request, res: Response) => {
     );
     return apiResponseWrapper(res, createdFacilitatorData);
   } catch (e) {
-    routeErrorHandler(res, e);
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.get("/:email", async (req: Request, res: Response) => {
+  const { email } = req.params;
+  try {
+    const user = await getUserByEmail(email);
+    console.log(user);
+    return apiResponseWrapper(res, { user: user });
+  } catch (e) {
+    return routeErrorHandler(res, e);
   }
 });
 
