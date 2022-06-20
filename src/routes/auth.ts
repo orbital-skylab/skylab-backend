@@ -47,21 +47,17 @@ router.post("/sign-in", async (req: Request, res: Response) => {
   }
 });
 
-router.get(
-  "/:userId/sign-out",
-  authorize,
-  async (_: Request, res: Response) => {
-    try {
-      res.clearCookie("token").sendStatus(HttpStatusCode.OK);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+router.get("/sign-out", authorize, async (_: Request, res: Response) => {
+  try {
+    res.clearCookie("token").sendStatus(HttpStatusCode.OK);
+  } catch (e) {
+    if (!(e instanceof SkylabError)) {
+      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+    } else {
+      res.status(e.statusCode).send(e.message);
     }
   }
-);
+});
 
 router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
