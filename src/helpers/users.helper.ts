@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import SibApiV3Sdk from "@sendinblue/client";
 import { getOneUser } from "src/models/users.db";
+import { SkylabError } from "src/errors/SkylabError";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export const userLogin = async (email: string, password: string) => {
   const user = await getOneUser({ where: { email: email } });
@@ -64,5 +66,11 @@ export const sendPasswordResetEmail = async (
 export const getUserByEmail = async (email: string) => {
   try {
     return await getOneUser({ where: { email: email } });
-  } catch (e) {}
+  } catch (e) {
+    if (!(e instanceof SkylabError)) {
+      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
+    } else {
+      throw e;
+    }
+  }
 };
