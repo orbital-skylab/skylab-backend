@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
 import { userLogin } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
@@ -46,27 +47,27 @@ router.post("/sign-in", async (req: Request, res: Response) => {
   }
 });
 
-router.get(
-  "/:userId/sign-out",
-  authorize,
-  async (_: Request, res: Response) => {
-    try {
-      res.clearCookie("token").sendStatus(HttpStatusCode.OK);
-    } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+router.get("/sign-out", authorize, async (_: Request, res: Response) => {
+  try {
+    res.clearCookie("token").sendStatus(HttpStatusCode.OK);
+  } catch (e) {
+    if (!(e instanceof SkylabError)) {
+      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+    } else {
+      res.status(e.statusCode).send(e.message);
     }
   }
-);
+});
 
-router.get("/:userId/info", authorize, async (req: Request, res: Response) => {
+router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const { token } = req.cookies;
+    const { id } = jwt.verify(
+      token,
+      process.env.JWT_SECRET ?? "jwt_secret"
+    ) as JwtPayload;
     const userData = await getOneUserWithRoleData({
-      where: { id: Number(userId) },
+      where: { id: Number(id) },
     });
     res.status(HttpStatusCode.OK).json(userData);
   } catch (e) {
