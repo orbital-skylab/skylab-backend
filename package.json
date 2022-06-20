@@ -8,7 +8,8 @@
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
     "lint": "eslint . --ext .ts",
     "start": "nodemon",
-    "dev": "nodemon src/index.ts"
+    "dev": "nodemon src/index.ts",
+    "heroku-postbuild": "npx prisma generate"
   },
   "_moduleAliases": {
     "@services": "dist/services",
