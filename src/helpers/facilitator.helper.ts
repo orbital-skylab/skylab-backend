@@ -9,7 +9,11 @@ import {
 } from "src/models/facilitator.db";
 import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import {
+  hashPassword,
+  generateRandomHashedPassword,
+  sendPasswordResetEmail,
+} from "./users.helper";
 
 /**
  * @function getFacilitatorInputParser Parse the input returned from the prisma.facilitator.find function
@@ -83,9 +87,10 @@ export const createNewFacilitatorParser = async (
     );
   }
 
-  user.password = user.password
-    ? await hashPassword(user.password)
-    : await generateRandomHashedPassword();
+  user.password =
+    isAdmin && user.password
+      ? await hashPassword(user.password)
+      : await generateRandomHashedPassword();
 
   return {
     user,
@@ -93,12 +98,18 @@ export const createNewFacilitatorParser = async (
   };
 };
 
-export const createNewFacilitator = async (body: any, isAdmin?: boolean) => {
+export const createNewFacilitator = async (
+  body: any,
+  isAdmin?: boolean
+): Promise<User> => {
   const account = await createNewFacilitatorParser(body, isAdmin ?? false);
-
-  return await createOneUser({
+  const createdUser = await createOneUser({
     data: { ...account.user, facilitator: { create: account.facilitator } },
   });
+  if (!isAdmin) {
+    await sendPasswordResetEmail([createdUser.email]);
+  }
+  return createdUser;
 };
 
 export const createManyFacilitatorsParser = async (
@@ -138,7 +149,7 @@ export const createManyFacilitatorsParser = async (
     }
 
     promises.push(
-      user.password
+      isAdmin && user.password
         ? hashPassword(user.password)
         : generateRandomHashedPassword()
     );
@@ -148,14 +159,22 @@ export const createManyFacilitatorsParser = async (
   return accounts;
 };
 
-export const createManyFacilitators = async (body: any, isAdmin?: boolean) => {
+export const createManyFacilitators = async (
+  body: any,
+  isAdmin?: boolean
+): Promise<User[]> => {
   const accounts = await createManyFacilitatorsParser(body, isAdmin ?? false);
   const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
     return {
       data: { ...account.user, facilitator: { create: account.facilitator } },
     };
   });
-  return await createManyUsers(prismaArgsArray);
+  const createdUsers = await createManyUsers(prismaArgsArray);
+  if (!isAdmin) {
+    const mailingList = createdUsers.map((user) => user.email);
+    await sendPasswordResetEmail(mailingList);
+  }
+  return createdUsers;
 };
 
 export const addFacilitatorToAccountParser = (

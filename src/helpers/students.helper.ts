@@ -8,7 +8,11 @@ import {
 } from "src/models/students.db";
 import { createManyUsers, createOneUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { generateRandomHashedPassword, hashPassword } from "./users.helper";
+import {
+  generateRandomHashedPassword,
+  hashPassword,
+  sendPasswordResetEmail,
+} from "./users.helper";
 
 /**
  * @function getStudentInputParser Parse the input returned from the prisma.student.find function
@@ -83,9 +87,10 @@ export const createNewStudentParser = async (
     );
   }
 
-  user.password = user.password
-    ? await hashPassword(user.password)
-    : await generateRandomHashedPassword();
+  user.password =
+    isAdmin && user.password
+      ? await hashPassword(user.password)
+      : await generateRandomHashedPassword();
 
   return {
     user,
@@ -93,11 +98,18 @@ export const createNewStudentParser = async (
   };
 };
 
-export const createNewStudent = async (body: any, isAdmin?: boolean) => {
+export const createNewStudent = async (
+  body: any,
+  isAdmin?: boolean
+): Promise<User> => {
   const account = await createNewStudentParser(body, isAdmin ?? false);
-  return await createOneUser({
+  const createdUser = await createOneUser({
     data: { ...account.user, student: { create: account.student } },
   });
+  if (!isAdmin) {
+    await sendPasswordResetEmail([createdUser.email]);
+  }
+  return createdUser;
 };
 
 export const createManyStudentsParser = async (
@@ -137,7 +149,7 @@ export const createManyStudentsParser = async (
     }
 
     promises.push(
-      user.password
+      isAdmin && user.password
         ? hashPassword(user.password)
         : generateRandomHashedPassword()
     );
@@ -147,12 +159,20 @@ export const createManyStudentsParser = async (
   return accounts;
 };
 
-export const createManyStudents = async (body: any, isAdmin?: boolean) => {
+export const createManyStudents = async (
+  body: any,
+  isAdmin?: boolean
+): Promise<User[]> => {
   const accounts = await createManyStudentsParser(body, isAdmin ?? false);
   const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
     return { data: { ...account.user, student: { create: account.student } } };
   });
-  return await createManyUsers(prismaArgsArray);
+  const createdUsers = await createManyUsers(prismaArgsArray);
+  if (!isAdmin) {
+    const mailingList = createdUsers.map((user) => user.email);
+    await sendPasswordResetEmail(mailingList);
+  }
+  return createdUsers;
 };
 
 export const addStudentToAccountParser = (
