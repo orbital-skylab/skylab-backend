@@ -1,9 +1,10 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import SibApiV3Sdk from "@sendinblue/client";
-import { getOneUser } from "src/models/users.db";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { getOneUser } from "src/models/users.db";
+import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
+import { TEMPLATE_ID } from "src/utils/Emails";
 
 export const userLogin = async (email: string, password: string) => {
   const user = await getOneUser({ where: { email: email } });
@@ -33,34 +34,21 @@ export const generateRandomHashedPassword = async () => {
   return await hashPassword(plainTextPassword);
 };
 
-export const sendPasswordResetEmail = async (
-  emails: Array<{ email: string }>
-) => {
-  const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+export const sendPasswordResetEmail = async (emails: string[]) => {
+  try {
+    const sendInBlue = await import("sib-api-v3-typescript");
+    const apiInstance = new sendInBlue.TransactionalEmailsApi();
+    apiInstance.setApiKey(
+      TransactionalEmailsApiApiKeys.apiKey,
+      process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key"
+    );
+    const newPasswordResetEmail = new sendInBlue.SendEmail();
+    newPasswordResetEmail.emailTo = emails;
 
-  apiInstance.setApiKey(
-    SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
-    process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key"
-  );
-
-  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-
-  sendSmtpEmail.subject = "Reset Password for Orbital Skylab";
-  sendSmtpEmail.sender = { email: "nvjn37@gmail.com" };
-  sendSmtpEmail.to = emails;
-  sendSmtpEmail.bcc = [{ email: "nvjn37@gmail.com" }];
-  sendSmtpEmail.replyTo = { email: "nvjn37@gmail.com" };
-
-  apiInstance.sendTransacEmail(sendSmtpEmail).then(
-    function (data) {
-      console.log(
-        "API called successfully. Returned data: " + JSON.stringify(data)
-      );
-    },
-    function (error) {
-      console.error(error);
-    }
-  );
+    await apiInstance.sendTemplate(TEMPLATE_ID, newPasswordResetEmail);
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 export const getUserByEmail = async (email: string) => {

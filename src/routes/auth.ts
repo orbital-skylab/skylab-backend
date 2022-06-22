@@ -25,15 +25,17 @@ router.post("/sign-in", async (req: Request, res: Response) => {
     }
 
     const { token } = await userLogin(email, password);
-    console.log("token: ", token);
 
     if (token) {
       const userData = await getOneUserWithRoleData({
         where: { email: email },
       });
       res
+        .cookie("token", token, {
+          httpOnly: true,
+          maxAge: 60 * 60 * 24,
+        })
         .status(HttpStatusCode.OK)
-        .cookie("token", token, { httpOnly: true })
         .json(userData);
     } else {
       res.status(HttpStatusCode.UNAUTHORIZED).send("Password is incorrect");

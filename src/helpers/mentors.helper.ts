@@ -8,7 +8,11 @@ import {
 } from "src/models/mentors.db";
 import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import {
+  hashPassword,
+  generateRandomHashedPassword,
+  sendPasswordResetEmail,
+} from "./users.helper";
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -88,9 +92,10 @@ export const createNewMentorParser = async (
     );
   }
 
-  user.password = user.password
-    ? await hashPassword(user.password)
-    : await generateRandomHashedPassword();
+  user.password =
+    isAdmin && user.password
+      ? await hashPassword(user.password)
+      : await generateRandomHashedPassword();
 
   return {
     user,
@@ -98,12 +103,18 @@ export const createNewMentorParser = async (
   };
 };
 
-export const createNewMentor = async (body: any, isAdmin?: boolean) => {
+export const createNewMentor = async (
+  body: any,
+  isAdmin?: boolean
+): Promise<User> => {
   const account = await createNewMentorParser(body, isAdmin ?? false);
-
-  return await createOneUser({
+  const createdUser = await createOneUser({
     data: { ...account.user, mentor: { create: account.mentor } },
   });
+  if (!isAdmin) {
+    await sendPasswordResetEmail([createdUser.email]);
+  }
+  return createdUser;
 };
 
 export const createManyMentorsParser = async (
@@ -143,7 +154,7 @@ export const createManyMentorsParser = async (
     }
 
     promises.push(
-      user.password
+      isAdmin && user.password
         ? hashPassword(user.password)
         : generateRandomHashedPassword()
     );
@@ -153,12 +164,20 @@ export const createManyMentorsParser = async (
   return accounts;
 };
 
-export const createManyMentors = async (body: any, isAdmin?: boolean) => {
+export const createManyMentors = async (
+  body: any,
+  isAdmin?: boolean
+): Promise<User[]> => {
   const accounts = await createManyMentorsParser(body, isAdmin ?? false);
   const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
     return { data: { ...account.user, mentor: { create: account.mentor } } };
   });
-  return await createManyUsers(prismaArgsArray);
+  const createdUsers = await createManyUsers(prismaArgsArray);
+  if (!isAdmin) {
+    const mailingList = createdUsers.map((user) => user.email);
+    await sendPasswordResetEmail(mailingList);
+  }
+  return createdUsers;
 };
 
 export const addMentorToAccountParser = (
