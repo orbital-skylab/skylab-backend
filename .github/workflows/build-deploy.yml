@@ -13,8 +13,8 @@ jobs:
       # Install Node.js
       - uses: actions/setup-node@v1.4.4
         with:
-          node-version: stable
-
+          node-version: 16.3.2
+w
       # Install Node Dependencies
       - name: Installing NodeJS Dependencies
         run: npm install
