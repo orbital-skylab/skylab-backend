@@ -68,6 +68,9 @@ export const getFilteredDeadlines = async (filter: any) => {
         cohortYear: cohortYear ? Number(cohortYear) : undefined,
         name: name ? name : undefined,
       },
+      orderBy: {
+        dueBy: "asc",
+      },
     });
     return deadlines;
   } catch (e) {
