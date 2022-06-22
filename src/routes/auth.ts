@@ -33,7 +33,7 @@ router.post("/sign-in", async (req: Request, res: Response) => {
       res
         .cookie("token", token, {
           httpOnly: true,
-          maxAge: 60 * 60 * 24,
+          maxAge: 10 * 60 * 60 * 24 * 1000,
         })
         .status(HttpStatusCode.OK)
         .json(userData);
