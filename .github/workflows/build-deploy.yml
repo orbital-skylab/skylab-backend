@@ -13,7 +13,7 @@ jobs:
       # Install Node.js
       - uses: actions/setup-node@v1.4.4
         with:
-          node-version: 14
+          node-version: stable
 
       # Install Node Dependencies
       - name: Installing NodeJS Dependencies
@@ -28,7 +28,6 @@ jobs:
         run: npx prettier --check "src/**/*.ts"
 
       ## TODO: Add test scripts when Jest is configured
-
 #   Deploy:
 #     needs: [Lint-Test]
 #     runs-on: ubuntu-latest
