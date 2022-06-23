@@ -21,8 +21,8 @@ app.disable("x-powered-by");
 
 // Common middlewares
 const allowedOrigins = [
-  "https://skylab-frontend.vercel.app/",
-  "http://localhost:3000/",
+  "https://skylab-frontend.vercel.app",
+  "http://localhost:3000",
 ];
 app.use(
   cors({
