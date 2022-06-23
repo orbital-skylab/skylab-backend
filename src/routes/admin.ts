@@ -144,4 +144,6 @@ router.post("/:userId/facilitator", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/");
+
 export default router;
