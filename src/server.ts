@@ -20,7 +20,25 @@ app.disable("x-powered-by");
  **********************************************************************************/
 
 // Common middlewares
-app.use(cors());
+const allowedOrigins = [
+  "https://skylab-frontend.vercel.app/",
+  "http://localhost:3000/",
+];
+app.use(
+  cors({
+    credentials: true,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          "The CORS policy for this site does not " +
+          "allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
