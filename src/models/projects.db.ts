@@ -77,6 +77,13 @@ export const getManyProjects = async ({
   return projects;
 };
 
+export const getManyProjectsLean = async (
+  query: Prisma.ProjectFindManyArgs
+) => {
+  const projects = await prisma.project.findMany(query);
+  return projects;
+};
+
 /**
  * @function createProject Create Project with the given project data
  * @param project Data of the project to be created

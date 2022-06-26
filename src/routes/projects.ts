@@ -6,7 +6,10 @@ import {
   getFilteredProjects,
   getLeanProjects,
 } from "src/helpers/projects.helper";
-import { routeErrorHandler } from "src/utils/ApiResponseWrapper";
+import {
+  apiResponseWrapper,
+  routeErrorHandler,
+} from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
@@ -58,7 +61,7 @@ router.get("/lean", async (req: Request, res: Response) => {
   const { cohortYear } = req.query;
   try {
     const projects = await getLeanProjects(Number(cohortYear));
-    return projects;
+    return apiResponseWrapper(res, projects);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
