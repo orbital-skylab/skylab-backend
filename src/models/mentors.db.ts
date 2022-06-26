@@ -74,7 +74,7 @@ export const createOneMentor = async (mentor: Prisma.MentorCreateArgs) => {
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        "Student is not unique",
+        "Mentor is not unique",
         HttpStatusCode.BAD_REQUEST,
         e.meta
       );
@@ -88,7 +88,7 @@ export const createManyMentors = async (
   mentors: Prisma.MentorCreateManyArgs
 ) => {
   try {
-    return await prisma.student.createMany(mentors);
+    return await prisma.mentor.createMany(mentors);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -96,7 +96,7 @@ export const createManyMentors = async (
 
     if (e.code === "P2002") {
       throw new SkylabError(
-        "One of the students are not unique",
+        "One of the mentors are not unique",
         HttpStatusCode.BAD_REQUEST,
         e.meta
       );
