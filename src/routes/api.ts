@@ -10,6 +10,7 @@ import facilitatorRouter from "./facilitators";
 import devRouter from "./dev";
 import deadlineRouter from "./deadlines";
 import authRouter from "./auth";
+import administratorRouter from "./administrators";
 
 // Export the base-router
 const baseRouter = Router();
@@ -25,6 +26,7 @@ baseRouter.use("/facilitators", facilitatorRouter);
 baseRouter.use("/dev", devRouter);
 baseRouter.use("/deadlines", deadlineRouter);
 baseRouter.use("/auth", authRouter);
+baseRouter.use("/administrators", administratorRouter);
 
 // Export default.
 export default baseRouter;
