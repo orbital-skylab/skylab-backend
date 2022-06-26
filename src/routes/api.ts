@@ -22,7 +22,7 @@ baseRouter.use("/cohorts", cohortRouter);
 baseRouter.use("/projects", projectRouter);
 baseRouter.use("/advisers", adviserRouter);
 baseRouter.use("/facilitators", facilitatorRouter);
-baseRouter.use("/admin", devRouter);
+baseRouter.use("/dev", devRouter);
 baseRouter.use("/deadlines", deadlineRouter);
 baseRouter.use("/auth", authRouter);
 

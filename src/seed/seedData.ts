@@ -1,9 +1,31 @@
 import { Prisma } from "@prisma/client";
 
-export const createCohort: Prisma.CohortCreateInput = {
+export const createCohortData: Prisma.CohortCreateInput = {
   startDate: new Date("2022-08-01T03:24:00"),
   endDate: new Date("2023-05-15T03:24:00"),
   academicYear: 2022,
+};
+
+export const createDeadline1: Prisma.DeadlineCreateInput = {
+  name: "Milestone 1",
+  cohort: { connect: { academicYear: 2022 } },
+  dueBy: new Date("2022-06-01T03:24:00"),
+  desc: "The first Milestone of Orbital",
+  type: "Milestone",
+};
+export const createDeadline2: Prisma.DeadlineCreateInput = {
+  name: "Milestone 2",
+  cohort: { connect: { academicYear: 2022 } },
+  dueBy: new Date("2022-07-01T03:24:00"),
+  desc: "The second Milestone of Orbital",
+  type: "Milestone",
+};
+export const createDeadline3: Prisma.DeadlineCreateInput = {
+  name: "Milestone 3",
+  cohort: { connect: { academicYear: 2022 } },
+  dueBy: new Date("2022-08-01T03:24:00"),
+  desc: "The third Milestone of Orbital",
+  type: "Milestone",
 };
 
 export const batchCreateStudents: {

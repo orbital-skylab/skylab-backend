@@ -122,6 +122,7 @@ model Project {
   students     Student[]
   submitter    Submitter?       @relation(fields: [submitterId], references: [id])
   submitterId  Int?
+  proposalPdf  String?
 }
 
 model Deadline {

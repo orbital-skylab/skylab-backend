@@ -19,10 +19,12 @@ import {
   createNewStudent,
   addStudentToAccount,
 } from "src/helpers/students.helper";
+import { seedDummyData } from "src/seed/seed.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
 
@@ -139,6 +141,15 @@ router.post("/:userId/facilitator", async (req: Request, res: Response) => {
       req.body
     );
     return apiResponseWrapper(res, createdFacilitatorData);
+  } catch (e) {
+    routeErrorHandler(res, e);
+  }
+});
+
+router.post("/seed", async (_: Request, res: Response) => {
+  try {
+    await seedDummyData();
+    return res.sendStatus(HttpStatusCode.OK);
   } catch (e) {
     routeErrorHandler(res, e);
   }
