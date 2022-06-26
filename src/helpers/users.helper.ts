@@ -37,7 +37,7 @@ export const hashPassword = async (plainTextPassword: string) => {
   return await bcrypt.hash(plainTextPassword, saltRounds);
 };
 
-export const generateRandomHashedPassword = async () => {
+export const generateRandomPassword = () => {
   const length = 16;
   const chars =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$";
@@ -47,6 +47,11 @@ export const generateRandomHashedPassword = async () => {
     plainTextPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
+  return plainTextPassword;
+};
+
+export const generateRandomHashedPassword = async () => {
+  const plainTextPassword = generateRandomPassword();
   return await hashPassword(plainTextPassword);
 };
 
