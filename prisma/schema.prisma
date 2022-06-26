@@ -123,6 +123,8 @@ model Project {
   submitter    Submitter?       @relation(fields: [submitterId], references: [id])
   submitterId  Int?
   proposalPdf  String?
+
+  @@unique([name, cohortYear])
 }
 
 model Deadline {
