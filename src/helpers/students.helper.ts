@@ -177,7 +177,10 @@ export const createManyStudents = async (
 
 export const addStudentToAccountParser = (
   body: any
-): Prisma.StudentCreateInput & { cohortYear: number } => {
+): Prisma.StudentCreateInput & {
+  cohortYear: number;
+  projectId: number | undefined;
+} => {
   if (!body.student) {
     throw new SkylabError(
       "Parameters missing from request",
@@ -191,12 +194,13 @@ export const addStudentToAccountParser = (
 
 export const addStudentToAccount = async (userId: string, body: any) => {
   const student = addStudentToAccountParser(body);
-  const { cohortYear, ...studentData } = student;
+  const { cohortYear, projectId, ...studentData } = student;
   return await createOneStudent({
     data: {
       ...studentData,
       cohort: { connect: { academicYear: cohortYear } },
       user: { connect: { id: Number(userId) } },
+      project: projectId ? { connect: { id: projectId } } : undefined,
     },
   });
 };
