@@ -7,6 +7,7 @@ import { getOneMentor } from "src/models/mentors.db";
 import {
   createProject,
   getManyProjects,
+  getManyProjectsLean,
   updateProject,
 } from "src/models/projects.db";
 import { getOneStudent } from "src/models/students.db";
@@ -104,6 +105,14 @@ export const getFilteredProjects = async (query: any) => {
     getProjectInputParser(project)
   );
   return parsedProjects;
+};
+
+export const getLeanProjects = async (cohortYear: number) => {
+  const projects = await getManyProjectsLean({
+    where: { cohortYear: cohortYear },
+    select: { id: true, name: true },
+  });
+  return projects;
 };
 
 /**
