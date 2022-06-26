@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
 import { userLogin } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
@@ -64,13 +64,7 @@ router.get("/sign-out", authorize, async (_: Request, res: Response) => {
 router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
-    const { id } = jwt.verify(
-      token,
-      process.env.JWT_SECRET ?? "jwt_secret"
-    ) as JwtPayload;
-    const userData = await getOneUserWithRoleData({
-      where: { id: Number(id) },
-    });
+    const userData = jwt.verify(token, process.env.JWT_SECRET ?? "jwt_secret");
     res.status(HttpStatusCode.OK).json(userData);
   } catch (e) {
     if (!(e instanceof SkylabError)) {
