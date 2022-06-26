@@ -8,7 +8,7 @@ import {
   addFacilitatorToAccount,
   createManyFacilitators,
   createNewFacilitator,
-} from "src/helpers/facilitator.helper";
+} from "src/helpers/facilitators.helper";
 import {
   addMentorToAccount,
   createManyMentors,

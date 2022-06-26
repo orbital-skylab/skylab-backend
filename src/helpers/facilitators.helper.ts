@@ -6,7 +6,7 @@ import {
   createOneFacilitator,
   getManyFacilitators,
   getOneFacilitator,
-} from "src/models/facilitator.db";
+} from "src/models/facilitators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   hashPassword,
