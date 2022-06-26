@@ -106,6 +106,14 @@ export const getFilteredProjects = async (query: any) => {
   return parsedProjects;
 };
 
+export const getLeanProjects = async (cohortYear: number) => {
+  const projects = await getManyProjects({
+    where: { cohortYear: cohortYear },
+    select: { id: true, name: true },
+  });
+  return projects;
+};
+
 /**
  * @function createProjectInputParser Parse the query body received from
  * the HTTP Request to be passed to prisma.project.create

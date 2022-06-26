@@ -4,7 +4,9 @@ import {
   addUsersToProject,
   createProjectHelper,
   getFilteredProjects,
+  getLeanProjects,
 } from "src/helpers/projects.helper";
+import { routeErrorHandler } from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
@@ -45,6 +47,22 @@ router
       .status(HttpStatusCode.BAD_REQUEST)
       .send("Invalid method to access endpoint");
   });
+
+router.get("/lean", async (req: Request, res: Response) => {
+  if (!req.query.cohortYear) {
+    return res
+      .status(HttpStatusCode.BAD_REQUEST)
+      .send("Cohort Year missing from request query");
+  }
+
+  const { cohortYear } = req.query;
+  try {
+    const projects = await getLeanProjects(Number(cohortYear));
+    return projects;
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 router.put("/users", async (req: Request, res: Response) => {
   if (!req.body.projectId) {
