@@ -165,3 +165,15 @@ export const createManyUsers = async (queries: Prisma.UserCreateArgs[]) => {
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 };
+
+export const deleteOneUser = async (query: Prisma.UserDeleteArgs) => {
+  try {
+    return await prisma.user.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};

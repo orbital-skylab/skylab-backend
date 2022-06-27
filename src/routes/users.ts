@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   addAdviserToAccount,
   createManyAdvisers,
@@ -19,11 +20,16 @@ import {
   createNewStudent,
   addStudentToAccount,
 } from "src/helpers/students.helper";
-import { getUserByEmail } from "src/helpers/users.helper";
+import {
+  deleteUserById,
+  editUserInformation,
+  getUserByEmail,
+} from "src/helpers/users.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
 
@@ -144,6 +150,40 @@ router.post("/:userId/facilitator", async (req: Request, res: Response) => {
     return routeErrorHandler(res, e);
   }
 });
+
+router
+  .put("/:userId", async (req: Request, res: Response) => {
+    const { userId } = req.params;
+
+    if (!req.body.user) {
+      return routeErrorHandler(
+        res,
+        new SkylabError(
+          "Parameters missing in request body",
+          HttpStatusCode.NOT_FOUND
+        )
+      );
+    }
+
+    try {
+      const editedUser = await editUserInformation(
+        Number(userId),
+        req.body.user
+      );
+      return apiResponseWrapper(res, editedUser);
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .delete("/:userId", async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    try {
+      const deletedUser = await deleteUserById(Number(userId));
+      return apiResponseWrapper(res, deletedUser);
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  });
 
 router.get("/:email", async (req: Request, res: Response) => {
   const { email } = req.params;
