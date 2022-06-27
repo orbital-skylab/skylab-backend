@@ -1,4 +1,5 @@
 import { Request, Response, Router } from "express";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createNewDeadline,
   deleteDeadlineById,
@@ -34,9 +35,13 @@ router
     }
   })
   .all("/", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
 router
@@ -53,9 +58,10 @@ router
     const { deadlineId } = req.params;
 
     if (!req.body.questions) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .json("Parameters missing from request");
+      throw new SkylabError(
+        "Parameters missing from request body",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
     try {
       const newQuestions = await replaceQuestionsOfDeadline(
@@ -100,9 +106,13 @@ router
     }
   })
   .all("/:deadlineId", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
 export default router;

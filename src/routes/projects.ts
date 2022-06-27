@@ -18,13 +18,9 @@ router
   .get("/", async (req: Request, res: Response) => {
     try {
       const allProjects = await getFilteredProjects(req.query);
-      res.status(HttpStatusCode.OK).json(allProjects);
+      return apiResponseWrapper(res, allProjects);
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   })
   .post("/", async (req: Request, res: Response) => {
@@ -36,26 +32,27 @@ router
 
     try {
       await createProjectHelper(req.body.project);
-      return res.sendStatus(HttpStatusCode.OK);
+      return apiResponseWrapper(res, {});
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   })
   .all("/", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
 router.get("/lean", async (req: Request, res: Response) => {
   if (!req.query.cohortYear) {
-    return res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Cohort Year missing from request query");
+    throw new SkylabError(
+      "Cohort Year missing from request query",
+      HttpStatusCode.BAD_REQUEST
+    );
   }
 
   const { cohortYear } = req.query;
@@ -77,9 +74,10 @@ router.put("/users", async (req: Request, res: Response) => {
   const { projectId } = req.body;
 
   if (!req.body.students && !req.body.mentor && !req.body.adviser) {
-    return res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Parameters missing from request");
+    throw new SkylabError(
+      "Parameters missing from request",
+      HttpStatusCode.BAD_REQUEST
+    );
   }
 
   const { students, mentor, adviser } = req.body;
@@ -94,11 +92,7 @@ router.put("/users", async (req: Request, res: Response) => {
     await addUsersToProject(projectId, users);
     return res.sendStatus(HttpStatusCode.OK);
   } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-    } else {
-      return res.status(e.statusCode).send(e.message);
-    }
+    return routeErrorHandler(res, e);
   }
 });
 

@@ -17,40 +17,36 @@ const router = Router();
 router
   .get("/", async (_: Request, res: Response) => {
     try {
-      const cohorts = await getManyCohorts({});
+      const cohorts = await getManyCohorts({
+        orderBy: [{ academicYear: "desc" }],
+      });
       return apiResponseWrapper(res, { cohorts: cohorts });
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        return res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   })
   .post("/", async (req: Request, res: Response) => {
     if (!req.body.cohort) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .send("Parameters missing from request");
+      throw new SkylabError(
+        "Parameters missing from request",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
     const { cohort } = req.body;
 
     if (!cohort.startDate || !cohort.endDate || !cohort.academicYear) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .send("Parameters missing from request");
+      throw new SkylabError(
+        "Parameters missing from request",
+        HttpStatusCode.BAD_REQUEST
+      );
     }
 
     try {
       await createCohort(cohort);
       return apiResponseWrapper(res, { cohort: cohort });
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   });
 
@@ -59,12 +55,9 @@ router
     const { cohortYear } = req.params;
 
     if (!req.body.cohort) {
-      return routeErrorHandler(
-        res,
-        new SkylabError(
-          "Parameters missing from request body",
-          HttpStatusCode.BAD_REQUEST
-        )
+      throw new SkylabError(
+        "Parameters missing from request body",
+        HttpStatusCode.BAD_REQUEST
       );
     }
 
@@ -95,17 +88,17 @@ router
       const latestCohort = await getLatestCohort();
       res.status(HttpStatusCode.OK).json({ cohort: latestCohort });
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   })
   .all("/latest", (_: Request, res: Response) => {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send("Invalid method to access endpoint");
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
 export default router;
