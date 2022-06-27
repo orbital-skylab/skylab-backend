@@ -2,17 +2,33 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { getOneUser } from "src/models/users.db";
+import { getOneUser, getOneUserWithRoleData } from "src/models/users.db";
 import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
 import { TEMPLATE_ID } from "src/utils/Emails";
 
 export const userLogin = async (email: string, password: string) => {
-  const user = await getOneUser({ where: { email: email } });
-  const isValidPassword = await bcrypt.compare(password, user.password);
+  const user = await getOneUser({ where: { email: email } }, true);
+
+  const { password: correctPassword } = user;
+  if (!correctPassword) {
+    throw new SkylabError(
+      "User does not have a password",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const isValidPassword = await bcrypt.compare(password, correctPassword);
+  if (!isValidPassword) {
+    return {
+      token: null,
+    };
+  }
+
+  const userWithRoleData = await getOneUserWithRoleData({
+    where: { id: user.id },
+  });
   return {
-    token: isValidPassword
-      ? jwt.sign(user, process.env.JWT_SECRET ?? "jwt_secret")
-      : null,
+    token: jwt.sign(userWithRoleData, process.env.JWT_SECRET ?? "jwt_secret"),
   };
 };
 
@@ -21,7 +37,7 @@ export const hashPassword = async (plainTextPassword: string) => {
   return await bcrypt.hash(plainTextPassword, saltRounds);
 };
 
-export const generateRandomHashedPassword = async () => {
+export const generateRandomPassword = () => {
   const length = 16;
   const chars =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$";
@@ -31,6 +47,11 @@ export const generateRandomHashedPassword = async () => {
     plainTextPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
+  return plainTextPassword;
+};
+
+export const generateRandomHashedPassword = async () => {
+  const plainTextPassword = generateRandomPassword();
   return await hashPassword(plainTextPassword);
 };
 

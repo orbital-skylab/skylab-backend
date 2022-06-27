@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Student, User } from "@prisma/client";
+import { Prisma, PrismaClient, Student, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneStudent,
   getManyStudents,
   getOneStudent,
 } from "src/models/students.db";
-import { createManyUsers, createOneUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   generateRandomHashedPassword,
@@ -14,8 +13,10 @@ import {
   sendPasswordResetEmail,
 } from "./users.helper";
 
+const prismaClient = new PrismaClient();
+
 /**
- * @function getStudentInputParser Parse the input returned from the prisma.student.find function
+ * @function getStudentInputParser Parse the input returned from the `  `.student.find function
  * @param student The payload returned from prisma.student.find
  * @returns Flattened object with both User and Student Data
  */
@@ -73,13 +74,13 @@ export const getStudentById = async (studentId: string) => {
 
 export const createNewStudentParser = async (
   body: any,
-  isAdmin: boolean
+  isDev: boolean
 ): Promise<{
   user: Prisma.UserCreateInput;
-  student: Prisma.StudentCreateInput;
+  student: Prisma.StudentCreateInput & { cohortYear: number };
 }> => {
   const { student, user } = body;
-  if (!student || !user || (isAdmin && !user.password)) {
+  if (!student || !user || (isDev && !user.password)) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
@@ -88,7 +89,7 @@ export const createNewStudentParser = async (
   }
 
   user.password =
-    isAdmin && user.password
+    isDev && user.password
       ? await hashPassword(user.password)
       : await generateRandomHashedPassword();
 
@@ -98,81 +99,134 @@ export const createNewStudentParser = async (
   };
 };
 
-export const createNewStudent = async (
-  body: any,
-  isAdmin?: boolean
-): Promise<User> => {
-  const account = await createNewStudentParser(body, isAdmin ?? false);
-  const createdUser = await createOneUser({
-    data: { ...account.user, student: { create: account.student } },
-  });
-  if (!isAdmin) {
+export const createNewStudent = async (body: any, isDev?: boolean) => {
+  const account = await createNewStudentParser(body, isDev ?? false);
+  const { user, student } = account;
+  const { cohortYear, ...studentData } = student;
+
+  const [createdUser, createdStudent] = await prismaClient.$transaction([
+    prismaClient.user.create({ data: user }),
+    prismaClient.student.create({
+      data: {
+        ...studentData,
+        user: { connect: { email: user.email } },
+        cohort: { connect: { academicYear: cohortYear } },
+      },
+    }),
+  ]);
+  if (!isDev) {
     await sendPasswordResetEmail([createdUser.email]);
   }
-  return createdUser;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...createdUserWithoutPassword } = createdUser;
+  return {
+    user: createdUserWithoutPassword,
+    student: createdStudent,
+  };
 };
 
 export const createManyStudentsParser = async (
   body: any,
-  isAdmin: boolean
+  isDev: boolean
 ): Promise<
   {
-    user: Prisma.UserCreateInput;
-    student: Prisma.StudentCreateInput;
+    project: Prisma.ProjectCreateInput;
+    student: {
+      user: Prisma.UserCreateInput;
+      student: Prisma.StudentCreateInput & { cohortYear: number };
+    };
   }[]
 > => {
-  const { count, accounts } = body;
+  const { count, projects } = body;
 
-  if (!count || !accounts) {
+  if (!count || !projects) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
       body
     );
   }
-  if (count !== accounts.length) {
+  if (count !== projects.length) {
     throw new SkylabError(
-      "Count and Accounts Data do not match",
+      "Count and Projects Data do not match",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  const promises: Promise<string>[] = [];
-  accounts.forEach((account: { student: Student; user: User }) => {
-    const { user } = account;
+  const accounts = [];
+  for (const project of projects) {
+    const { students, ...projectData } = project;
+    for (const student of students) {
+      if (projectData.cohortYear !== student.student.cohortYear) {
+        console.log(projectData, student.student.cohortYear);
+        throw new SkylabError(
+          "Project cohort and student cohort does not match",
+          HttpStatusCode.BAD_REQUEST
+        );
+      }
 
-    if (isAdmin && !user.password) {
-      throw new SkylabError(
-        "All accounts should have a password input",
-        HttpStatusCode.BAD_REQUEST
-      );
+      if (isDev && !student.user.password) {
+        throw new SkylabError(
+          "All accounts should have a password input",
+          HttpStatusCode.BAD_REQUEST
+        );
+      }
+
+      student.user.password =
+        isDev && student.user.password
+          ? await hashPassword(student.user.password)
+          : await generateRandomHashedPassword();
+
+      accounts.push({ project: projectData, student });
     }
+  }
 
-    promises.push(
-      isAdmin && user.password
-        ? hashPassword(user.password)
-        : generateRandomHashedPassword()
-    );
-  });
-
-  await Promise.all(promises);
   return accounts;
 };
 
-export const createManyStudents = async (
-  body: any,
-  isAdmin?: boolean
-): Promise<User[]> => {
-  const accounts = await createManyStudentsParser(body, isAdmin ?? false);
-  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
-    return { data: { ...account.user, student: { create: account.student } } };
-  });
-  const createdUsers = await createManyUsers(prismaArgsArray);
-  if (!isAdmin) {
-    const mailingList = createdUsers.map((user) => user.email);
+export const createManyStudents = async (body: any, isDev?: boolean) => {
+  const accounts = await createManyStudentsParser(body, isDev ?? false);
+
+  const createdAccounts: Array<{
+    user: Omit<User, "password">;
+    student: Student & { cohortYear: number };
+  }> = [];
+  for (const account of accounts) {
+    const { project, student: _student } = account;
+    const { user, student } = _student;
+    const { cohortYear, ...studentData } = student;
+    const [createdUser, createdStudent] = await prismaClient.$transaction([
+      prismaClient.user.create({ data: user }),
+      prismaClient.student.create({
+        data: {
+          ...studentData,
+          user: { connect: { email: user.email } },
+          cohort: { connect: { academicYear: cohortYear } },
+          project: {
+            connectOrCreate: {
+              where: {
+                name_cohortYear: { name: project.name, cohortYear: cohortYear },
+              },
+              create: project,
+            },
+          },
+        },
+      }),
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...createdUserWithoutPassword } = createdUser;
+    createdAccounts.push({
+      user: createdUserWithoutPassword,
+      student: createdStudent,
+    });
+  }
+
+  if (!isDev) {
+    const mailingList = createdAccounts.map((account) => account.user.email);
     await sendPasswordResetEmail(mailingList);
   }
-  return createdUsers;
+  return createdAccounts;
 };
 
 export const addStudentToAccountParser = (
