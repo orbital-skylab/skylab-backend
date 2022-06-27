@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
@@ -7,10 +8,83 @@ import {
   getOneUser,
   updateOneUser,
   getOneUserWithRoleData,
+  getManyUsers,
 } from "src/models/users.db";
 import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
 import { TEMPLATE_ID } from "src/utils/Emails";
 import { Prisma } from "@prisma/client";
+
+enum UserFilterRoles {
+  Mentor = "Mentor",
+  Student = "Student",
+  Adviser = "Adviser",
+}
+
+export const getUsersFilterParser = (query: any) => {
+  let filter: Prisma.UserFindManyArgs = {};
+
+  if (!query.cohortYear) {
+    throw new SkylabError(
+      "Parameters missing in request",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const cohortYear = Number(query.cohortYear);
+
+  if (query.page && query.limit) {
+    filter = {
+      take: Number(query.limit),
+      skip: Number(query.page) * Number(query.limit),
+    };
+  }
+
+  if (query.role) {
+    const { role } = query;
+    switch (role) {
+      case UserFilterRoles.Student:
+        filter = {
+          ...filter,
+          include: { student: { where: { cohortYear: cohortYear } } },
+        };
+        break;
+      case UserFilterRoles.Mentor:
+        filter = {
+          ...filter,
+          include: { mentor: { where: { cohortYear: cohortYear } } },
+        };
+        break;
+      case UserFilterRoles.Adviser:
+        filter = {
+          ...filter,
+          include: { adviser: { where: { cohortYear: cohortYear } } },
+        };
+        break;
+      default:
+        throw new SkylabError(
+          "Invalid Role to Filter On",
+          HttpStatusCode.BAD_REQUEST
+        );
+    }
+  } else {
+    filter = {
+      ...filter,
+      include: {
+        mentor: { where: { cohortYear: cohortYear } },
+        student: { where: { cohortYear: cohortYear } },
+        adviser: { where: { cohortYear: cohortYear } },
+      },
+    };
+  }
+
+  return filter;
+};
+
+export const getFilteredUsers = async (query: any) => {
+  const filteredQuery = getUsersFilterParser(query);
+  const users = await getManyUsers(filteredQuery);
+  return users;
+};
 
 export const userLogin = async (email: string, password: string) => {
   const user = await getOneUser({ where: { email: email } }, true);
