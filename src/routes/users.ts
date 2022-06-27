@@ -28,6 +28,7 @@ import {
 import {
   deleteUserById,
   editUserInformation,
+  getFilteredUsers,
   getUserByEmail,
 } from "src/helpers/users.helper";
 import {
@@ -37,6 +38,15 @@ import {
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
+
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const users = await getFilteredUsers(req.query);
+    return apiResponseWrapper(res, { users: users });
+  } catch (e) {
+    routeErrorHandler(res, e);
+  }
+});
 
 router.post("/create-student/batch", async (req: Request, res: Response) => {
   try {

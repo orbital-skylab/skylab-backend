@@ -18,7 +18,7 @@ router
   .get("/", async (_: Request, res: Response) => {
     try {
       const cohorts = await getManyCohorts({});
-      return apiResponseWrapper(res, cohorts);
+      return apiResponseWrapper(res, { cohorts: cohorts });
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
@@ -44,7 +44,7 @@ router
 
     try {
       await createCohort(cohort);
-      return res.sendStatus(HttpStatusCode.OK);
+      return apiResponseWrapper(res, { cohort: cohort });
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
@@ -73,7 +73,7 @@ router
         Number(cohortYear),
         req.body.cohort
       );
-      return apiResponseWrapper(res, editedCohort);
+      return apiResponseWrapper(res, { cohort: editedCohort });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -83,7 +83,7 @@ router
 
     try {
       const deletedCohort = await deleteCohortByYear(Number(cohortYear));
-      return apiResponseWrapper(res, deletedCohort);
+      return apiResponseWrapper(res, { cohort: deletedCohort });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -93,7 +93,7 @@ router
   .get("/latest", async (_: Request, res: Response) => {
     try {
       const latestCohort = await getLatestCohort();
-      res.status(HttpStatusCode.OK).json(latestCohort);
+      res.status(HttpStatusCode.OK).json({ cohort: latestCohort });
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);

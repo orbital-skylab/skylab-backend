@@ -99,20 +99,7 @@ export const getOneUserWithRoleData = async (
  * @returns The array of user records that match the query conditions
  */
 export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
-  const queryParams = {
-    ...query,
-    // exclude password
-    select: {
-      name: true,
-      email: true,
-      profilePicUrl: true,
-      githubUrl: true,
-      linkedinUrl: true,
-      personalSiteUrl: true,
-      selfIntro: true,
-    },
-  };
-  const users = await prisma.user.findMany(queryParams);
+  const users = await prisma.user.findMany(query);
   return users;
 };
 
