@@ -1,4 +1,10 @@
-import { getFirstCohort, getManyCohorts } from "src/models/cohorts.db";
+import { Prisma } from "@prisma/client";
+import {
+  deleteCohort,
+  editCohort,
+  getFirstCohort,
+  getManyCohorts,
+} from "src/models/cohorts.db";
 
 /**
  * @function getLatestCohort Get the most recent cohort
@@ -14,4 +20,15 @@ export const getLatestCohort = async () => {
  */
 export const getAllCohorts = async () => {
   return await getManyCohorts({ orderBy: { academicYear: "asc" } });
+};
+
+export const editCohortByYear = async (
+  cohortYear: number,
+  data: Prisma.CohortUpdateInput
+) => {
+  return await editCohort({ where: { academicYear: cohortYear }, data: data });
+};
+
+export const deleteCohortByYear = async (cohortYear: number) => {
+  return await deleteCohort({ where: { academicYear: cohortYear } });
 };

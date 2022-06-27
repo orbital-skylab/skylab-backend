@@ -72,3 +72,26 @@ export const createCohort = async (cohort: Prisma.CohortCreateInput) => {
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
+
+export const editCohort = async (query: Prisma.CohortUpdateArgs) => {
+  try {
+    return await prisma.cohort.update(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};
+
+export const deleteCohort = async (query: Prisma.CohortDeleteArgs) => {
+  try {
+    return await prisma.cohort.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};
