@@ -1,7 +1,15 @@
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
-import { getLatestCohort } from "src/helpers/cohorts.helper";
+import {
+  deleteCohortByYear,
+  editCohortByYear,
+  getLatestCohort,
+} from "src/helpers/cohorts.helper";
 import { createCohort, getManyCohorts } from "src/models/cohorts.db";
+import {
+  apiResponseWrapper,
+  routeErrorHandler,
+} from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
@@ -10,7 +18,7 @@ router
   .get("/", async (_: Request, res: Response) => {
     try {
       const cohorts = await getManyCohorts({});
-      res.status(HttpStatusCode.OK).json(cohorts);
+      return apiResponseWrapper(res, cohorts);
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
@@ -43,6 +51,41 @@ router
       } else {
         res.status(e.statusCode).send(e.message);
       }
+    }
+  });
+
+router
+  .put("/:cohortYear", async (req: Request, res: Response) => {
+    const { cohortYear } = req.params;
+
+    if (!req.body.cohort) {
+      return routeErrorHandler(
+        res,
+        new SkylabError(
+          "Parameters missing from request body",
+          HttpStatusCode.BAD_REQUEST
+        )
+      );
+    }
+
+    try {
+      const editedCohort = await editCohortByYear(
+        Number(cohortYear),
+        req.body.cohort
+      );
+      return apiResponseWrapper(res, editedCohort);
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .delete("/:cohortYear", async (req: Request, res: Response) => {
+    const { cohortYear } = req.params;
+
+    try {
+      const deletedCohort = await deleteCohortByYear(Number(cohortYear));
+      return apiResponseWrapper(res, deletedCohort);
+    } catch (e) {
+      return routeErrorHandler(res, e);
     }
   });
 
