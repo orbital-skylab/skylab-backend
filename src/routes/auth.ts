@@ -12,7 +12,10 @@ import {
   getOneUserWithRoleData,
   updateOneUser,
 } from "src/models/users.db";
-import { apiResponseWrapper } from "src/utils/ApiResponseWrapper";
+import {
+  apiResponseWrapper,
+  routeErrorHandler,
+} from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
@@ -22,38 +25,33 @@ router.post("/sign-in", async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return apiResponseWrapper(
-        res,
-        {},
-        new SkylabError(
-          "Missing request parameters",
-          HttpStatusCode.BAD_REQUEST
-        )
+      throw new SkylabError(
+        "Missing request parameters",
+        HttpStatusCode.BAD_REQUEST
       );
     }
 
     const { token } = await userLogin(email, password);
 
-    if (token) {
-      const userData = await getOneUserWithRoleData({
-        where: { email: email },
-      });
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          maxAge: 10 * 60 * 60 * 24 * 1000,
-        })
-        .status(HttpStatusCode.OK)
-        .json(userData);
-    } else {
-      res.status(HttpStatusCode.UNAUTHORIZED).send("Password is incorrect");
+    if (!token) {
+      throw new SkylabError(
+        "Password is incorrect",
+        HttpStatusCode.UNAUTHORIZED
+      );
     }
+
+    const userData = await getOneUserWithRoleData({
+      where: { email: email },
+    });
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        maxAge: 10 * 60 * 60 * 24 * 1000,
+      })
+      .status(HttpStatusCode.OK)
+      .json(userData);
   } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-    } else {
-      res.status(e.statusCode).send(e.message);
-    }
+    return routeErrorHandler(res, e);
   }
 });
 
@@ -61,11 +59,7 @@ router.get("/sign-out", authorize, async (_: Request, res: Response) => {
   try {
     res.clearCookie("token").sendStatus(HttpStatusCode.OK);
   } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-    } else {
-      res.status(e.statusCode).send(e.message);
-    }
+    return routeErrorHandler(res, e);
   }
 });
 
@@ -73,13 +67,9 @@ router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
     const userData = jwt.verify(token, process.env.JWT_SECRET ?? "jwt_secret");
-    res.status(HttpStatusCode.OK).json(userData);
+    return apiResponseWrapper(res, userData as JwtPayload);
   } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-    } else {
-      res.status(e.statusCode).send(e.message);
-    }
+    return routeErrorHandler(res, e);
   }
 });
 
@@ -96,13 +86,9 @@ router.post(
         data: { password: hashedPassword },
       });
 
-      return res.status(HttpStatusCode.OK).json({ password });
+      return apiResponseWrapper(res, { password });
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   }
 );
@@ -141,13 +127,9 @@ router.post(
         data: { password: hashedPassword },
       });
 
-      return res.sendStatus(HttpStatusCode.OK);
+      return apiResponseWrapper(res, {});
     } catch (e) {
-      if (!(e instanceof SkylabError)) {
-        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
-      } else {
-        res.status(e.statusCode).send(e.message);
-      }
+      return routeErrorHandler(res, e);
     }
   }
 );

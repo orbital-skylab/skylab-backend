@@ -205,12 +205,9 @@ router
     const { userId } = req.params;
 
     if (!req.body.user) {
-      return routeErrorHandler(
-        res,
-        new SkylabError(
-          "Parameters missing in request body",
-          HttpStatusCode.NOT_FOUND
-        )
+      throw new SkylabError(
+        "Parameters missing in request body",
+        HttpStatusCode.NOT_FOUND
       );
     }
 
