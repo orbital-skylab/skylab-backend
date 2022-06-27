@@ -1,9 +1,17 @@
 import { Router, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
-import { userLogin } from "src/helpers/users.helper";
+import {
+  generateRandomPassword,
+  hashPassword,
+  userLogin,
+} from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
-import { getOneUserWithRoleData } from "src/models/users.db";
+import {
+  getOneUser,
+  getOneUserWithRoleData,
+  updateOneUser,
+} from "src/models/users.db";
 import { apiResponseWrapper } from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
@@ -64,13 +72,7 @@ router.get("/sign-out", authorize, async (_: Request, res: Response) => {
 router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
-    const { id } = jwt.verify(
-      token,
-      process.env.JWT_SECRET ?? "jwt_secret"
-    ) as JwtPayload;
-    const userData = await getOneUserWithRoleData({
-      where: { id: Number(id) },
-    });
+    const userData = jwt.verify(token, process.env.JWT_SECRET ?? "jwt_secret");
     res.status(HttpStatusCode.OK).json(userData);
   } catch (e) {
     if (!(e instanceof SkylabError)) {
@@ -80,5 +82,74 @@ router.get("/info", authorize, async (req: Request, res: Response) => {
     }
   }
 });
+
+router.post(
+  "/:email/regenerate-password",
+  async (req: Request, res: Response) => {
+    try {
+      const password = generateRandomPassword();
+      const hashedPassword = await hashPassword(password);
+
+      const { email } = req.params;
+      await updateOneUser({
+        where: { email: email },
+        data: { password: hashedPassword },
+      });
+
+      return res.status(HttpStatusCode.OK).json({ password });
+    } catch (e) {
+      if (!(e instanceof SkylabError)) {
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+      } else {
+        res.status(e.statusCode).send(e.message);
+      }
+    }
+  }
+);
+
+router.post(
+  "/reset-password",
+  authorize,
+  async (req: Request, res: Response) => {
+    try {
+      const { token } = req.cookies;
+      const { id } = jwt.verify(
+        token,
+        process.env.JWT_SECRET ?? "jwt_secret"
+      ) as JwtPayload;
+      const { password } = await getOneUser(
+        {
+          where: { id: id },
+          select: {
+            password: true,
+          },
+        },
+        true
+      );
+
+      const { currentPassword, newPassword } = req.body;
+      if (currentPassword !== password) {
+        throw new SkylabError(
+          "Current password does not match record in database",
+          HttpStatusCode.BAD_REQUEST
+        );
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await updateOneUser({
+        where: { id: id },
+        data: { password: hashedPassword },
+      });
+
+      return res.sendStatus(HttpStatusCode.OK);
+    } catch (e) {
+      if (!(e instanceof SkylabError)) {
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);
+      } else {
+        res.status(e.statusCode).send(e.message);
+      }
+    }
+  }
+);
 
 export default router;

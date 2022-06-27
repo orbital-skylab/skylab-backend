@@ -7,14 +7,9 @@ export const apiResponseWrapper = (
   body: object,
   error?: SkylabError
 ) => {
-  //   return res.status(error ? error.statusCode : HttpStatusCode.OK).json({
-  //     error: error ? error.message : "",
-  //     data: error ? error.meta : body,
-  //   });
-
   return res
     .status(error ? error.statusCode : HttpStatusCode.OK)
-    .json(error ? (error.meta ? error.meta : error.message) : body);
+    .json(error ? { message: error.message, meta: error.meta } : body);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,10 +17,14 @@ export const routeErrorHandler = (res: Response, e: any) => {
   if (!(e instanceof SkylabError)) {
     return apiResponseWrapper(
       res,
-      {},
+      { message: e.message || e, meta: e.meta || e },
       new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR)
     );
   }
 
-  return apiResponseWrapper(res, {}, e);
+  return apiResponseWrapper(
+    res,
+    { message: e.message || e, meta: e.meta || e },
+    e
+  );
 };

@@ -29,7 +29,10 @@ export const getFirstUser = async (query: Prisma.UserFindUniqueArgs) => {
  * @param query The query conditions for the user
  * @returns The mentor record that matches the query conditions
  */
-export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
+export const getOneUser = async (
+  query: Prisma.UserFindUniqueArgs,
+  includePassword?: boolean
+) => {
   const queryParams = { ...query, rejectOnNotFound: false };
   const user = await prisma.user.findUnique(queryParams);
 
@@ -37,7 +40,10 @@ export const getOneUser = async (query: Prisma.UserFindUniqueArgs) => {
     throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
   }
 
-  return user;
+  return {
+    ...user,
+    password: includePassword ? user.password : null,
+  };
 };
 
 /**
@@ -128,7 +134,10 @@ export const updateOneUser = async (query: Prisma.UserUpdateArgs) => {
 
 export const createOneUser = async (query: Prisma.UserCreateArgs) => {
   try {
-    return await prisma.user.create(query);
+    const createdUser = await prisma.user.create(query);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...createdUserWithoutPassword } = createdUser;
+    return createdUserWithoutPassword;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -148,7 +157,14 @@ export const createOneUser = async (query: Prisma.UserCreateArgs) => {
 
 export const createManyUsers = async (queries: Prisma.UserCreateArgs[]) => {
   try {
-    return await Promise.all(queries.map((query) => prisma.user.create(query)));
+    const createdUsers = await Promise.all(
+      queries.map((query) => prisma.user.create(query))
+    );
+    return createdUsers.map((createdUser) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...createdUserWithoutPassword } = createdUser;
+      return createdUserWithoutPassword;
+    });
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;

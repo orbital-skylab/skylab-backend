@@ -1,18 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Mentor, Prisma, User } from "@prisma/client";
+import { Mentor, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneMentor,
   getManyMentors,
   getOneMentor,
 } from "src/models/mentors.db";
-import { createOneUser, createManyUsers } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   hashPassword,
   generateRandomHashedPassword,
   sendPasswordResetEmail,
 } from "./users.helper";
+
+const prismaClient = new PrismaClient();
 
 /**
  * @function getMentorInputParser Parse the input returned from the prisma.mentor.find function
@@ -78,13 +79,13 @@ export const getFilteredMentors = async (query: any) => {
 
 export const createNewMentorParser = async (
   body: any,
-  isAdmin: boolean
+  isDev: boolean
 ): Promise<{
   user: Prisma.UserCreateInput;
-  mentor: Prisma.MentorCreateInput;
+  mentor: Prisma.MentorCreateInput & { cohortYear: number };
 }> => {
   const { mentor, user } = body;
-  if (!mentor || !user || (isAdmin && !user.password)) {
+  if (!mentor || !user || (isDev && !user.password)) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
@@ -93,37 +94,48 @@ export const createNewMentorParser = async (
   }
 
   user.password =
-    isAdmin && user.password
+    isDev && user.password
       ? await hashPassword(user.password)
       : await generateRandomHashedPassword();
 
-  return {
-    user,
-    mentor,
-  };
+  return { mentor, user };
 };
 
-export const createNewMentor = async (
-  body: any,
-  isAdmin?: boolean
-): Promise<User> => {
-  const account = await createNewMentorParser(body, isAdmin ?? false);
-  const createdUser = await createOneUser({
-    data: { ...account.user, mentor: { create: account.mentor } },
-  });
-  if (!isAdmin) {
+export const createNewMentor = async (body: any, isDev?: boolean) => {
+  const account = await createNewMentorParser(body, isDev ?? false);
+
+  const { user, mentor } = account;
+  const { cohortYear, ...mentorData } = mentor;
+
+  const [createdUser, createdMentor] = await prismaClient.$transaction([
+    prismaClient.user.create({ data: user }),
+    prismaClient.mentor.create({
+      data: {
+        ...mentorData,
+        user: { connect: { email: user.email } },
+        cohort: { connect: { academicYear: cohortYear } },
+      },
+    }),
+  ]);
+
+  if (!isDev) {
     await sendPasswordResetEmail([createdUser.email]);
   }
-  return createdUser;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...createdUserWithoutPassword } = createdUser;
+  return {
+    user: createdUserWithoutPassword,
+    mentor: createdMentor,
+  };
 };
 
 export const createManyMentorsParser = async (
   body: any,
-  isAdmin: boolean
+  isDev: boolean
 ): Promise<
   {
     user: Prisma.UserCreateInput;
-    mentor: Prisma.MentorCreateInput;
+    mentor: Prisma.MentorCreateInput & { cohortYear: number };
   }[]
 > => {
   const { count, accounts } = body;
@@ -142,42 +154,69 @@ export const createManyMentorsParser = async (
     );
   }
 
-  const promises: Promise<string>[] = [];
-  accounts.forEach((account: { mentor: Mentor; user: User }) => {
-    const { user } = account;
-
-    if (isAdmin && !user.password) {
-      throw new SkylabError(
-        "All accounts should have a password input",
-        HttpStatusCode.BAD_REQUEST
-      );
+  accounts.map(
+    async (account: {
+      user: User;
+      mentor: Mentor;
+    }): Promise<{ user: User; mentor: Mentor & { cohortYear: number } }> => {
+      if (isDev && !account.user.password) {
+        throw new SkylabError(
+          "All accounts should have a password input",
+          HttpStatusCode.BAD_REQUEST
+        );
+      }
+      const { user, mentor } = account;
+      const password =
+        isDev && user.password
+          ? await hashPassword(user.password)
+          : await generateRandomHashedPassword();
+      return {
+        user: {
+          ...user,
+          password,
+        },
+        mentor,
+      };
     }
+  );
+  await Promise.all(accounts);
 
-    promises.push(
-      isAdmin && user.password
-        ? hashPassword(user.password)
-        : generateRandomHashedPassword()
-    );
-  });
-
-  await Promise.all(promises);
   return accounts;
 };
 
-export const createManyMentors = async (
-  body: any,
-  isAdmin?: boolean
-): Promise<User[]> => {
-  const accounts = await createManyMentorsParser(body, isAdmin ?? false);
-  const prismaArgsArray: Prisma.UserCreateArgs[] = accounts.map((account) => {
-    return { data: { ...account.user, mentor: { create: account.mentor } } };
-  });
-  const createdUsers = await createManyUsers(prismaArgsArray);
-  if (!isAdmin) {
-    const mailingList = createdUsers.map((user) => user.email);
+export const createManyMentors = async (body: any, isDev?: boolean) => {
+  const accounts = await createManyMentorsParser(body, isDev ?? false);
+  const createdAccounts: Array<{
+    user: Omit<User, "password">;
+    mentor: Mentor & { cohortYear: number };
+  }> = [];
+  for (const account of accounts) {
+    const { user, mentor } = account;
+    const { cohortYear, ...mentorData } = mentor;
+    const [createdUser, createdMentor] = await prismaClient.$transaction([
+      prismaClient.user.create({ data: user }),
+      prismaClient.mentor.create({
+        data: {
+          ...mentorData,
+          user: { connect: { email: user.email } },
+          cohort: { connect: { academicYear: cohortYear } },
+        },
+      }),
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...createdUserWithoutPassword } = createdUser;
+    createdAccounts.push({
+      user: createdUserWithoutPassword,
+      mentor: createdMentor,
+    });
+  }
+
+  if (!isDev) {
+    const mailingList = createdAccounts.map((account) => account.user.email);
     await sendPasswordResetEmail(mailingList);
   }
-  return createdUsers;
+  return createdAccounts;
 };
 
 export const addMentorToAccountParser = (

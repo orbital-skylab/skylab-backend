@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import {
   getFacilitatorById,
   getFilteredFacilitators,
-} from "src/helpers/facilitator.helper";
+} from "src/helpers/facilitators.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,

@@ -1,6 +1,11 @@
 import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import {
+  addAdministratorToAccount,
+  createManyAdministrators,
+  createNewAdministrator,
+} from "src/helpers/administrators.helper";
+import {
   addAdviserToAccount,
   createManyAdvisers,
   createNewAdviser,
@@ -9,7 +14,7 @@ import {
   addFacilitatorToAccount,
   createManyFacilitators,
   createNewFacilitator,
-} from "src/helpers/facilitator.helper";
+} from "src/helpers/facilitators.helper";
 import {
   addMentorToAccount,
   createManyMentors,
@@ -146,6 +151,40 @@ router.post("/:userId/facilitator", async (req: Request, res: Response) => {
       req.body
     );
     return apiResponseWrapper(res, createdFacilitatorData);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.post(
+  "/create-administrator/batch",
+  async (req: Request, res: Response) => {
+    try {
+      const createdAdministrator = await createManyAdministrators(req.body);
+      return apiResponseWrapper(res, createdAdministrator);
+    } catch (e) {
+      routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post("/create-administrator", async (req: Request, res: Response) => {
+  try {
+    const createdAdministrator = await createNewAdministrator(req.body);
+    return apiResponseWrapper(res, createdAdministrator);
+  } catch (e) {
+    routeErrorHandler(res, e);
+  }
+});
+
+router.post("/:userId/administrator", async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  try {
+    const createdAdministratorData = await addAdministratorToAccount(
+      userId,
+      req.body
+    );
+    return apiResponseWrapper(res, createdAdministratorData);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
