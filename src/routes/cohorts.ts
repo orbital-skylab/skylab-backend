@@ -3,7 +3,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   deleteCohortByYear,
   editCohortByYear,
-  getLatestCohort,
+  getCurrentCohort,
 } from "src/helpers/cohorts.helper";
 import { createCohort, getManyCohorts } from "src/models/cohorts.db";
 import {
@@ -90,10 +90,10 @@ router
   });
 
 router
-  .get("/latest", async (_: Request, res: Response) => {
+  .get("/current", async (_: Request, res: Response) => {
     try {
-      const latestCohort = await getLatestCohort();
-      res.status(HttpStatusCode.OK).json({ cohort: latestCohort });
+      const currentCohort = await getCurrentCohort();
+      res.status(HttpStatusCode.OK).json({ cohort: currentCohort });
     } catch (e) {
       if (!(e instanceof SkylabError)) {
         res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).send(e.message);

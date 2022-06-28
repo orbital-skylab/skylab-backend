@@ -43,10 +43,10 @@ export const getUsersFilterParser = (query: any) => {
   filter = {
     ...filter,
     include: {
-      student: true,
-      administrator: true,
-      mentor: true,
-      adviser: true,
+      student: { where: { cohortYear: cohortYear } },
+      administrator: { where: { endDate: { gte: new Date() } } },
+      mentor: { where: { cohortYear: cohortYear } },
+      adviser: { where: { cohortYear: cohortYear } },
     },
   };
 
