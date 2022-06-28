@@ -1,5 +1,9 @@
 import { Router, Request, Response } from "express";
 import {
+  createNewAdministrator,
+  addAdministratorToAccount,
+} from "src/helpers/administrators.helper";
+import {
   addAdviserToAccount,
   createManyAdvisers,
   createNewAdviser,
@@ -19,6 +23,7 @@ import {
   createNewStudent,
   addStudentToAccount,
 } from "src/helpers/students.helper";
+import { createManyAdministrators } from "src/models/administrators.db";
 import { seedDummyData } from "src/seed/seed.helper";
 import {
   apiResponseWrapper,
@@ -143,6 +148,43 @@ router.post("/:userId/facilitator", async (req: Request, res: Response) => {
     return apiResponseWrapper(res, createdFacilitatorData);
   } catch (e) {
     routeErrorHandler(res, e);
+  }
+});
+
+router.post(
+  "/create-administrator/batch",
+  async (req: Request, res: Response) => {
+    try {
+      const createdAdministrator = await createManyAdministrators(
+        req.body,
+        true
+      );
+      return apiResponseWrapper(res, createdAdministrator);
+    } catch (e) {
+      routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post("/create-administrator", async (req: Request, res: Response) => {
+  try {
+    const createdAdministrator = await createNewAdministrator(req.body, true);
+    return apiResponseWrapper(res, createdAdministrator);
+  } catch (e) {
+    routeErrorHandler(res, e);
+  }
+});
+
+router.post("/:userId/administrator", async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  try {
+    const createdAdministratorData = await addAdministratorToAccount(
+      userId,
+      req.body
+    );
+    return apiResponseWrapper(res, createdAdministratorData);
+  } catch (e) {
+    return routeErrorHandler(res, e);
   }
 });
 
