@@ -84,6 +84,14 @@ export const getUsersFilterParser = (query: any) => {
           HttpStatusCode.BAD_REQUEST
         );
     }
+
+    if (query.search) {
+      const { where, ...filterInfo } = filter;
+      filter = {
+        ...filterInfo,
+        where: { ...where, name: { search: query.search } },
+      };
+    }
   }
 
   return filter;
