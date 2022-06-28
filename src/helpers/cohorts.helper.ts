@@ -14,7 +14,21 @@ export const getCurrentCohort = async () => {
   return await getFirstCohort({
     where: { startDate: { lte: new Date() }, endDate: { gte: new Date() } },
     orderBy: { academicYear: "desc" },
-  });
+  })
+    .catch(async () => {
+      return await getFirstCohort({
+        where: {
+          startDate: { gte: new Date() },
+        },
+        orderBy: { academicYear: "asc" },
+      });
+    })
+    .catch(async () => {
+      return await getFirstCohort({
+        where: { endDate: { lte: new Date() } },
+        orderBy: { academicYear: "desc" },
+      });
+    });
 };
 
 /**

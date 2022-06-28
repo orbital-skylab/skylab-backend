@@ -20,6 +20,7 @@ router
       const allProjects = await getFilteredProjects(req.query);
       return apiResponseWrapper(res, allProjects);
     } catch (e) {
+      console.log(e);
       return routeErrorHandler(res, e);
     }
   })
