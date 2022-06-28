@@ -8,11 +8,7 @@ import {
   getOneFacilitator,
 } from "src/models/facilitators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import {
-  hashPassword,
-  generateRandomHashedPassword,
-  sendPasswordResetEmail,
-} from "./users.helper";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -113,13 +109,10 @@ export const createNewFacilitator = async (body: any, isDev?: boolean) => {
     }),
   ]);
 
-  if (!isDev) {
-    await sendPasswordResetEmail([createdUser.email]);
-  }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...createdUserWithoutPassword } = createdUser;
   return {
-    user: createdUserWithoutPassword,
+    ...createdUserWithoutPassword,
     facilitator: createdFacilitator,
   };
 };
@@ -184,10 +177,11 @@ export const createManyFacilitatorsParser = async (
 
 export const createManyFacilitators = async (body: any, isDev?: boolean) => {
   const accounts = await createManyFacilitatorsParser(body, isDev ?? false);
-  const createdAccounts: Array<{
-    user: Omit<User, "password">;
-    facilitator: Facilitator & { cohortYear: number };
-  }> = [];
+  const createdAccounts: Array<
+    Omit<User, "password"> & {
+      facilitator: Facilitator & { cohortYear: number };
+    }
+  > = [];
   for (const account of accounts) {
     const { user, facilitator } = account;
     const { cohortYear, ...facilitatorData } = facilitator;
@@ -205,15 +199,11 @@ export const createManyFacilitators = async (body: any, isDev?: boolean) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...createdUserWithoutPassword } = createdUser;
     createdAccounts.push({
-      user: createdUserWithoutPassword,
+      ...createdUserWithoutPassword,
       facilitator: createdFacilitator,
     });
   }
 
-  if (!isDev) {
-    const mailingList = createdAccounts.map((account) => account.user.email);
-    await sendPasswordResetEmail(mailingList);
-  }
   return createdAccounts;
 };
 

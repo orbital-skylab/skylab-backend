@@ -7,11 +7,7 @@ import {
   getOneAdviser,
 } from "src/models/advisers.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import {
-  hashPassword,
-  generateRandomHashedPassword,
-  sendPasswordResetEmail,
-} from "./users.helper";
+import { hashPassword, generateRandomHashedPassword } from "./users.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -120,13 +116,10 @@ export const createNewAdviser = async (body: any, isDev?: boolean) => {
     }),
   ]);
 
-  if (!isDev) {
-    await sendPasswordResetEmail([createdUser.email]);
-  }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...createdUserWithoutPassword } = createdUser;
   return {
-    user: createdUserWithoutPassword,
+    ...createdUserWithoutPassword,
     adviser: createdAdviser,
   };
 };
@@ -188,10 +181,11 @@ export const createManyAdvisersParser = async (
 
 export const createManyAdvisers = async (body: any, isDev?: boolean) => {
   const accounts = await createManyAdvisersParser(body, isDev ?? false);
-  const createdAccounts: Array<{
-    user: Omit<User, "password">;
-    adviser: Adviser & { cohortYear: number };
-  }> = [];
+  const createdAccounts: Array<
+    Omit<User, "password"> & {
+      adviser: Adviser & { cohortYear: number };
+    }
+  > = [];
   for (const account of accounts) {
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
@@ -209,15 +203,11 @@ export const createManyAdvisers = async (body: any, isDev?: boolean) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...createdUserWithoutPassword } = createdUser;
     createdAccounts.push({
-      user: createdUserWithoutPassword,
+      ...createdUserWithoutPassword,
       adviser: createdAdviser,
     });
   }
 
-  if (!isDev) {
-    const mailingList = createdAccounts.map((account) => account.user.email);
-    await sendPasswordResetEmail(mailingList);
-  }
   return createdAccounts;
 };
 

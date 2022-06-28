@@ -7,11 +7,7 @@ import {
   getOneStudent,
 } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import {
-  generateRandomHashedPassword,
-  hashPassword,
-  sendPasswordResetEmail,
-} from "./users.helper";
+import { generateRandomHashedPassword, hashPassword } from "./users.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -114,13 +110,11 @@ export const createNewStudent = async (body: any, isDev?: boolean) => {
       },
     }),
   ]);
-  if (!isDev) {
-    await sendPasswordResetEmail([createdUser.email]);
-  }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...createdUserWithoutPassword } = createdUser;
   return {
-    user: createdUserWithoutPassword,
+    ...createdUserWithoutPassword,
     student: createdStudent,
   };
 };
@@ -187,10 +181,11 @@ export const createManyStudentsParser = async (
 export const createManyStudents = async (body: any, isDev?: boolean) => {
   const accounts = await createManyStudentsParser(body, isDev ?? false);
 
-  const createdAccounts: Array<{
-    user: Omit<User, "password">;
-    student: Student & { cohortYear: number };
-  }> = [];
+  const createdAccounts: Array<
+    Omit<User, "password"> & {
+      student: Student & { cohortYear: number };
+    }
+  > = [];
   for (const account of accounts) {
     const { project, student: _student } = account;
     const { user, student } = _student;
@@ -217,15 +212,11 @@ export const createManyStudents = async (body: any, isDev?: boolean) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...createdUserWithoutPassword } = createdUser;
     createdAccounts.push({
-      user: createdUserWithoutPassword,
+      ...createdUserWithoutPassword,
       student: createdStudent,
     });
   }
 
-  if (!isDev) {
-    const mailingList = createdAccounts.map((account) => account.user.email);
-    await sendPasswordResetEmail(mailingList);
-  }
   return createdAccounts;
 };
 
