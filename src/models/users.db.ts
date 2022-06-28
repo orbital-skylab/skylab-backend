@@ -98,8 +98,20 @@ export const getOneUserWithRoleData = async (
  * @param query The query conditions to be selected upon
  * @returns The array of user records that match the query conditions
  */
-export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
-  const users = await prisma.user.findMany(query);
+export const getManyUsers = async ({
+  include,
+  ...query
+}: Prisma.UserFindManyArgs) => {
+  const users = await prisma.user.findMany({
+    ...query,
+    include: {
+      ...include,
+      student: true,
+      mentor: true,
+      adviser: true,
+      administrator: true,
+    },
+  });
   return users;
 };
 

@@ -8,11 +8,10 @@ import {
   getOneUser,
   updateOneUser,
   getOneUserWithRoleData,
-  getManyUsers,
 } from "src/models/users.db";
 import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
 import { TEMPLATE_ID } from "src/utils/Emails";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 enum UserFilterRoles {
   Mentor = "Mentor",
@@ -97,10 +96,49 @@ export const getUsersFilterParser = (query: any) => {
   return filter;
 };
 
+export const parseFilteredUsers = async (
+  user: Prisma.UserGetPayload<{
+    include: {
+      mentor: true;
+      administrator: true;
+      adviser: true;
+      student: true;
+    };
+  }>
+) => {
+  const { student, mentor, administrator, adviser, ...userInfo } = user;
+  return {
+    ...userInfo,
+    student: student[0] ?? {},
+    mentor: mentor[0] ?? {},
+    adviser: adviser[0] ?? {},
+    administrator: administrator[0] ?? {},
+  };
+};
+
 export const getFilteredUsers = async (query: any) => {
   const filteredQuery = getUsersFilterParser(query);
-  const users = await getManyUsers(filteredQuery);
-  return users;
+
+  if (!query.cohortYear) {
+    throw new SkylabError(
+      "Parameters missing in request",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const cohortYear = Number(query.cohortYear);
+
+  const prismaClient = new PrismaClient();
+  const users = await prismaClient.user.findMany({
+    ...filteredQuery,
+    include: {
+      student: { where: { cohortYear: cohortYear } },
+      administrator: { where: { endDate: { gte: new Date() } } },
+      mentor: { where: { cohortYear: cohortYear } },
+      adviser: { where: { cohortYear: cohortYear } },
+    },
+  });
+  return await Promise.all(users.map((user) => parseFilteredUsers(user)));
 };
 
 export const userLogin = async (email: string, password: string) => {
