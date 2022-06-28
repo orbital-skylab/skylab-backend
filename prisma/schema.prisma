@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "interactiveTransactions"]
+  previewFeatures = ["fullTextSearch", "interactiveTransactions", "extendedIndexes"]
 }
 
 datasource db {
@@ -123,6 +123,7 @@ model Project {
   submitter    Submitter?       @relation(fields: [submitterId], references: [id])
   submitterId  Int?
   proposalPdf  String?
+
 
   @@unique([name, cohortYear])
 }

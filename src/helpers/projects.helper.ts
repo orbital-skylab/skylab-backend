@@ -90,6 +90,23 @@ export const getFilteredProjectsWhereInputParser = (filter: any) => {
     };
   }
 
+  if (filter.search) {
+    const { where, ...filterData } = toReturn;
+    const searchString = filter.search;
+    toReturn = {
+      ...filterData,
+      where: {
+        ...where,
+        OR: [
+          { name: { search: searchString } },
+          { students: { some: { user: { name: { search: searchString } } } } },
+          { mentor: { user: { name: { search: searchString } } } },
+          { adviser: { user: { name: { search: searchString } } } },
+        ],
+      },
+    };
+  }
+
   return toReturn;
 };
 

@@ -157,8 +157,8 @@ export const createProject1: {
   project: {
     cohortYear: 2022,
     students: [1, 2],
-    mentor: 5,
-    adviser: 7,
+    mentor: 1,
+    adviser: 1,
     name: "NUSGrabYourOwnFood",
     achievement: "Vostok",
   },
