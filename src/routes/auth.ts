@@ -2,8 +2,8 @@ import { Router, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  generateRandomPassword,
   hashPassword,
+  sendPasswordResetEmail,
   userLogin,
 } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
@@ -73,65 +73,84 @@ router.get("/info", authorize, async (req: Request, res: Response) => {
   }
 });
 
-router.post(
-  "/:email/regenerate-password",
-  async (req: Request, res: Response) => {
-    try {
-      const password = generateRandomPassword();
-      const hashedPassword = await hashPassword(password);
-
-      const { email } = req.params;
-      await updateOneUser({
+router.post("/reset-password", async (req: Request, res: Response) => {
+  try {
+    const { email, origin } = req.body;
+    const { id, password } = await getOneUser(
+      {
         where: { email: email },
-        data: { password: hashedPassword },
-      });
-
-      return apiResponseWrapper(res, { password });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  }
-);
-
-router.post(
-  "/reset-password",
-  authorize,
-  async (req: Request, res: Response) => {
-    try {
-      const { token } = req.cookies;
-      const { id } = jwt.verify(
-        token,
-        process.env.JWT_SECRET ?? "jwt_secret"
-      ) as JwtPayload;
-      const { password } = await getOneUser(
-        {
-          where: { id: id },
-          select: {
-            password: true,
-          },
+        select: {
+          password: true,
+          id: true,
         },
-        true
-      );
+      },
+      true
+    );
 
-      const { currentPassword, newPassword } = req.body;
-      if (currentPassword !== password) {
-        throw new SkylabError(
-          "Current password does not match record in database",
-          HttpStatusCode.BAD_REQUEST
-        );
-      }
-
-      const hashedPassword = await hashPassword(newPassword);
-      await updateOneUser({
-        where: { id: id },
-        data: { password: hashedPassword },
-      });
-
-      return apiResponseWrapper(res, {});
-    } catch (e) {
-      return routeErrorHandler(res, e);
+    if (!password) {
+      throw new SkylabError("User not found", HttpStatusCode.BAD_REQUEST);
     }
+
+    const expiryDate = new Date();
+    expiryDate.setMinutes(expiryDate.getMinutes() + 30);
+    console.log(expiryDate.toString());
+    const token = jwt.sign({ id, expiryDate }, password);
+
+    sendPasswordResetEmail(email, id, token, origin);
+
+    return apiResponseWrapper(res, {});
+  } catch (e) {
+    return routeErrorHandler(res, e);
   }
-);
+});
+
+router.post("/change-password", async (req: Request, res: Response) => {
+  try {
+    const { id, token, newPassword } = req.body;
+
+    const { password } = await getOneUser(
+      {
+        where: { id: id },
+        select: {
+          password: true,
+        },
+      },
+      true
+    );
+
+    if (!password) {
+      throw new SkylabError("User not found", HttpStatusCode.BAD_REQUEST);
+    }
+
+    const { id: userId, expiryDate } = jwt.verify(
+      token,
+      password
+    ) as JwtPayload;
+
+    if (Number(id) !== Number(userId)) {
+      throw new SkylabError(
+        "User id does not match",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    if (new Date() > expiryDate) {
+      throw new SkylabError(
+        "Reset password link has expired",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    await updateOneUser({
+      where: { id: id },
+      data: { password: hashedPassword },
+    });
+
+    return apiResponseWrapper(res, {});
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 export default router;
