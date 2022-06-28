@@ -18,6 +18,7 @@ enum UserFilterRoles {
   Mentor = "Mentor",
   Student = "Student",
   Adviser = "Adviser",
+  Admin = "Administrator",
 }
 
 export const getUsersFilterParser = (query: any) => {
@@ -39,42 +40,50 @@ export const getUsersFilterParser = (query: any) => {
     };
   }
 
+  filter = {
+    ...filter,
+    include: {
+      student: true,
+      administrator: true,
+      mentor: true,
+      adviser: true,
+    },
+  };
+
   if (query.role) {
-    const { role } = query;
-    switch (role) {
-      case UserFilterRoles.Student:
-        filter = {
-          ...filter,
-          include: { student: { where: { cohortYear: cohortYear } } },
-        };
-        break;
+    switch (query.role) {
       case UserFilterRoles.Mentor:
         filter = {
           ...filter,
-          include: { mentor: { where: { cohortYear: cohortYear } } },
+          where: { mentor: { some: { cohortYear: cohortYear } } },
         };
         break;
       case UserFilterRoles.Adviser:
         filter = {
           ...filter,
-          include: { adviser: { where: { cohortYear: cohortYear } } },
+          where: { adviser: { some: { cohortYear: cohortYear } } },
+        };
+        break;
+      case UserFilterRoles.Student:
+        filter = {
+          ...filter,
+          where: { student: { some: { cohortYear: cohortYear } } },
+        };
+        break;
+      case UserFilterRoles.Admin:
+        filter = {
+          ...filter,
+          where: {
+            administrator: { some: { endDate: { gte: new Date() } } },
+          },
         };
         break;
       default:
         throw new SkylabError(
-          "Invalid Role to Filter On",
+          "Invalid Input for Role in Request",
           HttpStatusCode.BAD_REQUEST
         );
     }
-  } else {
-    filter = {
-      ...filter,
-      include: {
-        mentor: { where: { cohortYear: cohortYear } },
-        student: { where: { cohortYear: cohortYear } },
-        adviser: { where: { cohortYear: cohortYear } },
-      },
-    };
   }
 
   return filter;
