@@ -1,4 +1,4 @@
-import { createManyStudents } from "src/helpers/students.helper";
+import { createNewStudent } from "src/helpers/students.helper";
 import { createManyAdvisers } from "src/helpers/advisers.helper";
 import { createCohort } from "src/models/cohorts.db";
 import { createOneDeadline } from "src/models/deadline.db";
@@ -25,7 +25,11 @@ export const seedDummyData = async () => {
   await createOneDeadline({ data: createDeadline3 });
 
   //3. Create Students
-  await createManyStudents(batchCreateStudents, true);
+  await Promise.all(
+    batchCreateStudents.accounts.map((account) =>
+      createNewStudent({ ...account }, true)
+    )
+  );
 
   //4. Create Advisers
   await createManyAdvisers(batchCreateAdvisers, true);

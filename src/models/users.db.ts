@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
-import { getLatestCohort } from "src/helpers/cohorts.helper";
+import { getCurrentCohort } from "src/helpers/cohorts.helper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
@@ -55,7 +55,7 @@ export const getOneUser = async (
 export const getOneUserWithRoleData = async (
   query: Prisma.UserFindUniqueArgs
 ) => {
-  const { academicYear } = await getLatestCohort();
+  const { academicYear } = await getCurrentCohort();
   const queryParams = {
     ...query,
     include: {
@@ -98,8 +98,20 @@ export const getOneUserWithRoleData = async (
  * @param query The query conditions to be selected upon
  * @returns The array of user records that match the query conditions
  */
-export const getManyUsers = async (query: Prisma.UserFindManyArgs) => {
-  const users = await prisma.user.findMany(query);
+export const getManyUsers = async ({
+  include,
+  ...query
+}: Prisma.UserFindManyArgs) => {
+  const users = await prisma.user.findMany({
+    ...query,
+    include: {
+      ...include,
+      student: true,
+      mentor: true,
+      adviser: true,
+      administrator: true,
+    },
+  });
   return users;
 };
 

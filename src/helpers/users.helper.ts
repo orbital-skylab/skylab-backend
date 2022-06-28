@@ -8,16 +8,16 @@ import {
   getOneUser,
   updateOneUser,
   getOneUserWithRoleData,
-  getManyUsers,
 } from "src/models/users.db";
 import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
-import { Prisma } from "@prisma/client";
-import { GET_HTML_CONTENT, SENDER, SUBJECT } from "src/utils/Emails";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { SUBJECT, SENDER, GET_HTML_CONTENT } from "src/utils/Emails";
 
 enum UserFilterRoles {
   Mentor = "Mentor",
   Student = "Student",
   Adviser = "Adviser",
+  Admin = "Administrator",
 }
 
 export const getUsersFilterParser = (query: any) => {
@@ -39,51 +39,106 @@ export const getUsersFilterParser = (query: any) => {
     };
   }
 
+  filter = {
+    ...filter,
+    include: {
+      student: { where: { cohortYear: cohortYear } },
+      administrator: { where: { endDate: { gte: new Date() } } },
+      mentor: { where: { cohortYear: cohortYear } },
+      adviser: { where: { cohortYear: cohortYear } },
+    },
+  };
+
   if (query.role) {
-    const { role } = query;
-    switch (role) {
-      case UserFilterRoles.Student:
-        filter = {
-          ...filter,
-          include: { student: { where: { cohortYear: cohortYear } } },
-        };
-        break;
+    switch (query.role) {
       case UserFilterRoles.Mentor:
         filter = {
           ...filter,
-          include: { mentor: { where: { cohortYear: cohortYear } } },
+          where: { mentor: { some: { cohortYear: cohortYear } } },
         };
         break;
       case UserFilterRoles.Adviser:
         filter = {
           ...filter,
-          include: { adviser: { where: { cohortYear: cohortYear } } },
+          where: { adviser: { some: { cohortYear: cohortYear } } },
+        };
+        break;
+      case UserFilterRoles.Student:
+        filter = {
+          ...filter,
+          where: { student: { some: { cohortYear: cohortYear } } },
+        };
+        break;
+      case UserFilterRoles.Admin:
+        filter = {
+          ...filter,
+          where: {
+            administrator: { some: { endDate: { gte: new Date() } } },
+          },
         };
         break;
       default:
         throw new SkylabError(
-          "Invalid Role to Filter On",
+          "Invalid Input for Role in Request",
           HttpStatusCode.BAD_REQUEST
         );
     }
-  } else {
-    filter = {
-      ...filter,
-      include: {
-        mentor: { where: { cohortYear: cohortYear } },
-        student: { where: { cohortYear: cohortYear } },
-        adviser: { where: { cohortYear: cohortYear } },
-      },
-    };
+
+    if (query.search) {
+      const { where, ...filterInfo } = filter;
+      filter = {
+        ...filterInfo,
+        where: { ...where, name: { search: query.search } },
+      };
+    }
   }
 
   return filter;
 };
 
+export const parseFilteredUsers = async (
+  user: Prisma.UserGetPayload<{
+    include: {
+      mentor: true;
+      administrator: true;
+      adviser: true;
+      student: true;
+    };
+  }>
+) => {
+  const { student, mentor, administrator, adviser, ...userInfo } = user;
+  return {
+    ...userInfo,
+    student: student[0] ?? {},
+    mentor: mentor[0] ?? {},
+    adviser: adviser[0] ?? {},
+    administrator: administrator[0] ?? {},
+  };
+};
+
 export const getFilteredUsers = async (query: any) => {
   const filteredQuery = getUsersFilterParser(query);
-  const users = await getManyUsers(filteredQuery);
-  return users;
+
+  if (!query.cohortYear) {
+    throw new SkylabError(
+      "Parameters missing in request",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const cohortYear = Number(query.cohortYear);
+
+  const prismaClient = new PrismaClient();
+  const users = await prismaClient.user.findMany({
+    ...filteredQuery,
+    include: {
+      student: { where: { cohortYear: cohortYear } },
+      administrator: { where: { endDate: { gte: new Date() } } },
+      mentor: { where: { cohortYear: cohortYear } },
+      adviser: { where: { cohortYear: cohortYear } },
+    },
+  });
+  return await Promise.all(users.map((user) => parseFilteredUsers(user)));
 };
 
 export const userLogin = async (email: string, password: string) => {
