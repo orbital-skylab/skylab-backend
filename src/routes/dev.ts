@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import {
   createNewAdministrator,
   addAdministratorToAccount,
+  createManyAdministrators,
 } from "src/helpers/administrators.helper";
 import {
   addAdviserToAccount,
@@ -23,7 +24,6 @@ import {
   createNewStudent,
   addStudentToAccount,
 } from "src/helpers/students.helper";
-import { createManyAdministrators } from "src/models/administrators.db";
 import { seedDummyData } from "src/seed/seed.helper";
 import {
   apiResponseWrapper,
