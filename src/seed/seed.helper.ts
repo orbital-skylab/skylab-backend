@@ -25,13 +25,13 @@ export const seedDummyData = async () => {
   await createOneDeadline({ data: createDeadline3 });
 
   //3. Create Students
-  await createManyStudents(batchCreateStudents);
+  await createManyStudents(batchCreateStudents, true);
 
   //4. Create Advisers
-  await createManyAdvisers(batchCreateAdvisers);
+  await createManyAdvisers(batchCreateAdvisers, true);
 
   //5. Create Mentors
-  await createManyMentors(batchCreateMentors);
+  await createManyMentors(batchCreateMentors, true);
 
   //6. Create Project
   await createProjectHelper(createProject1);
