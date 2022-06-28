@@ -10,8 +10,11 @@ import {
  * @function getLatestCohort Get the most recent cohort
  * @returns The most recent cohort record by academicYear
  */
-export const getLatestCohort = async () => {
-  return await getFirstCohort({ orderBy: { academicYear: "desc" } });
+export const getCurrentCohort = async () => {
+  return await getFirstCohort({
+    where: { startDate: { lte: new Date() }, endDate: { gte: new Date() } },
+    orderBy: { academicYear: "desc" },
+  });
 };
 
 /**
