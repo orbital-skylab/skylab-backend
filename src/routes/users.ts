@@ -11,11 +11,6 @@ import {
   createNewAdviser,
 } from "src/helpers/advisers.helper";
 import {
-  addFacilitatorToAccount,
-  createManyFacilitators,
-  createNewFacilitator,
-} from "src/helpers/facilitators.helper";
-import {
   addMentorToAccount,
   createManyMentors,
   createNewMentor,
@@ -39,6 +34,13 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
 
+enum UserRoleRoutes {
+  Student = "student",
+  Administrator = "administrator",
+  Mentor = "mentor",
+  Adviser = "adviser",
+}
+
 router.get("/", async (req: Request, res: Response) => {
   try {
     const users = await getFilteredUsers(req.query);
@@ -48,155 +50,92 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/create-student/batch", async (req: Request, res: Response) => {
+router.post("/create-:role/batch", async (req: Request, res: Response) => {
+  const { role } = req.params;
   try {
-    const createdStudents = await createManyStudents(req.body);
-    return apiResponseWrapper(res, { students: createdStudents });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-student", async (req: Request, res: Response) => {
-  try {
-    const createdStudent = await createNewStudent(req.body);
-    return apiResponseWrapper(res, createdStudent);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/:userId/student", async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  try {
-    const createdStudentData = await addStudentToAccount(userId, req.body);
-    return apiResponseWrapper(res, createdStudentData);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-mentor/batch", async (req: Request, res: Response) => {
-  try {
-    const createdMentors = await createManyMentors(req.body);
-    return apiResponseWrapper(res, createdMentors);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-mentor", async (req: Request, res: Response) => {
-  try {
-    const createdMentor = await createNewMentor(req.body);
-    return apiResponseWrapper(res, createdMentor);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/:userId/mentor", async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  try {
-    const createdMentorData = await addMentorToAccount(userId, req.body);
-    return apiResponseWrapper(res, createdMentorData);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-adviser/batch", async (req: Request, res: Response) => {
-  try {
-    const createdAdvisers = await createManyAdvisers(req.body);
-    return apiResponseWrapper(res, createdAdvisers);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-adviser", async (req: Request, res: Response) => {
-  try {
-    const createdAdviser = await createNewAdviser(req.body);
-    return apiResponseWrapper(res, createdAdviser);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/:userId/adviser", async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  try {
-    const createdAdviserData = await addAdviserToAccount(userId, req.body);
-    return apiResponseWrapper(res, createdAdviserData);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post(
-  "/create-facilitator/batch",
-  async (req: Request, res: Response) => {
-    try {
-      const createdFacilitators = await createManyFacilitators(req.body);
-      return apiResponseWrapper(res, createdFacilitators);
-    } catch (e) {
-      routeErrorHandler(res, e);
+    let created;
+    switch (role) {
+      case UserRoleRoutes.Student:
+        created = await createManyStudents(req.body);
+        break;
+      case UserRoleRoutes.Mentor:
+        created = await createManyMentors(req.body);
+        break;
+      case UserRoleRoutes.Adviser:
+        created = await createManyAdvisers(req.body);
+        break;
+      case UserRoleRoutes.Administrator:
+        created = await createManyAdministrators(req.body);
+      default:
+        throw new SkylabError(
+          "Invalid role to access endpoint",
+          HttpStatusCode.BAD_REQUEST
+        );
     }
-  }
-);
 
-router.post("/create-facilitator", async (req: Request, res: Response) => {
-  try {
-    const createdFacilitator = await createNewFacilitator(req.body);
-    return apiResponseWrapper(res, createdFacilitator);
+    return apiResponseWrapper(res, { [role]: created });
   } catch (e) {
     routeErrorHandler(res, e);
   }
 });
 
-router.post("/:userId/facilitator", async (req: Request, res: Response) => {
-  const { userId } = req.params;
+router.post("/create-:role", async (req: Request, res: Response) => {
+  const { role } = req.params;
   try {
-    const createdFacilitatorData = await addFacilitatorToAccount(
-      userId,
-      req.body
-    );
-    return apiResponseWrapper(res, createdFacilitatorData);
-  } catch (e) {
-    return routeErrorHandler(res, e);
-  }
-});
-
-router.post(
-  "/create-administrator/batch",
-  async (req: Request, res: Response) => {
-    try {
-      const createdAdministrator = await createManyAdministrators(req.body);
-      return apiResponseWrapper(res, createdAdministrator);
-    } catch (e) {
-      routeErrorHandler(res, e);
+    let created;
+    switch (role) {
+      case UserRoleRoutes.Student:
+        created = await createNewStudent(req.body);
+        break;
+      case UserRoleRoutes.Mentor:
+        created = await createNewMentor(req.body);
+        break;
+      case UserRoleRoutes.Adviser:
+        created = await createNewAdviser(req.body);
+        break;
+      case UserRoleRoutes.Administrator:
+        created = await createNewAdministrator(req.body);
+        break;
+      default:
+        throw new SkylabError(
+          "Invalid role to access endpoint",
+          HttpStatusCode.BAD_REQUEST
+        );
     }
-  }
-);
-
-router.post("/create-administrator", async (req: Request, res: Response) => {
-  try {
-    const createdAdministrator = await createNewAdministrator(req.body);
-    return apiResponseWrapper(res, createdAdministrator);
+    return apiResponseWrapper(res, { [role]: created });
   } catch (e) {
     routeErrorHandler(res, e);
   }
 });
 
-router.post("/:userId/administrator", async (req: Request, res: Response) => {
-  const { userId } = req.params;
+router.post("/:userId/:role", async (req: Request, res: Response) => {
+  const { userId, role } = req.params;
+
   try {
-    const createdAdministratorData = await addAdministratorToAccount(
-      userId,
-      req.body
-    );
-    return apiResponseWrapper(res, createdAdministratorData);
+    let created;
+    switch (role) {
+      case UserRoleRoutes.Student:
+        created = await addStudentToAccount(userId, req.body);
+        break;
+      case UserRoleRoutes.Mentor:
+        created = await addMentorToAccount(userId, req.body);
+        break;
+      case UserRoleRoutes.Adviser:
+        created = await addAdviserToAccount(userId, req.body);
+        break;
+      case UserRoleRoutes.Administrator:
+        created = await addAdministratorToAccount(userId, req.body);
+        break;
+      default:
+        throw new SkylabError(
+          "Invalid role to access endpoint",
+          HttpStatusCode.BAD_REQUEST
+        );
+    }
+
+    return apiResponseWrapper(res, created);
   } catch (e) {
-    return routeErrorHandler(res, e);
+    routeErrorHandler(res, e);
   }
 });
 
