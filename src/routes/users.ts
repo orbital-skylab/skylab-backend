@@ -216,7 +216,7 @@ router
         Number(userId),
         req.body.user
       );
-      return apiResponseWrapper(res, editedUser);
+      return apiResponseWrapper(res, { user: editedUser });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -225,7 +225,7 @@ router
     const { userId } = req.params;
     try {
       const deletedUser = await deleteUserById(Number(userId));
-      return apiResponseWrapper(res, deletedUser);
+      return apiResponseWrapper(res, { user: deletedUser });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
