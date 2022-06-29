@@ -150,6 +150,7 @@ model Question {
   question       String
   desc           String
   type           QuestionType
+  anonymous      Boolean
 
   answers Answer[]
   options Option[] //for MCQ/Multi-select questions
