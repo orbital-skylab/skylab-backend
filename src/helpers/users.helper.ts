@@ -10,8 +10,8 @@ import {
   getOneUserWithRoleData,
 } from "src/models/users.db";
 import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
-import { TEMPLATE_ID } from "src/utils/Emails";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { SUBJECT, SENDER, GET_HTML_CONTENT } from "src/utils/Emails";
 
 enum UserFilterRoles {
   Mentor = "Mentor",
@@ -190,7 +190,12 @@ export const generateRandomHashedPassword = async () => {
   return await hashPassword(plainTextPassword);
 };
 
-export const sendPasswordResetEmail = async (emails: string[]) => {
+export const sendPasswordResetEmail = async (
+  email: string,
+  id: number,
+  token: string,
+  origin: string
+) => {
   try {
     const sendInBlue = await import("sib-api-v3-typescript");
     const apiInstance = new sendInBlue.TransactionalEmailsApi();
@@ -198,10 +203,12 @@ export const sendPasswordResetEmail = async (emails: string[]) => {
       TransactionalEmailsApiApiKeys.apiKey,
       process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key"
     );
-    const newPasswordResetEmail = new sendInBlue.SendEmail();
-    newPasswordResetEmail.emailTo = emails;
-
-    await apiInstance.sendTemplate(TEMPLATE_ID, newPasswordResetEmail);
+    const newPasswordResetEmail = new sendInBlue.SendSmtpEmail();
+    newPasswordResetEmail.subject = SUBJECT;
+    newPasswordResetEmail.to = [{ email }];
+    newPasswordResetEmail.sender = SENDER;
+    newPasswordResetEmail.htmlContent = GET_HTML_CONTENT(origin, token, id);
+    await apiInstance.sendTransacEmail(newPasswordResetEmail);
   } catch (e) {
     console.error(e);
   }

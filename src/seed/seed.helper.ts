@@ -27,15 +27,15 @@ export const seedDummyData = async () => {
   //3. Create Students
   await Promise.all(
     batchCreateStudents.accounts.map((account) =>
-      createNewStudent({ ...account })
+      createNewStudent({ ...account }, true)
     )
   );
 
   //4. Create Advisers
-  await createManyAdvisers(batchCreateAdvisers);
+  await createManyAdvisers(batchCreateAdvisers, true);
 
   //5. Create Mentors
-  await createManyMentors(batchCreateMentors);
+  await createManyMentors(batchCreateMentors, true);
 
   //6. Create Project
   await createProjectHelper(createProject1);
