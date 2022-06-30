@@ -16,7 +16,7 @@ const prismaClient = new PrismaClient();
  * @param adviser The payload returned from prisma.adviser.find
  * @returns Flattened object with both User and Adviser Data
  */
-export const getAdviserInputParser = (
+export const parseGetAdvisersInput = (
   adviser: Prisma.AdviserGetPayload<{ include: { user: true } }>
 ) => {
   const { user, id, ...data } = adviser;
@@ -25,7 +25,7 @@ export const getAdviserInputParser = (
 
 export const getAdviserById = async (adviserId: string) => {
   const adviser = await getOneAdviser({ where: { id: Number(adviserId) } });
-  return getAdviserInputParser(adviser);
+  return parseGetAdvisersInput(adviser);
 };
 
 /**
@@ -34,31 +34,12 @@ export const getAdviserById = async (adviserId: string) => {
  * @param query The raw query object from the HTTP Request
  * @returns A filter object that works with prisma.adviser.findMany
  */
-export const getFilteredAdvisersWhereInputParser = (query: any) => {
-  let filter: Prisma.AdviserFindManyArgs = {};
-
-  if ((query.page && !query.limit) || (query.limit && !query.page)) {
-    throw new SkylabError(
-      `${
-        query.limit ? "Page" : "Limit"
-      } parameter missing in a pagination query`,
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  if (query.page && query.limit) {
-    filter = {
-      ...filter,
-      take: Number(query.limit),
-      skip: Number(query.page) * Number(query.limit),
-    };
-  }
-
-  if (query.cohortYear) {
-    filter = { ...filter, where: { cohortYear: Number(query.cohortYear) } };
-  }
-
-  return filter;
+export const parseGetAdvisersFilter = (query: any) => {
+  return {
+    take: query.limit ?? undefined,
+    skip: query.page * query.limit ?? undefined,
+    where: query.cohortYear ?? { query: query.cohortYear },
+  };
 };
 
 /**
@@ -67,10 +48,10 @@ export const getFilteredAdvisersWhereInputParser = (query: any) => {
  * @returns Array of Adviser Records that match the given query
  */
 export const getFilteredAdvisers = async (query: any) => {
-  const filteredQuery = getFilteredAdvisersWhereInputParser(query);
+  const filteredQuery = parseGetAdvisersFilter(query);
   const advisers = await getManyAdvisers(filteredQuery);
   const parsedAdvisers = advisers.map((adviser) =>
-    getAdviserInputParser(adviser)
+    parseGetAdvisersInput(adviser)
   );
   return parsedAdvisers;
 };
@@ -83,7 +64,7 @@ export const createNewAdviserParser = async (
   adviser: Prisma.AdviserCreateInput & { cohortYear: number };
 }> => {
   const { adviser, user } = body;
-  if (!adviser || !user || (isDev && !user.password)) {
+  if (isDev && !user.password) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
@@ -135,13 +116,6 @@ export const createManyAdvisersParser = async (
 > => {
   const { count, accounts } = body;
 
-  if (!count || !accounts) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
   if (count !== accounts.length) {
     throw new SkylabError(
       "Count and Accounts Data do not match",

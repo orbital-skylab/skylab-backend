@@ -5,6 +5,7 @@ import {
   createOneStudent,
   getManyStudents,
   getOneStudent,
+  updateStudent,
 } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomHashedPassword, hashPassword } from "./users.helper";
@@ -27,9 +28,9 @@ export const parseGetStudentsFilter = (
   query: any
 ): Prisma.StudentFindManyArgs => {
   return {
-    take: query.page && query.limit ? query.limit : undefined,
-    skip: query.page && query.limit ? query.page * query.limit : undefined,
-    where: query.cohortYear ? { cohortYear: query.cohortYear } : undefined,
+    take: query.limit ?? undefined,
+    skip: query.page * query.limit ?? undefined,
+    where: query.cohortYear ?? { cohortYear: query.cohortYear },
   };
 };
 
@@ -120,13 +121,6 @@ export const createManyStudentsParser = async (
 > => {
   const { count, projects } = body;
 
-  if (!count || !projects) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
   if (count !== projects.length) {
     throw new SkylabError(
       "Count and Projects Data do not match",
@@ -235,4 +229,17 @@ export const addStudentToAccount = async (userId: string, body: any) => {
       project: projectId ? { connect: { id: projectId } } : undefined,
     },
   });
+};
+
+export const parseEditStudent = (body: any): Prisma.StudentUpdateInput => {
+  const { student } = body;
+  return {
+    matricNo: student.matricNo ?? undefined,
+    nusnetId: student.nusnetId ?? undefined,
+  };
+};
+
+export const editStudent = async (studentId: number, body: any) => {
+  const studentData = parseEditStudent(body);
+  return await updateStudent({ where: { id: studentId }, data: studentData });
 };

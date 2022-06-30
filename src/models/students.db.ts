@@ -105,3 +105,15 @@ export const createManyStudent = async (
     }
   }
 };
+
+export const updateStudent = async (student: Prisma.StudentUpdateArgs) => {
+  try {
+    return await prisma.student.update(student);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+};

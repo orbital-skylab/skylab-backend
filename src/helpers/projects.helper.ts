@@ -12,7 +12,7 @@ import {
 } from "src/models/projects.db";
 import { getOneStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { getAdviserInputParser } from "./advisers.helper";
+import { parseGetAdvisersInput } from "./advisers.helper";
 import { getMentorInputParser } from "./mentors.helper";
 import { parseGetStudentsInput } from "./students.helper";
 
@@ -34,7 +34,7 @@ export const getProjectInputParser = (
   return {
     mentor: mentor ? getMentorInputParser(mentor) : undefined,
     students: students.map((student) => parseGetStudentsInput(student)),
-    advisers: adviser ? getAdviserInputParser(adviser) : undefined,
+    advisers: adviser ? parseGetAdvisersInput(adviser) : undefined,
     ...projectData,
   };
 };

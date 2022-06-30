@@ -38,8 +38,8 @@ import {
   GetUserByEmailValidator,
   GetUsersValidator,
   UpdateUserByIDValidator,
-} from "src/validator/user.validator";
-import { errorFormatter, throwValidationError } from "src/validator/validator";
+} from "src/validators/user.validator";
+import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();
 
