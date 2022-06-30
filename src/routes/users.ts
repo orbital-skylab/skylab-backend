@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { check } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   addAdministratorToAccount,
@@ -31,40 +32,52 @@ import {
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { UserGetFilterRoles } from "src/helpers/users.helper";
 
 const router = Router();
 
-enum UserRoleRoutes {
-  Student = "student",
-  Administrator = "administrator",
-  Mentor = "mentor",
-  Adviser = "adviser",
-}
-
-router.get("/", async (req: Request, res: Response) => {
-  try {
-    const users = await getFilteredUsers(req.query);
-    return apiResponseWrapper(res, { users: users });
-  } catch (e) {
-    routeErrorHandler(res, e);
+router.get(
+  "/",
+  [
+    check("cohortYear").isNumeric().toInt(),
+    check("role")
+      .optional()
+      .isIn([
+        UserGetFilterRoles.Administrator,
+        UserGetFilterRoles.Adviser,
+        UserGetFilterRoles.Mentor,
+        UserGetFilterRoles.Student,
+      ])
+      .toLowerCase(),
+    check("page").optional().isNumeric().toInt(),
+    check("limit").optional().isNumeric().toInt(),
+    check("search").optional().isString(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const users = await getFilteredUsers(req.query);
+      return apiResponseWrapper(res, { users: users });
+    } catch (e) {
+      routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.post("/create-:role/batch", async (req: Request, res: Response) => {
   const { role } = req.params;
   try {
     let created;
     switch (role) {
-      case UserRoleRoutes.Student:
+      case UserGetFilterRoles.Student:
         created = await createManyStudents(req.body);
         break;
-      case UserRoleRoutes.Mentor:
+      case UserGetFilterRoles.Mentor:
         created = await createManyMentors(req.body);
         break;
-      case UserRoleRoutes.Adviser:
+      case UserGetFilterRoles.Adviser:
         created = await createManyAdvisers(req.body);
         break;
-      case UserRoleRoutes.Administrator:
+      case UserGetFilterRoles.Administrator:
         created = await createManyAdministrators(req.body);
       default:
         throw new SkylabError(
@@ -79,34 +92,47 @@ router.post("/create-:role/batch", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/create-:role", async (req: Request, res: Response) => {
-  const { role } = req.params;
-  try {
-    let created;
-    switch (role) {
-      case UserRoleRoutes.Student:
-        created = await createNewStudent(req.body);
-        break;
-      case UserRoleRoutes.Mentor:
-        created = await createNewMentor(req.body);
-        break;
-      case UserRoleRoutes.Adviser:
-        created = await createNewAdviser(req.body);
-        break;
-      case UserRoleRoutes.Administrator:
-        created = await createNewAdministrator(req.body);
-        break;
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
+router.post(
+  "/create-:role",
+  [
+    check("user").isObject(),
+    check("user.email").isEmail(),
+    check("user.password").optional().isAlphanumeric(),
+    check("student").isObject(),
+    check("student.matricNo").isString(),
+    check("student.nusnetId").isString(),
+    check("student.cohortYear").isNumeric().toInt(),
+    check("student.projectId").optional().isNumeric().toInt(),
+  ],
+  async (req: Request, res: Response) => {
+    const { role } = req.params;
+    try {
+      let created;
+      switch (role) {
+        case UserGetFilterRoles.Student:
+          created = await createNewStudent(req.body);
+          break;
+        case UserGetFilterRoles.Mentor:
+          created = await createNewMentor(req.body);
+          break;
+        case UserGetFilterRoles.Adviser:
+          created = await createNewAdviser(req.body);
+          break;
+        case UserGetFilterRoles.Administrator:
+          created = await createNewAdministrator(req.body);
+          break;
+        default:
+          throw new SkylabError(
+            "Invalid role to access endpoint",
+            HttpStatusCode.BAD_REQUEST
+          );
+      }
+      return apiResponseWrapper(res, { [role]: created });
+    } catch (e) {
+      routeErrorHandler(res, e);
     }
-    return apiResponseWrapper(res, { [role]: created });
-  } catch (e) {
-    routeErrorHandler(res, e);
   }
-});
+);
 
 router.post("/:userId/:role", async (req: Request, res: Response) => {
   const { userId, role } = req.params;
@@ -114,16 +140,16 @@ router.post("/:userId/:role", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserRoleRoutes.Student:
+      case UserGetFilterRoles.Student:
         created = await addStudentToAccount(userId, req.body);
         break;
-      case UserRoleRoutes.Mentor:
+      case UserGetFilterRoles.Mentor:
         created = await addMentorToAccount(userId, req.body);
         break;
-      case UserRoleRoutes.Adviser:
+      case UserGetFilterRoles.Adviser:
         created = await addAdviserToAccount(userId, req.body);
         break;
-      case UserRoleRoutes.Administrator:
+      case UserGetFilterRoles.Administrator:
         created = await addAdministratorToAccount(userId, req.body);
         break;
       default:

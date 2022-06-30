@@ -16,37 +16,21 @@ const prismaClient = new PrismaClient();
  * @param student The payload returned from prisma.student.find
  * @returns Flattened object with both User and Student Data
  */
-export const getStudentInputParser = (
+export const parseGetStudentsInput = (
   student: Prisma.StudentGetPayload<{ include: { user: true } }>
 ) => {
   const { user, id, ...data } = student;
   return { ...user, ...data, studentId: id };
 };
 
-export const getStudentsFilterParser = (query: any) => {
-  let filter: Prisma.StudentFindManyArgs = {};
-  if ((query.page && !query.limit) || (query.limit && !query.page)) {
-    throw new SkylabError(
-      `${
-        query.limit ? "Page" : "Limit"
-      } parameter missing in a pagination query`,
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  if (query.page && query.limit) {
-    filter = {
-      ...filter,
-      take: Number(query.limit),
-      skip: Number(query.page) * Number(query.limit),
-    };
-  }
-
-  if (query.cohortYear) {
-    filter = { ...filter, where: { cohortYear: Number(query.cohortYear) } };
-  }
-
-  return filter;
+export const parseGetStudentsFilter = (
+  query: any
+): Prisma.StudentFindManyArgs => {
+  return {
+    take: query.page && query.limit ? query.limit : undefined,
+    skip: query.page && query.limit ? query.page * query.limit : undefined,
+    where: query.cohortYear ? { cohortYear: query.cohortYear } : undefined,
+  };
 };
 
 /**
@@ -55,17 +39,17 @@ export const getStudentsFilterParser = (query: any) => {
  * @returns Array of Student Records that match the given query
  */
 export const getFilteredStudents = async (query: any) => {
-  const filteredQuery = getStudentsFilterParser(query);
+  const filteredQuery = parseGetStudentsFilter(query);
   const students = await getManyStudents(filteredQuery);
   const parsedStudents = students.map((student) =>
-    getStudentInputParser(student)
+    parseGetStudentsInput(student)
   );
   return parsedStudents;
 };
 
-export const getStudentById = async (studentId: string) => {
-  const student = await getOneStudent({ where: { id: Number(studentId) } });
-  return getStudentInputParser(student);
+export const getStudentById = async (studentId: number) => {
+  const student = await getOneStudent({ where: { id: studentId } });
+  return parseGetStudentsInput(student);
 };
 
 export const createNewStudentParser = async (
@@ -74,9 +58,10 @@ export const createNewStudentParser = async (
 ): Promise<{
   user: Prisma.UserCreateInput;
   student: Prisma.StudentCreateInput & { cohortYear: number };
+  projectId?: number;
 }> => {
-  const { student, user } = body;
-  if (!student || !user || (isDev && !user.password)) {
+  const { student, user, projectId } = body;
+  if (isDev && !user.password) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
@@ -92,12 +77,13 @@ export const createNewStudentParser = async (
   return {
     user,
     student,
+    projectId: projectId ? projectId : undefined,
   };
 };
 
 export const createNewStudent = async (body: any, isDev?: boolean) => {
   const account = await createNewStudentParser(body, isDev ?? false);
-  const { user, student } = account;
+  const { user, student, projectId } = account;
   const { cohortYear, ...studentData } = student;
 
   const [createdUser, createdStudent] = await prismaClient.$transaction([
@@ -107,6 +93,7 @@ export const createNewStudent = async (body: any, isDev?: boolean) => {
         ...studentData,
         user: { connect: { email: user.email } },
         cohort: { connect: { academicYear: cohortYear } },
+        project: projectId ? { connect: { id: projectId } } : undefined,
       },
     }),
   ]);

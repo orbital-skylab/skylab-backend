@@ -13,85 +13,41 @@ import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { SUBJECT, SENDER, GET_HTML_CONTENT } from "src/utils/Emails";
 
-enum UserFilterRoles {
-  Mentor = "Mentor",
-  Student = "Student",
-  Adviser = "Adviser",
-  Admin = "Administrator",
+export enum UserGetFilterRoles {
+  Student = "student",
+  Administrator = "administrator",
+  Mentor = "mentor",
+  Adviser = "adviser",
 }
 
-export const getUsersFilterParser = (query: any) => {
-  let filter: Prisma.UserFindManyArgs = {};
+export const parseGetUsersFilter = (query: any) => {
+  const { cohortYear } = query;
 
-  if (!query.cohortYear) {
-    throw new SkylabError(
-      "Parameters missing in request",
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  const cohortYear = Number(query.cohortYear);
-
-  if (query.page && query.limit) {
-    filter = {
-      take: Number(query.limit),
-      skip: Number(query.page) * Number(query.limit),
-    };
-  }
-
-  filter = {
-    ...filter,
-    include: {
-      student: { where: { cohortYear: cohortYear } },
-      administrator: { where: { endDate: { gte: new Date() } } },
-      mentor: { where: { cohortYear: cohortYear } },
-      adviser: { where: { cohortYear: cohortYear } },
+  const filter: Prisma.UserFindManyArgs = {
+    take: query.limit && query.page ? query.limit : undefined,
+    skip: query.limit && query.page ? query.page * query.limit : undefined,
+    where: {
+      name: query.search
+        ? { contains: query.search, mode: "insensitive" }
+        : undefined,
+      mentor:
+        query.role == UserGetFilterRoles.Mentor
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      student:
+        query.role == UserGetFilterRoles.Student
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      adviser:
+        query.role == UserGetFilterRoles.Adviser
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      administrator:
+        query.role == UserGetFilterRoles.Administrator
+          ? { some: { endDate: { gte: new Date() } } }
+          : undefined,
     },
   };
-
-  if (query.role) {
-    switch (query.role) {
-      case UserFilterRoles.Mentor:
-        filter = {
-          ...filter,
-          where: { mentor: { some: { cohortYear: cohortYear } } },
-        };
-        break;
-      case UserFilterRoles.Adviser:
-        filter = {
-          ...filter,
-          where: { adviser: { some: { cohortYear: cohortYear } } },
-        };
-        break;
-      case UserFilterRoles.Student:
-        filter = {
-          ...filter,
-          where: { student: { some: { cohortYear: cohortYear } } },
-        };
-        break;
-      case UserFilterRoles.Admin:
-        filter = {
-          ...filter,
-          where: {
-            administrator: { some: { endDate: { gte: new Date() } } },
-          },
-        };
-        break;
-      default:
-        throw new SkylabError(
-          "Invalid Input for Role in Request",
-          HttpStatusCode.BAD_REQUEST
-        );
-    }
-
-    if (query.search) {
-      const { where, ...filterInfo } = filter;
-      filter = {
-        ...filterInfo,
-        where: { ...where, name: { search: query.search } },
-      };
-    }
-  }
 
   return filter;
 };
@@ -117,19 +73,18 @@ export const parseFilteredUsers = async (
 };
 
 export const getFilteredUsers = async (query: any) => {
-  const filteredQuery = getUsersFilterParser(query);
+  const filteredQuery = parseGetUsersFilter(query);
 
-  if (!query.cohortYear) {
-    throw new SkylabError(
-      "Parameters missing in request",
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  const cohortYear = Number(query.cohortYear);
-
+  const { cohortYear } = query;
   const prismaClient = new PrismaClient();
-  const users = await prismaClient.user.findMany({
+  const users: Prisma.UserGetPayload<{
+    include: {
+      student: true;
+      administrator: true;
+      adviser: true;
+      mentor: true;
+    };
+  }>[] = await prismaClient.user.findMany({
     ...filteredQuery,
     include: {
       student: { where: { cohortYear: cohortYear } },

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, Prisma } from "@prisma/client";
+import { parse } from "path";
 import { SkylabError } from "src/errors/SkylabError";
 import { getOneAdviser } from "src/models/advisers.db";
 import { getOneMentor } from "src/models/mentors.db";
@@ -14,7 +15,7 @@ import { getOneStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { getAdviserInputParser } from "./advisers.helper";
 import { getMentorInputParser } from "./mentors.helper";
-import { getStudentInputParser } from "./students.helper";
+import { parseGetStudentsInput } from "./students.helper";
 
 /**
  * @function getProjectInputParser Parse the input returned from the prisma.project.find function
@@ -33,7 +34,7 @@ export const getProjectInputParser = (
   const { mentor, students, adviser, ...projectData } = project;
   return {
     mentor: mentor ? getMentorInputParser(mentor) : undefined,
-    students: students.map((student) => getStudentInputParser(student)),
+    students: students.map((student) => parseGetStudentsInput(student)),
     advisers: adviser ? getAdviserInputParser(adviser) : undefined,
     ...projectData,
   };

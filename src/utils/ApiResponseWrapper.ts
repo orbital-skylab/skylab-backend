@@ -28,3 +28,7 @@ export const routeErrorHandler = (res: Response, e: any) => {
     e
   );
 };
+
+export const bodyWrapper = (key: string, body: Record<string, unknown>) => {
+  return { [`${key}`]: body };
+};
