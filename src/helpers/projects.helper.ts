@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, Prisma } from "@prisma/client";
-import { parse } from "path";
 import { SkylabError } from "src/errors/SkylabError";
 import { getOneAdviser } from "src/models/advisers.db";
 import { getOneMentor } from "src/models/mentors.db";
