@@ -50,7 +50,9 @@ export async function getManyStudentsWithFilter(
 }
 
 export async function getOneStudentById(studentId: number) {
-  const student = await findUniqueStudentWithUserData({ where: { id: studentId } });
+  const student = await findUniqueStudentWithUserData({
+    where: { id: studentId },
+  });
   return parseGetStudentInput(student);
 }
 
