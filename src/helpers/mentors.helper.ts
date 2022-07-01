@@ -7,7 +7,7 @@ import {
   getOneMentor,
 } from "src/models/mentors.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import { generateRandomPassword, hashPassword } from "./authentication.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -73,7 +73,7 @@ export const createNewMentorParser = async (
   user.password =
     isDev && user.password
       ? await hashPassword(user.password)
-      : await generateRandomHashedPassword();
+      : await generateRandomPassword();
 
   return { mentor, user };
 };
@@ -136,7 +136,7 @@ export const createManyMentorsParser = async (
       const password =
         isDev && user.password
           ? await hashPassword(user.password)
-          : await generateRandomHashedPassword();
+          : await generateRandomPassword();
       return {
         user: {
           ...user,

@@ -7,7 +7,7 @@ import {
   getOneAdministrator,
 } from "src/models/administrators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import { hashPassword, generateRandomPassword } from "./authentication.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -94,7 +94,7 @@ export const createNewAdministratorParser = async (
   user.password =
     isDev && user.password
       ? await hashPassword(user.password)
-      : await generateRandomHashedPassword();
+      : await generateRandomPassword();
 
   return { administrator, user };
 };
@@ -165,7 +165,7 @@ export const createManyAdministratorsParser = async (
       const password =
         isDev && user.password
           ? await hashPassword(user.password)
-          : await generateRandomHashedPassword();
+          : await generateRandomPassword();
       return {
         user: {
           ...user,

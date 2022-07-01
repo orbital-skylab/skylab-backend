@@ -7,7 +7,7 @@ import {
   getOneAdviser,
 } from "src/models/advisers.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import { generateRandomPassword, hashPassword } from "./authentication.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -77,7 +77,7 @@ export const createNewAdviserParser = async (
   user.password =
     isDev && user.password
       ? await hashPassword(user.password)
-      : await generateRandomHashedPassword();
+      : await generateRandomPassword();
 
   return { adviser, user };
 };
@@ -140,7 +140,7 @@ export const createManyAdvisersParser = async (
       const password =
         isDev && user.password
           ? await hashPassword(user.password)
-          : await generateRandomHashedPassword();
+          : await generateRandomPassword();
       return {
         user: {
           ...user,

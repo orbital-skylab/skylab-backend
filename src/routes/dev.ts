@@ -10,11 +10,6 @@ import {
   createNewAdviser,
 } from "src/helpers/advisers.helper";
 import {
-  addFacilitatorToAccount,
-  createManyFacilitators,
-  createNewFacilitator,
-} from "src/helpers/facilitators.helper";
-import {
   addMentorToAccount,
   createManyMentors,
   createNewMentor,
@@ -112,40 +107,6 @@ router.post("/:userId/adviser", async (req: Request, res: Response) => {
   try {
     const createdAdviserData = await addAdviserToAccount(userId, req.body);
     return apiResponseWrapper(res, createdAdviserData);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post(
-  "/create-facilitator/batch",
-  async (req: Request, res: Response) => {
-    try {
-      const createdFacilitators = await createManyFacilitators(req.body, true);
-      return apiResponseWrapper(res, createdFacilitators);
-    } catch (e) {
-      routeErrorHandler(res, e);
-    }
-  }
-);
-
-router.post("/create-facilitator", async (req: Request, res: Response) => {
-  try {
-    const createdFacilitator = await createNewFacilitator(req.body, true);
-    return apiResponseWrapper(res, createdFacilitator);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/:userId/facilitator", async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  try {
-    const createdFacilitatorData = await addFacilitatorToAccount(
-      userId,
-      req.body
-    );
-    return apiResponseWrapper(res, createdFacilitatorData);
   } catch (e) {
     routeErrorHandler(res, e);
   }

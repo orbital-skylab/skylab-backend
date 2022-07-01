@@ -19,13 +19,13 @@ export const GetUsersValidator = [
   CohortQueryValidator,
   check("role")
     .optional()
+    .toLowerCase()
     .isIn([
       UserRolesEnum.Administrator,
       UserRolesEnum.Adviser,
       UserRolesEnum.Mentor,
       UserRolesEnum.Student,
-    ])
-    .toLowerCase(),
+    ]),
   PageQueryValidator,
   LimitQueryValidator,
   SearchQueryValidator,

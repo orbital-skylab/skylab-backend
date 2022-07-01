@@ -1,8 +1,8 @@
-import { getOneUser } from "src/models/users.db";
+import { findUniqueUser } from "src/models/users.db";
 
 export const checkUserExistsWithID = async (userId: number) => {
   try {
-    const user = await getOneUser({ where: { id: userId } });
+    const user = await findUniqueUser({ where: { id: userId } });
     return user ? true : false;
   } catch (e) {
     return false;
@@ -11,7 +11,7 @@ export const checkUserExistsWithID = async (userId: number) => {
 
 export const checkUserExistsWithEmail = async (email: string) => {
   try {
-    const user = await getOneUser({ where: { email: email } });
+    const user = await findUniqueUser({ where: { email: email } });
     return user ? true : false;
   } catch (e) {
     return false;

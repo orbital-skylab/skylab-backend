@@ -8,7 +8,7 @@ import {
   updateStudent,
 } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { generateRandomHashedPassword, hashPassword } from "./users.helper";
+import { generateRandomPassword, hashPassword } from "./authentication.helper";
 
 const prismaClient = new PrismaClient();
 
@@ -73,7 +73,7 @@ export const createNewStudentParser = async (
   user.password =
     isDev && user.password
       ? await hashPassword(user.password)
-      : await generateRandomHashedPassword();
+      : await generateRandomPassword();
 
   return {
     user,
@@ -150,7 +150,7 @@ export const createManyStudentsParser = async (
       student.user.password =
         isDev && student.user.password
           ? await hashPassword(student.user.password)
-          : await generateRandomHashedPassword();
+          : await generateRandomPassword();
 
       accounts.push({ project: projectData, student });
     }

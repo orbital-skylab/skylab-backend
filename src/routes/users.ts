@@ -22,22 +22,22 @@ import {
   addStudentToAccount,
 } from "src/helpers/students.helper";
 import {
-  deleteUserById,
-  editUserInformation,
-  getFilteredUsers,
-  getUserByEmail,
+  deleteOneUserById,
+  editOneUserById,
+  getManyUsersWithFilter,
+  getOneUserByEmail,
 } from "src/helpers/users.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { UserGetFilterRoles } from "src/helpers/users.helper";
 import {
   DeleteUserByIDValidator,
   GetUserByEmailValidator,
   GetUsersValidator,
   UpdateUserByIDValidator,
+  UserRolesEnum,
 } from "src/validators/user.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
 
@@ -49,7 +49,7 @@ router.get("/", GetUsersValidator, async (req: Request, res: Response) => {
     return throwValidationError(res, errors);
   }
   try {
-    const users = await getFilteredUsers(req.query);
+    const users = await getManyUsersWithFilter(req.query);
     return apiResponseWrapper(res, { users: users });
   } catch (e) {
     routeErrorHandler(res, e);
@@ -61,16 +61,16 @@ router.post("/create-:role/batch", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserGetFilterRoles.Student:
+      case UserRolesEnum.Student:
         created = await createManyStudents(req.body);
         break;
-      case UserGetFilterRoles.Mentor:
+      case UserRolesEnum.Mentor:
         created = await createManyMentors(req.body);
         break;
-      case UserGetFilterRoles.Adviser:
+      case UserRolesEnum.Adviser:
         created = await createManyAdvisers(req.body);
         break;
-      case UserGetFilterRoles.Administrator:
+      case UserRolesEnum.Administrator:
         created = await createManyAdministrators(req.body);
       default:
         throw new SkylabError(
@@ -90,16 +90,16 @@ router.post("/create-:role", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserGetFilterRoles.Student:
+      case UserRolesEnum.Student:
         created = await createNewStudent(req.body);
         break;
-      case UserGetFilterRoles.Mentor:
+      case UserRolesEnum.Mentor:
         created = await createNewMentor(req.body);
         break;
-      case UserGetFilterRoles.Adviser:
+      case UserRolesEnum.Adviser:
         created = await createNewAdviser(req.body);
         break;
-      case UserGetFilterRoles.Administrator:
+      case UserRolesEnum.Administrator:
         created = await createNewAdministrator(req.body);
         break;
       default:
@@ -120,16 +120,16 @@ router.post("/:userId/:role", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserGetFilterRoles.Student:
+      case UserRolesEnum.Student:
         created = await addStudentToAccount(userId, req.body);
         break;
-      case UserGetFilterRoles.Mentor:
+      case UserRolesEnum.Mentor:
         created = await addMentorToAccount(userId, req.body);
         break;
-      case UserGetFilterRoles.Adviser:
+      case UserRolesEnum.Adviser:
         created = await addAdviserToAccount(userId, req.body);
         break;
-      case UserGetFilterRoles.Administrator:
+      case UserRolesEnum.Administrator:
         created = await addAdministratorToAccount(userId, req.body);
         break;
       default:
@@ -158,10 +158,7 @@ router
       }
 
       try {
-        const editedUser = await editUserInformation(
-          Number(userId),
-          req.body.user
-        );
+        const editedUser = await editOneUserById(Number(userId), req.body.user);
         return apiResponseWrapper(res, { user: editedUser });
       } catch (e) {
         return routeErrorHandler(res, e);
@@ -180,7 +177,7 @@ router
       }
 
       try {
-        const deletedUser = await deleteUserById(Number(userId));
+        const deletedUser = await deleteOneUserById(Number(userId));
         return apiResponseWrapper(res, { user: deletedUser });
       } catch (e) {
         return routeErrorHandler(res, e);
@@ -197,7 +194,7 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const user = await getUserByEmail(email);
+        const user = await getOneUserByEmail(email);
         return apiResponseWrapper(res, { user: user });
       } catch (e) {
         return routeErrorHandler(res, e);

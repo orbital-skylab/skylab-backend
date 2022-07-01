@@ -6,120 +6,73 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getFirstUser Find the first user record with the given query conditions
- * @param query The query conditions for the user
- * @returns The first user record that matches the query conditions
- */
-export const getFirstUser = async (query: Prisma.UserFindUniqueArgs) => {
-  const queryParams = { ...query, rejectOnNotFound: false };
-  const user = await prisma.user.findFirst(queryParams);
-
-  if (!user) {
-    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
+export async function findFirstUser(query: Prisma.UserFindFirstArgs) {
+  const firstUser = await prisma.user.findFirst({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!firstUser) {
+    throw new SkylabError("User was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return firstUser;
+}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
-};
-
-/**
- * @function getOneUser Find a unique user record with the given query conditions
- * @param query The query conditions for the user
- * @returns The mentor record that matches the query conditions
- */
-export const getOneUser = async (
-  query: Prisma.UserFindUniqueArgs,
-  includePassword?: boolean
-) => {
-  const queryParams = { ...query, rejectOnNotFound: false };
-  const user = await prisma.user.findUnique(queryParams);
-
-  if (!user) {
-    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
+export async function findUniqueUser(query: Prisma.UserFindUniqueArgs) {
+  const uniqueUser = await prisma.user.findFirst({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueUser) {
+    throw new SkylabError("User was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return uniqueUser;
+}
 
-  return {
-    ...user,
-    password: includePassword ? user.password : null,
-  };
-};
-
-/**
- * @function getOneUserWithRoleData Find a unique user record (including role data) with the given query conditions
- * @param query The query conditions for the user
- * @returns The mentor record that matches the query conditions
- */
-// TODO: cache in node memory
-export const getOneUserWithRoleData = async (
-  query: Prisma.UserFindUniqueArgs
-) => {
+export async function findUniqueUserWithRoleData(
+  query: Omit<Prisma.UserFindUniqueArgs, "include">
+) {
   const { academicYear } = await getCurrentCohort();
-  const queryParams = {
+  const user = await prisma.user.findUnique({
     ...query,
     include: {
       student: {
-        where: {
-          cohortYear: academicYear,
-        },
+        where: { cohortYear: academicYear },
       },
       mentor: {
-        where: {
-          cohortYear: academicYear,
-        },
+        where: { cohortYear: academicYear },
       },
-      adviser: {
-        where: {
-          cohortYear: academicYear,
-        },
-      },
-      facilitator: {
-        where: {
-          cohortYear: academicYear,
-        },
-      },
+      adviser: { where: { cohortYear: academicYear } },
     },
     rejectOnNotFound: false,
-  };
-  const user = await prisma.user.findUnique(queryParams);
-
+  });
   if (!user) {
-    throw new SkylabError("User was not found", HttpStatusCode.NOT_FOUND);
+    throw new SkylabError("User was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return user;
+}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
-};
+export async function findManyUsers(query: Prisma.UserFindManyArgs) {
+  const manyUsers = await prisma.user.findMany(query);
+  return manyUsers;
+}
 
-/**
- * @function getManyUsers Find all the users that match the given query condtions
- * @param query The query conditions to be selected upon
- * @returns The array of user records that match the query conditions
- */
-export const getManyUsers = async ({
-  include,
-  ...query
-}: Prisma.UserFindManyArgs) => {
-  const users = await prisma.user.findMany({
+export async function findManyUsersWithRoleInCohort(
+  query: Omit<Prisma.UserFindManyArgs, "include">,
+  cohortYear: number
+) {
+  const manyUsers = await prisma.user.findMany({
     ...query,
     include: {
-      ...include,
-      student: true,
-      mentor: true,
-      adviser: true,
-      administrator: true,
+      student: { where: { cohortYear: cohortYear } },
+      administrator: { where: { endDate: { gte: new Date() } } },
+      mentor: { where: { cohortYear: cohortYear } },
+      adviser: { where: { cohortYear: cohortYear } },
     },
   });
-  return users;
-};
+  return manyUsers;
+}
 
-/**
- * @function updateOneUser Update one user based on the given unique condition
- * @param query The unique identifier for the user to update
- */
-export const updateOneUser = async (query: Prisma.UserUpdateArgs) => {
+export async function updateUniqueUser(query: Prisma.UserUpdateArgs) {
   try {
     return await prisma.user.update(query);
   } catch (e) {
@@ -129,14 +82,11 @@ export const updateOneUser = async (query: Prisma.UserUpdateArgs) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
-};
+}
 
-export const createOneUser = async (query: Prisma.UserCreateArgs) => {
+export async function createOneUser(query: Prisma.UserCreateArgs) {
   try {
-    const createdUser = await prisma.user.create(query);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...createdUserWithoutPassword } = createdUser;
-    return createdUserWithoutPassword;
+    return await prisma.user.create(query);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -152,18 +102,14 @@ export const createOneUser = async (query: Prisma.UserCreateArgs) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
 
-export const createManyUsers = async (queries: Prisma.UserCreateArgs[]) => {
+export async function createManyUsers(queries: Prisma.UserCreateArgs[]) {
   try {
     const createdUsers = await Promise.all(
       queries.map((query) => prisma.user.create(query))
     );
-    return createdUsers.map((createdUser) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...createdUserWithoutPassword } = createdUser;
-      return createdUserWithoutPassword;
-    });
+    return createdUsers;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -179,9 +125,9 @@ export const createManyUsers = async (queries: Prisma.UserCreateArgs[]) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
 
-export const deleteOneUser = async (query: Prisma.UserDeleteArgs) => {
+export async function deleteUniqueUser(query: Prisma.UserDeleteArgs) {
   try {
     return await prisma.user.delete(query);
   } catch (e) {
@@ -191,4 +137,4 @@ export const deleteOneUser = async (query: Prisma.UserDeleteArgs) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
