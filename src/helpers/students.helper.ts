@@ -3,8 +3,8 @@ import { Prisma, PrismaClient, Student, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneStudent,
-  findManyStudents,
-  findUniqueStudent,
+  findManyStudentsWithUserData,
+  findUniqueStudentWithUserData,
   updateUniqueStudent,
 } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
@@ -39,7 +39,7 @@ export async function getManyStudentsWithFilter(
   };
 
   /* Fetch Students with Filter Object */
-  const students = await findManyStudents(studentQuery);
+  const students = await findManyStudentsWithUserData(studentQuery);
 
   /* Parse Students Objects */
   const parsedStudents = students.map((student) =>
@@ -50,7 +50,7 @@ export async function getManyStudentsWithFilter(
 }
 
 export async function getOneStudentById(studentId: number) {
-  const student = await findUniqueStudent({ where: { id: studentId } });
+  const student = await findUniqueStudentWithUserData({ where: { id: studentId } });
   return parseGetStudentInput(student);
 }
 

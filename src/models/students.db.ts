@@ -5,7 +5,7 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-export async function findFirstFirst({
+export async function findFirstStudentWithUserData({
   include,
   ...query
 }: Prisma.StudentFindFirstArgs) {
@@ -20,7 +20,18 @@ export async function findFirstFirst({
   return firstStudent;
 }
 
-export async function findUniqueStudent({
+export async function findUniqueStudent(query: Prisma.StudentFindUniqueArgs) {
+  const uniqueStudent = await prisma.student.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueStudent;
+}
+
+export async function findUniqueStudentWithUserData({
   include,
   ...query
 }: Prisma.StudentFindUniqueArgs) {
@@ -35,7 +46,7 @@ export async function findUniqueStudent({
   return uniqueStudent;
 }
 
-export async function findManyStudents({
+export async function findManyStudentsWithUserData({
   include,
   ...query
 }: Prisma.StudentFindManyArgs) {
@@ -66,7 +77,7 @@ export async function createOneStudent(student: Prisma.StudentCreateArgs) {
   }
 }
 
-export async function createManyStudent(
+export async function createManyStudents(
   students: Prisma.StudentCreateManyArgs
 ) {
   try {

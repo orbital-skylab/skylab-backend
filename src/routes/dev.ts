@@ -10,9 +10,9 @@ import {
   createNewAdviser,
 } from "src/helpers/advisers.helper";
 import {
-  addMentorToAccount,
-  createManyMentors,
-  createNewMentor,
+  addMentorRoleToUser,
+  createManyUsersWithMentorRole,
+  createUserWithMentorRole,
 } from "src/helpers/mentors.helper";
 import {
   addStudentRoleToUser,
@@ -59,7 +59,7 @@ router.post("/:userId/student", async (req: Request, res: Response) => {
 
 router.post("/create-mentor/batch", async (req: Request, res: Response) => {
   try {
-    const createdMentors = await createManyMentors(req.body, true);
+    const createdMentors = await createManyUsersWithMentorRole(req.body, true);
     return apiResponseWrapper(res, createdMentors);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -68,7 +68,7 @@ router.post("/create-mentor/batch", async (req: Request, res: Response) => {
 
 router.post("/create-mentor", async (req: Request, res: Response) => {
   try {
-    const createdMentor = await createNewMentor(req.body, true);
+    const createdMentor = await createUserWithMentorRole(req.body, true);
     return apiResponseWrapper(res, createdMentor);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -78,7 +78,7 @@ router.post("/create-mentor", async (req: Request, res: Response) => {
 router.post("/:userId/mentor", async (req: Request, res: Response) => {
   const { userId } = req.params;
   try {
-    const createdMentorData = await addMentorToAccount(userId, req.body);
+    const createdMentorData = await addMentorRoleToUser(userId, req.body);
     return apiResponseWrapper(res, createdMentorData);
   } catch (e) {
     routeErrorHandler(res, e);

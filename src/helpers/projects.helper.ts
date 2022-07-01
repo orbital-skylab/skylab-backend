@@ -2,8 +2,7 @@
 import { AchievementLevel, Prisma } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { getOneAdviser } from "src/models/advisers.db";
-import { getOneMentor } from "src/models/mentors.db";
-
+import { findUniqueMentor } from "src/models/mentors.db";
 import {
   createProject,
   getManyProjects,
@@ -13,7 +12,7 @@ import {
 import { findUniqueStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { parseGetAdvisersInput } from "./advisers.helper";
-import { parseGetMentorsInput } from "./mentors.helper";
+import { parseGetMentorInput } from "./mentors.helper";
 import { parseGetStudentInput } from "./students.helper";
 
 /**
@@ -32,7 +31,7 @@ export const getProjectInputParser = (
 ) => {
   const { mentor, students, adviser, ...projectData } = project;
   return {
-    mentor: mentor ? parseGetMentorsInput(mentor) : undefined,
+    mentor: mentor ? parseGetMentorInput(mentor) : undefined,
     students: students.map((student) => parseGetStudentInput(student)),
     advisers: adviser ? parseGetAdvisersInput(adviser) : undefined,
     ...projectData,
@@ -240,10 +239,9 @@ export const getProjectsViaIds = async (users: {
   if (student) {
     return await findUniqueStudent({
       where: { id: student },
-      include: {
+      select: {
         project: { include: { students: true, mentor: true, adviser: true } },
       },
-      select: { project: true },
     });
   }
 
@@ -260,7 +258,7 @@ export const getProjectsViaIds = async (users: {
   }
 
   if (mentor) {
-    return getOneMentor({
+    return findUniqueMentor({
       where: { id: mentor },
       include: {
         projects: { include: { students: true, mentor: true, adviser: true } },

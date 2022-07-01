@@ -12,9 +12,9 @@ import {
   createNewAdviser,
 } from "src/helpers/advisers.helper";
 import {
-  addMentorToAccount,
-  createManyMentors,
-  createNewMentor,
+  addMentorRoleToUser,
+  createManyUsersWithMentorRole,
+  createUserWithMentorRole,
 } from "src/helpers/mentors.helper";
 
 import {
@@ -58,7 +58,7 @@ router.post("/create-:role/batch", async (req: Request, res: Response) => {
     let created;
     switch (role) {
       case UserRolesEnum.Mentor:
-        created = await createManyMentors(req.body);
+        created = await createManyUsersWithMentorRole(req.body);
         break;
       case UserRolesEnum.Adviser:
         created = await createManyAdvisers(req.body);
@@ -84,7 +84,7 @@ router.post("/create-:role", async (req: Request, res: Response) => {
     let created;
     switch (role) {
       case UserRolesEnum.Mentor:
-        created = await createNewMentor(req.body);
+        created = await createUserWithMentorRole(req.body);
         break;
       case UserRolesEnum.Adviser:
         created = await createNewAdviser(req.body);
@@ -111,7 +111,7 @@ router.post("/:userId/:role", async (req: Request, res: Response) => {
     let created;
     switch (role) {
       case UserRolesEnum.Mentor:
-        created = await addMentorToAccount(userId, req.body);
+        created = await addMentorRoleToUser(userId, req.body);
         break;
       case UserRolesEnum.Adviser:
         created = await addAdviserToAccount(userId, req.body);
