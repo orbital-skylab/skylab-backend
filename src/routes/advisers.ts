@@ -1,4 +1,6 @@
 import { Router, Request, Response } from "express";
+import { validationResult } from "express-validator";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createNewAdviser,
   getAdviserById,
@@ -9,11 +11,23 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import {
+  BatchCreateAdviserValidator,
+  CreateAdviserValidator,
+  GetAdviserByIDValidator,
+  GetAdvisersValidator,
+} from "src/validators/adviser.validator";
+import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();
 
 router
-  .get("/", async (req: Request, res: Response) => {
+  .get("/", GetAdvisersValidator, async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
     try {
       const advisers = await getFilteredAdvisers(req.query);
       return apiResponseWrapper(res, { advisers: advisers });
@@ -21,32 +35,81 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .post("/", async (req: Request, res: Response) => {
+  .post("/", CreateAdviserValidator, async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
     try {
       const createdAdviser = await createNewAdviser(req.body);
       return apiResponseWrapper(res, { adviser: createdAdviser });
     } catch (e) {
       routeErrorHandler(res, e);
     }
+  })
+  .all("/", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
-router.get("/:adviserId", async (req: Request, res: Response) => {
-  const { adviserId } = req.params;
-  try {
-    const adviser = await getAdviserById(adviserId);
-    return apiResponseWrapper(res, { adviser: adviser });
-  } catch (e) {
-    return routeErrorHandler(res, e);
-  }
-});
+router
+  .get(
+    "/:adviserId",
+    GetAdviserByIDValidator,
+    async (req: Request, res: Response) => {
+      const { adviserId } = req.params;
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const adviser = await getAdviserById(adviserId);
+        return apiResponseWrapper(res, { adviser: adviser });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/:adviserId", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
-router.post("/batch", async (req: Request, res: Response) => {
-  try {
-    const createdAdvisers = await createManyAdvisers(req.body);
-    return apiResponseWrapper(res, { advisers: createdAdvisers });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
+router
+  .post(
+    "/batch",
+    BatchCreateAdviserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdAdvisers = await createManyAdvisers(req.body);
+        return apiResponseWrapper(res, { advisers: createdAdvisers });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/batch", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
 export default router;

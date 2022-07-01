@@ -30,7 +30,7 @@ export const parseGetStudentsFilter = (
   return {
     take: query.limit ?? undefined,
     skip: query.page * query.limit ?? undefined,
-    where: query.cohortYear ?? { cohortYear: query.cohortYear },
+    where: { cohortYear: query.cohortYear } ?? undefined,
   };
 };
 

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyStudents,
   createNewStudent,
@@ -11,6 +12,7 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   BatchCreateStudentValidator,
   CreateStudentValidator,
@@ -46,6 +48,15 @@ router
     } catch (e) {
       routeErrorHandler(res, e);
     }
+  })
+  .all("/", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
 router
@@ -83,23 +94,42 @@ router
         routeErrorHandler(res, e);
       }
     }
-  );
+  )
+  .all("/:studentId", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
-router.post(
-  "/batch",
-  BatchCreateStudentValidator,
-  async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+router
+  .post(
+    "/batch",
+    BatchCreateStudentValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdStudents = await createManyStudents(req.body);
+        return apiResponseWrapper(res, { students: createdStudents });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
-    try {
-      const createdStudents = await createManyStudents(req.body);
-      return apiResponseWrapper(res, { students: createdStudents });
-    } catch (e) {
-      routeErrorHandler(res, e);
-    }
-  }
-);
+  )
+  .all("/batch", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
 export default router;

@@ -34,11 +34,13 @@ export const getAdviserById = async (adviserId: string) => {
  * @param query The raw query object from the HTTP Request
  * @returns A filter object that works with prisma.adviser.findMany
  */
-export const parseGetAdvisersFilter = (query: any) => {
+export const parseGetAdvisersFilter = (
+  query: any
+): Prisma.AdviserFindManyArgs => {
   return {
     take: query.limit ?? undefined,
     skip: query.page * query.limit ?? undefined,
-    where: query.cohortYear ?? { query: query.cohortYear },
+    where: { cohortYear: query.cohortYear } ?? undefined,
   };
 };
 

@@ -1,4 +1,4 @@
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import { checkCohortExists } from "./helper/cohort.validator.helper";
 import { checkUserExistsWithEmail } from "./helper/user.validator.helper";
 import {
@@ -11,6 +11,13 @@ export const GetAdvisersValidator = [
   CohortQueryValidator.optional(),
   PageQueryValidator,
   LimitQueryValidator,
+];
+
+export const GetAdviserByIDValidator = [
+  param("adviserId")
+    .isNumeric()
+    .withMessage("Adviser ID provided must be numeric")
+    .toInt(),
 ];
 
 export const CreateAdviserValidator = [
@@ -41,7 +48,7 @@ export const CreateAdviserValidator = [
       const exists = await checkCohortExists(value);
       if (!exists) {
         return Promise.reject(
-          "Cohort year provided in student data does not exist"
+          "Cohort year provided in adviser data does not exist"
         );
       }
     }),

@@ -44,7 +44,7 @@ export const PageQueryValidator = query("page")
   .toInt()
   .optional();
 
-export const LimitQueryValidator = param("limit")
+export const LimitQueryValidator = query("limit")
   .isNumeric()
   .withMessage("Limit must be numeric")
   .toInt()
