@@ -29,10 +29,9 @@ export async function userLogin(email: string, passwordInput: string) {
       token: null,
     };
   } else {
-    const userWithoutPassword = removePasswordFromUser(user);
     return {
       token: jwt.sign(
-        userWithoutPassword,
+        removePasswordFromUser(user),
         process.env.JWT_SECRET ?? "jwt_secret"
       ),
     };

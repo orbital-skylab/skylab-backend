@@ -15,22 +15,23 @@ import {
   createNewMentor,
 } from "src/helpers/mentors.helper";
 import {
-  createManyStudents,
-  createNewStudent,
-  addStudentToAccount,
+  addStudentRoleToUser,
+  createManyUsersWithStudentRole,
+  createUserWithStudentRole,
 } from "src/helpers/students.helper";
-import { seedDummyData } from "src/seed/seed.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const router = Router();
 
 router.post("/create-student/batch", async (req: Request, res: Response) => {
   try {
-    const createdStudents = await createManyStudents(req.body, true);
+    const createdStudents = await createManyUsersWithStudentRole(
+      req.body,
+      true
+    );
     return apiResponseWrapper(res, createdStudents);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -39,7 +40,7 @@ router.post("/create-student/batch", async (req: Request, res: Response) => {
 
 router.post("/create-student", async (req: Request, res: Response) => {
   try {
-    const createdStudent = await createNewStudent(req.body, true);
+    const createdStudent = await createUserWithStudentRole(req.body, true);
     return apiResponseWrapper(res, createdStudent);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -49,7 +50,7 @@ router.post("/create-student", async (req: Request, res: Response) => {
 router.post("/:userId/student", async (req: Request, res: Response) => {
   const { userId } = req.params;
   try {
-    const createdStudentData = await addStudentToAccount(userId, req.body);
+    const createdStudentData = await addStudentRoleToUser(userId, req.body);
     return apiResponseWrapper(res, createdStudentData);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -146,15 +147,6 @@ router.post("/:userId/administrator", async (req: Request, res: Response) => {
     return apiResponseWrapper(res, createdAdministratorData);
   } catch (e) {
     return routeErrorHandler(res, e);
-  }
-});
-
-router.post("/seed", async (_: Request, res: Response) => {
-  try {
-    await seedDummyData();
-    return res.sendStatus(HttpStatusCode.OK);
-  } catch (e) {
-    routeErrorHandler(res, e);
   }
 });
 

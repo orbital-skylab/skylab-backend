@@ -2,11 +2,11 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createManyStudents,
-  createNewStudent,
-  editStudent,
-  getFilteredStudents,
-  getStudentById,
+  createManyUsersWithStudentRole,
+  createUserWithStudentRole,
+  editStudentDataByStudentID,
+  getManyStudentsWithFilter,
+  getOneStudentById,
 } from "src/helpers/students.helper";
 import {
   apiResponseWrapper,
@@ -31,7 +31,7 @@ router
       return throwValidationError(res, errors);
     }
     try {
-      const students = await getFilteredStudents(req.query);
+      const students = await getManyStudentsWithFilter(req.query);
       return apiResponseWrapper(res, { students: students });
     } catch (e) {
       return routeErrorHandler(res, e);
@@ -43,7 +43,7 @@ router
       return throwValidationError(res, errors);
     }
     try {
-      const createdStudent = await createNewStudent(req.body);
+      const createdStudent = await createUserWithStudentRole(req.body);
       return apiResponseWrapper(res, { student: createdStudent });
     } catch (e) {
       routeErrorHandler(res, e);
@@ -70,7 +70,7 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const student = await getStudentById(Number(studentId));
+        const student = await getOneStudentById(Number(studentId));
         return apiResponseWrapper(res, { student: student });
       } catch (e) {
         return routeErrorHandler(res, e);
@@ -88,7 +88,10 @@ router
       }
       try {
         return apiResponseWrapper(res, {
-          student: await editStudent(Number(studentId), req.body),
+          student: await editStudentDataByStudentID(
+            Number(studentId),
+            req.body
+          ),
         });
       } catch (e) {
         routeErrorHandler(res, e);
@@ -115,7 +118,7 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const createdStudents = await createManyStudents(req.body);
+        const createdStudents = await createManyUsersWithStudentRole(req.body);
         return apiResponseWrapper(res, { students: createdStudents });
       } catch (e) {
         routeErrorHandler(res, e);

@@ -10,11 +10,11 @@ import {
   getManyProjectsLean,
   updateProject,
 } from "src/models/projects.db";
-import { getOneStudent } from "src/models/students.db";
+import { findUniqueStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { parseGetAdvisersInput } from "./advisers.helper";
 import { parseGetMentorsInput } from "./mentors.helper";
-import { parseGetStudentsInput } from "./students.helper";
+import { parseGetStudentInput } from "./students.helper";
 
 /**
  * @function getProjectInputParser Parse the input returned from the prisma.project.find function
@@ -33,7 +33,7 @@ export const getProjectInputParser = (
   const { mentor, students, adviser, ...projectData } = project;
   return {
     mentor: mentor ? parseGetMentorsInput(mentor) : undefined,
-    students: students.map((student) => parseGetStudentsInput(student)),
+    students: students.map((student) => parseGetStudentInput(student)),
     advisers: adviser ? parseGetAdvisersInput(adviser) : undefined,
     ...projectData,
   };
@@ -238,7 +238,7 @@ export const getProjectsViaIds = async (users: {
   const { student, adviser, mentor } = users;
 
   if (student) {
-    return await getOneStudent({
+    return await findUniqueStudent({
       where: { id: student },
       include: {
         project: { include: { students: true, mentor: true, adviser: true } },

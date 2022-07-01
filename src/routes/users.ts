@@ -16,11 +16,7 @@ import {
   createManyMentors,
   createNewMentor,
 } from "src/helpers/mentors.helper";
-import {
-  createManyStudents,
-  createNewStudent,
-  addStudentToAccount,
-} from "src/helpers/students.helper";
+
 import {
   deleteOneUserById,
   editOneUserById,
@@ -61,9 +57,6 @@ router.post("/create-:role/batch", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserRolesEnum.Student:
-        created = await createManyStudents(req.body);
-        break;
       case UserRolesEnum.Mentor:
         created = await createManyMentors(req.body);
         break;
@@ -90,9 +83,6 @@ router.post("/create-:role", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserRolesEnum.Student:
-        created = await createNewStudent(req.body);
-        break;
       case UserRolesEnum.Mentor:
         created = await createNewMentor(req.body);
         break;
@@ -120,9 +110,6 @@ router.post("/:userId/:role", async (req: Request, res: Response) => {
   try {
     let created;
     switch (role) {
-      case UserRolesEnum.Student:
-        created = await addStudentToAccount(userId, req.body);
-        break;
       case UserRolesEnum.Mentor:
         created = await addMentorToAccount(userId, req.body);
         break;

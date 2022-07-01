@@ -56,7 +56,7 @@ export async function getManyUsersWithFilter(
   /* Fetch Users with Filter Object */
   const users = await findManyUsersWithRoleInCohort(userQuery, cohortYear);
 
-  /* Parse Users Object */
+  /* Parse Users Objects */
   const parsedUsers = users.map((user) => {
     const { student, mentor, administrator, adviser, ...userInfo } = user;
     const userInfoWithoutPassword = removePasswordFromUser(userInfo);
