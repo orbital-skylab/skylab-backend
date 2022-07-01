@@ -1,4 +1,5 @@
 import { body, param } from "express-validator";
+import { checkCohortExists } from "./helper/cohort.validator.helper";
 import { checkUserExistsWithEmail } from "./helper/user.validator.helper";
 import {
   CohortQueryValidator,
@@ -30,4 +31,28 @@ export const CreateMentorValidator = [
         return Promise.reject("User with email provided already exists");
       }
     }),
+  body("mentor")
+    .isObject()
+    .withMessage("Mentor object missing in request body"),
+  body("mentor.cohortYear")
+    .isNumeric()
+    .withMessage("Cohort year must be numeric")
+    .toInt()
+    .custom(async (value) => {
+      const exists = await checkCohortExists(value);
+      if (!exists) {
+        return Promise.reject(
+          "Cohort year provided in mentor data does not exist"
+        );
+      }
+    }),
+  body("mentor.projectIds")
+    .isArray()
+    .withMessage("Project IDs in mentor data not provided as an array")
+    .optional(),
+];
+
+export const BatchCreateMentorValidator = [
+  body("count").isNumeric().withMessage("Count must be a numeric value"),
+  body("accounts").isArray().withMessage("Accounts was not input as an array"),
 ];
