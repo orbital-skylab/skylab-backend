@@ -4,7 +4,6 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdministrator,
   findManyAdministratorsWithUserData,
-  findUniqueAdministrator,
   findUniqueAdministratorWithUserData,
 } from "src/models/administrators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
