@@ -7,9 +7,9 @@ import {
   createNewAdministrator,
 } from "src/helpers/administrators.helper";
 import {
-  addAdviserToAccount,
-  createManyAdvisers,
-  createNewAdviser,
+  addAdviserRoleToUser,
+  createManyUsersWithAdviserRole,
+  createUserWithAdviserRole,
 } from "src/helpers/advisers.helper";
 import {
   addMentorRoleToUser,
@@ -61,7 +61,7 @@ router.post("/create-:role/batch", async (req: Request, res: Response) => {
         created = await createManyUsersWithMentorRole(req.body);
         break;
       case UserRolesEnum.Adviser:
-        created = await createManyAdvisers(req.body);
+        created = await createManyUsersWithAdviserRole(req.body);
         break;
       case UserRolesEnum.Administrator:
         created = await createManyAdministrators(req.body);
@@ -87,7 +87,7 @@ router.post("/create-:role", async (req: Request, res: Response) => {
         created = await createUserWithMentorRole(req.body);
         break;
       case UserRolesEnum.Adviser:
-        created = await createNewAdviser(req.body);
+        created = await createUserWithAdviserRole(req.body);
         break;
       case UserRolesEnum.Administrator:
         created = await createNewAdministrator(req.body);
@@ -114,7 +114,7 @@ router.post("/:userId/:role", async (req: Request, res: Response) => {
         created = await addMentorRoleToUser(userId, req.body);
         break;
       case UserRolesEnum.Adviser:
-        created = await addAdviserToAccount(userId, req.body);
+        created = await addAdviserRoleToUser(userId, req.body);
         break;
       case UserRolesEnum.Administrator:
         created = await addAdministratorToAccount(userId, req.body);

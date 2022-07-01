@@ -3,68 +3,60 @@ import { Adviser, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdviser,
-  getManyAdvisers,
-  getOneAdviser,
+  findManyAdvisersWithUserData,
+  findUniqueAdviserWithUserData,
 } from "src/models/advisers.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
+import { removePasswordFromUser } from "./users.helper";
 
 const prismaClient = new PrismaClient();
 
-/**
- * @function getAdviserInputParser Parse the input returned from the prisma.adviser.find function
- * @param adviser The payload returned from prisma.adviser.find
- * @returns Flattened object with both User and Adviser Data
- */
-export const parseGetAdvisersInput = (
+export function parseGetAdviserInput(
   adviser: Prisma.AdviserGetPayload<{ include: { user: true } }>
-) => {
+) {
   const { user, id, ...data } = adviser;
   return { ...user, ...data, adviserId: id };
-};
+}
 
-export const getAdviserById = async (adviserId: string) => {
-  const adviser = await getOneAdviser({ where: { id: Number(adviserId) } });
-  return parseGetAdvisersInput(adviser);
-};
-
-/**
- * @function getFilteredAdvisersWhereInputParser Parse the query from the HTTP Request and returns a query object
- * for prisma.adviser.findMany
- * @param query The raw query object from the HTTP Request
- * @returns A filter object that works with prisma.adviser.findMany
- */
-export const parseGetAdvisersFilter = (
-  query: any
-): Prisma.AdviserFindManyArgs => {
-  return {
-    take: query.limit ?? undefined,
-    skip: query.page * query.limit ?? undefined,
-    where: { cohortYear: query.cohortYear } ?? undefined,
+export async function getManyAdvisersWithFilter(
+  query: any & {
+    limit?: number;
+    page?: number;
+    cohortYear?: number;
+  }
+) {
+  const { limit, page, cohortYear } = query;
+  /* Create Filter Object */
+  const adviserQuery: Prisma.AdviserFindManyArgs = {
+    take: limit ?? undefined,
+    skip: limit && page ? limit * page : undefined,
+    where: cohortYear
+      ? {
+          cohortYear: cohortYear,
+        }
+      : undefined,
   };
-};
 
-/**
- * @function getFilteredAdvisers Retrieve a list of advisers that match the given query parameters
- * @param query The query parameters retrieved from the HTTP Request
- * @returns Array of Adviser Records that match the given query
- */
-export const getFilteredAdvisers = async (query: any) => {
-  const filteredQuery = parseGetAdvisersFilter(query);
-  const advisers = await getManyAdvisers(filteredQuery);
+  /* Fetch Advisers with Filter Object */
+  const advisers = await findManyAdvisersWithUserData(adviserQuery);
+
+  /* Parse Advisers Objects */
   const parsedAdvisers = advisers.map((adviser) =>
-    parseGetAdvisersInput(adviser)
+    parseGetAdviserInput(adviser)
   );
-  return parsedAdvisers;
-};
 
-export const createNewAdviserParser = async (
-  body: any,
-  isDev: boolean
-): Promise<{
-  user: Prisma.UserCreateInput;
-  adviser: Prisma.AdviserCreateInput & { cohortYear: number };
-}> => {
+  return parsedAdvisers;
+}
+
+export async function getOneAdviserById(adviserId: number) {
+  const adviser = await findUniqueAdviserWithUserData({
+    where: { id: adviserId },
+  });
+  return parseGetAdviserInput(adviser);
+}
+
+export async function createUserWithAdviserRole(body: any, isDev?: boolean) {
   const { adviser, user } = body;
   if (isDev && !user.password) {
     throw new SkylabError(
@@ -73,19 +65,11 @@ export const createNewAdviserParser = async (
       body
     );
   }
-
   user.password =
     isDev && user.password
       ? await hashPassword(user.password)
       : await generateRandomPassword();
 
-  return { adviser, user };
-};
-
-export const createNewAdviser = async (body: any, isDev?: boolean) => {
-  const account = await createNewAdviserParser(body, isDev ?? false);
-
-  const { user, adviser } = account;
   const { cohortYear, ...adviserData } = adviser;
 
   const [createdUser, createdAdviser] = await prismaClient.$transaction([
@@ -99,28 +83,21 @@ export const createNewAdviser = async (body: any, isDev?: boolean) => {
     }),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...createdUserWithoutPassword } = createdUser;
   return {
-    ...createdUserWithoutPassword,
+    user: removePasswordFromUser(createdUser),
     adviser: createdAdviser,
   };
-};
+}
 
-export const createManyAdvisersParser = async (
+export async function createManyUsersWithAdviserRole(
   body: any,
-  isDev: boolean
-): Promise<
-  {
-    user: Prisma.UserCreateInput;
-    adviser: Prisma.AdviserCreateInput & { cohortYear: number };
-  }[]
-> => {
+  isDev?: boolean
+) {
   const { count, accounts } = body;
 
-  if (count !== accounts.length) {
+  if (count != accounts.length) {
     throw new SkylabError(
-      "Count and Accounts Data do not match",
+      "Count and Projects Data do not match",
       HttpStatusCode.BAD_REQUEST
     );
   }
@@ -152,16 +129,7 @@ export const createManyAdvisersParser = async (
   );
   await Promise.all(accounts);
 
-  return accounts;
-};
-
-export const createManyAdvisers = async (body: any, isDev?: boolean) => {
-  const accounts = await createManyAdvisersParser(body, isDev ?? false);
-  const createdAccounts: Array<
-    Omit<User, "password"> & {
-      adviser: Adviser & { cohortYear: number };
-    }
-  > = [];
+  const createdAccounts = [];
   for (const account of accounts) {
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
@@ -185,24 +153,10 @@ export const createManyAdvisers = async (body: any, isDev?: boolean) => {
   }
 
   return createdAccounts;
-};
+}
 
-export const addAdviserToAccountParser = (
-  body: any
-): Prisma.AdviserCreateInput & { cohortYear: number } => {
-  if (!body.adviser) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
-
-  return body.adviser;
-};
-
-export const addAdviserToAccount = async (userId: string, body: any) => {
-  const adviser = addAdviserToAccountParser(body);
+export async function addAdviserRoleToUser(userId: string, body: any) {
+  const { adviser } = body;
   const { cohortYear, ...adviserData } = adviser;
   return await createOneAdviser({
     data: {
@@ -211,4 +165,4 @@ export const addAdviserToAccount = async (userId: string, body: any) => {
       user: { connect: { id: Number(userId) } },
     },
   });
-};
+}

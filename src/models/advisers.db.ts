@@ -5,68 +5,59 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getFirstAdviser Find the first adviser record with the given query conditions
- * @param query The query conditions for the user
- * @returns The first adviser record that matches the query conditions
- */
-export const getFirstAdviser = async ({
+export async function findFirstAdviser({
   include,
   ...query
-}: Prisma.AdviserFindFirstArgs) => {
-  const adviser = await prisma.adviser.findFirst({
+}: Prisma.AdviserFindFirstArgs) {
+  const firstAdviser = await prisma.adviser.findFirst({
+    ...query,
+    include: { ...include, user: true },
+    rejectOnNotFound: false,
+  });
+  if (!firstAdviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return firstAdviser;
+}
+
+export async function findUniqueAdviser(query: Prisma.AdviserFindUniqueArgs) {
+  const uniqueAdviser = await prisma.adviser.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueAdviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueAdviser;
+}
+
+export async function findUniqueAdviserWithUserData({
+  include,
+  ...query
+}: Prisma.AdviserFindUniqueArgs) {
+  const uniqueAdviser = await prisma.adviser.findUnique({
     include: { ...include, user: true },
     ...query,
     rejectOnNotFound: false,
   });
-
-  if (!adviser) {
-    throw new SkylabError("Adviser was not found", HttpStatusCode.NOT_FOUND);
+  if (!uniqueAdviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return uniqueAdviser;
+}
 
-  return adviser;
-};
-
-/**
- * @function getOneAdviser Find a unique adviser record with the given query conditions
- * @param query The query conditions for the user
- * @returns The adviser record that matches the query conditions
- */
-export const getOneAdviser = async ({
+export async function findManyAdvisersWithUserData({
   include,
   ...query
-}: Prisma.AdviserFindUniqueArgs) => {
-  const adviser = await prisma.adviser.findUnique({
-    include: { ...include, user: true },
-    ...query,
-    rejectOnNotFound: false,
-  });
-
-  if (!adviser) {
-    throw new SkylabError("Adviser was not found", HttpStatusCode.NOT_FOUND);
-  }
-
-  return adviser;
-};
-
-/**
- * @function getManyAdvisers Find all the advisers that match the given query conditions
- * @param query The query conditions to be selected upon
- * @returns The array of adviser records that match the query conditions
- */
-export const getManyAdvisers = async ({
-  include,
-  ...query
-}: Prisma.AdviserFindManyArgs) => {
-  const advisers = await prisma.adviser.findMany({
+}: Prisma.AdviserFindManyArgs) {
+  const manyAdvisers = await prisma.adviser.findMany({
     include: { ...include, user: true },
     ...query,
   });
+  return manyAdvisers;
+}
 
-  return advisers;
-};
-
-export const createOneAdviser = async (adviser: Prisma.AdviserCreateArgs) => {
+export async function createOneAdviser(adviser: Prisma.AdviserCreateArgs) {
   try {
     return await prisma.adviser.create(adviser);
   } catch (e) {
@@ -84,11 +75,11 @@ export const createOneAdviser = async (adviser: Prisma.AdviserCreateArgs) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
 
-export const createManyAdvisers = async (
+export async function createManyAdvisers(
   advisers: Prisma.AdviserCreateManyArgs
-) => {
+) {
   try {
     return await prisma.adviser.createMany(advisers);
   } catch (e) {
@@ -104,4 +95,16 @@ export const createManyAdvisers = async (
       );
     }
   }
-};
+}
+
+export async function updateUniqueAdviser(query: Prisma.AdviserUpdateArgs) {
+  try {
+    return await prisma.adviser.update(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

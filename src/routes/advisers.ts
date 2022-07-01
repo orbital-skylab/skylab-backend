@@ -2,9 +2,9 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  createNewAdviser,
-  getAdviserById,
-  getFilteredAdvisers,
+  createUserWithAdviserRole,
+  getManyAdvisersWithFilter,
+  getOneAdviserById,
 } from "src/helpers/advisers.helper";
 import { createManyAdvisers } from "src/models/advisers.db";
 import {
@@ -29,7 +29,7 @@ router
       return throwValidationError(res, errors);
     }
     try {
-      const advisers = await getFilteredAdvisers(req.query);
+      const advisers = await getManyAdvisersWithFilter(req.query);
       return apiResponseWrapper(res, { advisers: advisers });
     } catch (e) {
       return routeErrorHandler(res, e);
@@ -41,7 +41,7 @@ router
       return throwValidationError(res, errors);
     }
     try {
-      const createdAdviser = await createNewAdviser(req.body);
+      const createdAdviser = await createUserWithAdviserRole(req.body);
       return apiResponseWrapper(res, { adviser: createdAdviser });
     } catch (e) {
       routeErrorHandler(res, e);
@@ -68,7 +68,7 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const adviser = await getAdviserById(adviserId);
+        const adviser = await getOneAdviserById(Number(adviserId));
         return apiResponseWrapper(res, { adviser: adviser });
       } catch (e) {
         return routeErrorHandler(res, e);

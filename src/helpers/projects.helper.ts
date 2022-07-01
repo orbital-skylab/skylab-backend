@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, Prisma } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { getOneAdviser } from "src/models/advisers.db";
+import { findUniqueAdviser } from "src/models/advisers.db";
 import { findUniqueMentor } from "src/models/mentors.db";
 import {
   createProject,
@@ -11,7 +11,7 @@ import {
 } from "src/models/projects.db";
 import { findUniqueStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { parseGetAdvisersInput } from "./advisers.helper";
+import { parseGetAdviserInput } from "./advisers.helper";
 import { parseGetMentorInput } from "./mentors.helper";
 import { parseGetStudentInput } from "./students.helper";
 
@@ -33,7 +33,7 @@ export const getProjectInputParser = (
   return {
     mentor: mentor ? parseGetMentorInput(mentor) : undefined,
     students: students.map((student) => parseGetStudentInput(student)),
-    advisers: adviser ? parseGetAdvisersInput(adviser) : undefined,
+    advisers: adviser ? parseGetAdviserInput(adviser) : undefined,
     ...projectData,
   };
 };
@@ -246,24 +246,20 @@ export const getProjectsViaIds = async (users: {
   }
 
   if (adviser) {
-    return getOneAdviser({
+    return findUniqueAdviser({
       where: { id: adviser },
-      include: {
-        projects: {
-          include: { students: true, mentor: true, adviser: true },
-        },
+      select: {
+        projects: { include: { students: true, mentor: true, adviser: true } },
       },
-      select: { projects: true },
     });
   }
 
   if (mentor) {
     return findUniqueMentor({
       where: { id: mentor },
-      include: {
+      select: {
         projects: { include: { students: true, mentor: true, adviser: true } },
       },
-      select: { projects: true },
     });
   }
 };

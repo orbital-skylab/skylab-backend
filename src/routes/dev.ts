@@ -5,9 +5,9 @@ import {
   createManyAdministrators,
 } from "src/helpers/administrators.helper";
 import {
-  addAdviserToAccount,
-  createManyAdvisers,
-  createNewAdviser,
+  addAdviserRoleToUser,
+  createManyUsersWithAdviserRole,
+  createUserWithAdviserRole,
 } from "src/helpers/advisers.helper";
 import {
   addMentorRoleToUser,
@@ -87,7 +87,10 @@ router.post("/:userId/mentor", async (req: Request, res: Response) => {
 
 router.post("/create-adviser/batch", async (req: Request, res: Response) => {
   try {
-    const createdAdvisers = await createManyAdvisers(req.body, true);
+    const createdAdvisers = await createManyUsersWithAdviserRole(
+      req.body,
+      true
+    );
     return apiResponseWrapper(res, createdAdvisers);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -96,7 +99,7 @@ router.post("/create-adviser/batch", async (req: Request, res: Response) => {
 
 router.post("/create-adviser", async (req: Request, res: Response) => {
   try {
-    const createdAdviser = await createNewAdviser(req.body, true);
+    const createdAdviser = await createUserWithAdviserRole(req.body, true);
     return apiResponseWrapper(res, createdAdviser);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -106,7 +109,7 @@ router.post("/create-adviser", async (req: Request, res: Response) => {
 router.post("/:userId/adviser", async (req: Request, res: Response) => {
   const { userId } = req.params;
   try {
-    const createdAdviserData = await addAdviserToAccount(userId, req.body);
+    const createdAdviserData = await addAdviserRoleToUser(userId, req.body);
     return apiResponseWrapper(res, createdAdviserData);
   } catch (e) {
     routeErrorHandler(res, e);
