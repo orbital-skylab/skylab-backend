@@ -16,7 +16,7 @@ const prismaClient = new PrismaClient();
  * @param mentor The payload returned from prisma.mentor.find
  * @returns Flattened object with both User and Mentor Data
  */
-export const getMentorInputParser = (
+export const parseGetMentorsInput = (
   mentor: Prisma.MentorGetPayload<{ include: { user: true } }>
 ) => {
   const { user, id, ...data } = mentor;
@@ -25,7 +25,7 @@ export const getMentorInputParser = (
 
 export const getMentorById = async (mentorId: string) => {
   const mentor = await getOneMentor({ where: { id: Number(mentorId) } });
-  return getMentorInputParser(mentor);
+  return parseGetMentorsInput(mentor);
 };
 
 /**
@@ -34,31 +34,12 @@ export const getMentorById = async (mentorId: string) => {
  * @param query The raw query object from the HTTP Request
  * @returns A filter object that works with prisma.mentor.findMany
  */
-export const getMentorsFilterParser = (query: any) => {
-  let filter: Prisma.MentorFindManyArgs = {};
-
-  if ((query.page && !query.limit) || (query.limit && !query.page)) {
-    throw new SkylabError(
-      `${
-        query.limit ? "Page" : "Limit"
-      } parameter missing in a pagination query`,
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  if (query.page && query.limit) {
-    filter = {
-      ...filter,
-      take: Number(query.limit),
-      skip: Number(query.page) * Number(query.limit),
-    };
-  }
-
-  if (query.cohortYear) {
-    filter = { ...filter, where: { cohortYear: Number(query.cohortYear) } };
-  }
-
-  return filter;
+export const parseGetMentorsFilter = (query: any) => {
+  return {
+    take: query.limit ?? undefined,
+    skip: query.page * query.limit ?? undefined,
+    where: { cohortYear: query.cohortYear } ?? undefined,
+  };
 };
 
 /**
@@ -67,9 +48,9 @@ export const getMentorsFilterParser = (query: any) => {
  * @returns Array of Mentor Records that match the given query
  */
 export const getFilteredMentors = async (query: any) => {
-  const filteredQuery = getMentorsFilterParser(query);
+  const filteredQuery = parseGetMentorsFilter(query);
   const mentors = await getManyMentors(filteredQuery);
-  const parsedMentors = mentors.map((mentor) => getMentorInputParser(mentor));
+  const parsedMentors = mentors.map((mentor) => parseGetMentorsInput(mentor));
   return parsedMentors;
 };
 
@@ -81,7 +62,7 @@ export const createNewMentorParser = async (
   mentor: Prisma.MentorCreateInput & { cohortYear: number };
 }> => {
   const { mentor, user } = body;
-  if (!mentor || !user || (isDev && !user.password)) {
+  if (isDev && !user.password) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
@@ -133,13 +114,6 @@ export const createManyMentorsParser = async (
 > => {
   const { count, accounts } = body;
 
-  if (!count || !accounts) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
   if (count !== accounts.length) {
     throw new SkylabError(
       "Count and Accounts Data do not match",
