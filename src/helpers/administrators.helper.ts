@@ -135,9 +135,6 @@ export async function createManyUsersWithAdministratorRole(
         }),
       ]
     );
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-
     createdAccounts.push({
       user: removePasswordFromUser(createdUser),
       administrator: createdAdministrator,
