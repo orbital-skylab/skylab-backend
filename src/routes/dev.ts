@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
 import {
-  createNewAdministrator,
-  addAdministratorToAccount,
-  createManyAdministrators,
+  addAdministratorRoleToUser,
+  createManyUsersWithAdministratorRole,
+  createUserWithAdministratorRole,
 } from "src/helpers/administrators.helper";
 import {
   addAdviserRoleToUser,
@@ -120,7 +120,7 @@ router.post(
   "/create-administrator/batch",
   async (req: Request, res: Response) => {
     try {
-      const createdAdministrator = await createManyAdministrators(
+      const createdAdministrator = await createManyUsersWithAdministratorRole(
         req.body,
         true
       );
@@ -133,7 +133,10 @@ router.post(
 
 router.post("/create-administrator", async (req: Request, res: Response) => {
   try {
-    const createdAdministrator = await createNewAdministrator(req.body, true);
+    const createdAdministrator = await createUserWithAdministratorRole(
+      req.body,
+      true
+    );
     return apiResponseWrapper(res, createdAdministrator);
   } catch (e) {
     routeErrorHandler(res, e);
@@ -143,7 +146,7 @@ router.post("/create-administrator", async (req: Request, res: Response) => {
 router.post("/:userId/administrator", async (req: Request, res: Response) => {
   const { userId } = req.params;
   try {
-    const createdAdministratorData = await addAdministratorToAccount(
+    const createdAdministratorData = await addAdministratorRoleToUser(
       userId,
       req.body
     );

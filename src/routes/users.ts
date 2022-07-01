@@ -2,9 +2,9 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import {
-  addAdministratorToAccount,
-  createManyAdministrators,
-  createNewAdministrator,
+  addAdministratorRoleToUser,
+  createManyUsersWithAdministratorRole,
+  createUserWithAdministratorRole,
 } from "src/helpers/administrators.helper";
 import {
   addAdviserRoleToUser,
@@ -64,7 +64,7 @@ router.post("/create-:role/batch", async (req: Request, res: Response) => {
         created = await createManyUsersWithAdviserRole(req.body);
         break;
       case UserRolesEnum.Administrator:
-        created = await createManyAdministrators(req.body);
+        created = await createManyUsersWithAdministratorRole(req.body);
       default:
         throw new SkylabError(
           "Invalid role to access endpoint",
@@ -90,7 +90,7 @@ router.post("/create-:role", async (req: Request, res: Response) => {
         created = await createUserWithAdviserRole(req.body);
         break;
       case UserRolesEnum.Administrator:
-        created = await createNewAdministrator(req.body);
+        created = await createUserWithAdministratorRole(req.body);
         break;
       default:
         throw new SkylabError(
@@ -117,7 +117,7 @@ router.post("/:userId/:role", async (req: Request, res: Response) => {
         created = await addAdviserRoleToUser(userId, req.body);
         break;
       case UserRolesEnum.Administrator:
-        created = await addAdministratorToAccount(userId, req.body);
+        created = await addAdministratorRoleToUser(userId, req.body);
         break;
       default:
         throw new SkylabError(

@@ -15,8 +15,8 @@ const prismaClient = new PrismaClient();
 
 export function parseGetStudentInput(student: Student & { user: User }) {
   const { user, id, ...data } = student;
-  const userWithPassword = removePasswordFromUser(user);
-  return { ...userWithPassword, ...data, studentId: id };
+  const userWithoutPassword = removePasswordFromUser(user);
+  return { ...userWithoutPassword, ...data, studentId: id };
 }
 
 export async function getManyStudentsWithFilter(

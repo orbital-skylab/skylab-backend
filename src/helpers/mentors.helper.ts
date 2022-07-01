@@ -16,7 +16,8 @@ export function parseGetMentorInput(
   mentor: Prisma.MentorGetPayload<{ include: { user: true } }>
 ) {
   const { user, id, ...data } = mentor;
-  return { ...user, ...data, mentorId: id };
+  const userWithoutPassword = removePasswordFromUser(user);
+  return { ...userWithoutPassword, ...data, mentorId: id };
 }
 
 export async function getManyMentorsWithFilter(

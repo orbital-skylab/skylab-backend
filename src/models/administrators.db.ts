@@ -5,74 +5,72 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getFirstAdministrator Find the first administrator record with the given query conditions
- * @param query The query conditions for the user
- * @returns The first administrator record that matches the query conditions
- */
-export const getFirstAdministrator = async ({
+export async function findFirstAdministrator({
   include,
   ...query
-}: Prisma.AdministratorFindFirstArgs) => {
-  const administrator = await prisma.administrator.findFirst({
+}: Prisma.AdministratorFindFirstArgs) {
+  const firstAdministrator = await prisma.administrator.findFirst({
+    ...query,
+    include: { ...include, user: true },
+    rejectOnNotFound: false,
+  });
+  if (!firstAdministrator) {
+    throw new SkylabError(
+      "Administrator was not found",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+  return firstAdministrator;
+}
+
+export async function findUniqueAdministrator(
+  query: Prisma.AdministratorFindUniqueArgs
+) {
+  const uniqueAdministrator = await prisma.administrator.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueAdministrator) {
+    throw new SkylabError(
+      "Administrator was not found",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+  return uniqueAdministrator;
+}
+
+export async function findUniqueAdministratorWithUserData({
+  include,
+  ...query
+}: Prisma.AdministratorFindUniqueArgs) {
+  const uniqueAdministrator = await prisma.administrator.findUnique({
     include: { ...include, user: true },
     ...query,
     rejectOnNotFound: false,
   });
-
-  if (!administrator) {
+  if (!uniqueAdministrator) {
     throw new SkylabError(
       "Administrator was not found",
-      HttpStatusCode.NOT_FOUND
+      HttpStatusCode.BAD_REQUEST
     );
   }
+  return uniqueAdministrator;
+}
 
-  return administrator;
-};
-
-/**
- * @function getOneAdministrator Find a unique administrator record with the given query conditions
- * @param query The query conditions for the user
- * @returns The administrator record that matches the query conditions
- */
-export const getOneAdministrator = async ({
+export async function findManyAdministratorsWithUserData({
   include,
   ...query
-}: Prisma.AdministratorFindUniqueArgs) => {
-  const administrator = await prisma.administrator.findUnique({
-    include: { ...include, user: true },
-    ...query,
-    rejectOnNotFound: false,
-  });
-
-  if (!administrator) {
-    throw new SkylabError(
-      "Administrator was not found",
-      HttpStatusCode.NOT_FOUND
-    );
-  }
-  return administrator;
-};
-
-/**
- * @function getManyAdministrators Find all the administrators that match the given query conditions
- * @param query The query conditions to be selected upon
- * @returns The array of administrator records that match the query conditions
- */
-export const getManyAdministrators = async ({
-  include,
-  ...query
-}: Prisma.AdministratorFindManyArgs) => {
-  const administrators = await prisma.administrator.findMany({
+}: Prisma.AdministratorFindManyArgs) {
+  const manyAdministrators = await prisma.administrator.findMany({
     include: { ...include, user: true },
     ...query,
   });
-  return administrators;
-};
+  return manyAdministrators;
+}
 
-export const createOneAdministrator = async (
+export async function createOneAdministrator(
   administrator: Prisma.AdministratorCreateArgs
-) => {
+) {
   try {
     return await prisma.administrator.create(administrator);
   } catch (e) {
@@ -90,11 +88,11 @@ export const createOneAdministrator = async (
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
 
-export const createManyAdministrators = async (
+export async function createManyAdministrators(
   administrators: Prisma.AdministratorCreateManyArgs
-) => {
+) {
   try {
     return await prisma.administrator.createMany(administrators);
   } catch (e) {
@@ -110,4 +108,18 @@ export const createManyAdministrators = async (
       );
     }
   }
-};
+}
+
+export async function updateUniqueAdministrator(
+  query: Prisma.AdministratorUpdateArgs
+) {
+  try {
+    return await prisma.administrator.update(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

@@ -16,7 +16,8 @@ export function parseGetAdviserInput(
   adviser: Prisma.AdviserGetPayload<{ include: { user: true } }>
 ) {
   const { user, id, ...data } = adviser;
-  return { ...user, ...data, adviserId: id };
+  const userWithoutPassword = removePasswordFromUser(user);
+  return { ...userWithoutPassword, ...data, adviserId: id };
 }
 
 export async function getManyAdvisersWithFilter(
