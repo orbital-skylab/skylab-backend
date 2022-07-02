@@ -5,66 +5,59 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getFirstMentor Find the first mentor record with the given query conditions
- * @param query The query conditions for the user
- * @returns The first mentor record that matches the query conditions
- */
-export const getFirstMentor = async ({
+export async function findFirstMentor({
   include,
   ...query
-}: Prisma.MentorFindFirstArgs) => {
-  const mentor = await prisma.mentor.findFirst({
+}: Prisma.MentorFindFirstArgs) {
+  const firstMentor = await prisma.mentor.findFirst({
+    ...query,
+    include: { ...include, user: true },
+    rejectOnNotFound: false,
+  });
+  if (!firstMentor) {
+    throw new SkylabError("Mentor was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return firstMentor;
+}
+
+export async function findUniqueMentor(query: Prisma.MentorFindUniqueArgs) {
+  const uniqueMentor = await prisma.mentor.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueMentor) {
+    throw new SkylabError("Mentor was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueMentor;
+}
+
+export async function findUniqueMentorWithUserData({
+  include,
+  ...query
+}: Prisma.MentorFindUniqueArgs) {
+  const uniqueMentor = await prisma.mentor.findUnique({
     include: { ...include, user: true },
     ...query,
     rejectOnNotFound: false,
   });
-
-  if (!mentor) {
-    throw new SkylabError("Mentor was not found", HttpStatusCode.NOT_FOUND);
+  if (!uniqueMentor) {
+    throw new SkylabError("Mentor was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return uniqueMentor;
+}
 
-  return mentor;
-};
-
-/**
- * @function getOneMentor Find a unique mentor record with the given query conditions
- * @param query The query conditions for the user
- * @returns The mentor record that matches the query conditions
- */
-export const getOneMentor = async ({
+export async function findManyMentorsWithUserData({
   include,
   ...query
-}: Prisma.MentorFindUniqueArgs) => {
-  const mentor = await prisma.mentor.findUnique({
-    include: { ...include, user: true },
-    ...query,
-    rejectOnNotFound: false,
-  });
-
-  if (!mentor) {
-    throw new SkylabError("Mentor was not found", HttpStatusCode.NOT_FOUND);
-  }
-  return mentor;
-};
-
-/**
- * @function getManyMentors Find all the mentors that match the given query conditions
- * @param query The query conditions to be selected upon
- * @returns The array of mentor records that match the query conditions
- */
-export const getManyMentors = async ({
-  include,
-  ...query
-}: Prisma.MentorFindManyArgs) => {
-  const mentors = await prisma.mentor.findMany({
+}: Prisma.MentorFindManyArgs) {
+  const manyMentors = await prisma.mentor.findMany({
     include: { ...include, user: true },
     ...query,
   });
-  return mentors;
-};
+  return manyMentors;
+}
 
-export const createOneMentor = async (mentor: Prisma.MentorCreateArgs) => {
+export async function createOneMentor(mentor: Prisma.MentorCreateArgs) {
   try {
     return await prisma.mentor.create(mentor);
   } catch (e) {
@@ -82,11 +75,9 @@ export const createOneMentor = async (mentor: Prisma.MentorCreateArgs) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
 
-export const createManyMentors = async (
-  mentors: Prisma.MentorCreateManyArgs
-) => {
+export async function createManyMentors(mentors: Prisma.MentorCreateManyArgs) {
   try {
     return await prisma.mentor.createMany(mentors);
   } catch (e) {
@@ -102,4 +93,16 @@ export const createManyMentors = async (
       );
     }
   }
-};
+}
+
+export async function updateUniqueMentor(query: Prisma.MentorUpdateArgs) {
+  try {
+    return await prisma.mentor.update(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

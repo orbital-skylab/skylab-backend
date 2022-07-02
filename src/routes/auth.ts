@@ -5,12 +5,12 @@ import {
   hashPassword,
   sendPasswordResetEmail,
   userLogin,
-} from "src/helpers/users.helper";
+} from "src/helpers/authentication.helper";
 import authorize from "src/middleware/jwtAuth";
 import {
-  getOneUser,
-  getOneUserWithRoleData,
-  updateOneUser,
+  findUniqueUser,
+  findUniqueUserWithRoleData,
+  updateUniqueUser,
 } from "src/models/users.db";
 import {
   apiResponseWrapper,
@@ -40,7 +40,7 @@ router.post("/sign-in", async (req: Request, res: Response) => {
       );
     }
 
-    const userData = await getOneUserWithRoleData({
+    const userData = await findUniqueUserWithRoleData({
       where: { email: email },
     });
     res
@@ -78,16 +78,13 @@ router.get("/info", authorize, async (req: Request, res: Response) => {
 router.post("/reset-password", async (req: Request, res: Response) => {
   try {
     const { email, origin } = req.body;
-    const { id, password } = await getOneUser(
-      {
-        where: { email: email },
-        select: {
-          password: true,
-          id: true,
-        },
+    const { id, password } = await findUniqueUser({
+      where: { email: email },
+      select: {
+        password: true,
+        id: true,
       },
-      true
-    );
+    });
 
     if (!password) {
       throw new SkylabError("User not found", HttpStatusCode.BAD_REQUEST);
@@ -110,15 +107,12 @@ router.post("/change-password", async (req: Request, res: Response) => {
   try {
     const { id, token, newPassword } = req.body;
 
-    const { password } = await getOneUser(
-      {
-        where: { id: id },
-        select: {
-          password: true,
-        },
+    const { password } = await findUniqueUser({
+      where: { id: id },
+      select: {
+        password: true,
       },
-      true
-    );
+    });
 
     if (!password) {
       throw new SkylabError("User not found", HttpStatusCode.BAD_REQUEST);
@@ -144,7 +138,7 @@ router.post("/change-password", async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await hashPassword(newPassword);
-    await updateOneUser({
+    await updateUniqueUser({
       where: { id: id },
       data: { password: hashedPassword },
     });

@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "interactiveTransactions", "extendedIndexes"]
+  previewFeatures = ["fullTextSearch", "interactiveTransactions"]
 }
 
 datasource db {
@@ -25,7 +25,7 @@ model User {
   mentor          Mentor[]
   student         Student[]
   tutor           Tutor[]
-  submitter       Submitter?      @relation(fields: [submitterId], references: [id])
+  submitter       Submitter?      @relation(fields: [submitterId], references: [id], onDelete: Cascade)
   submitterId     Int?
 }
 
@@ -63,7 +63,7 @@ model Adviser {
   matricNo   String?
   cohortYear Int
   cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
-  user       User      @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects   Project[]
 
   @@unique([userId, cohortYear])
@@ -74,7 +74,7 @@ model Mentor {
   userId     Int
   cohortYear Int
   cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
-  user       User      @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects   Project[]
 
   @@unique([userId, cohortYear])
@@ -85,7 +85,7 @@ model Facilitator {
   userId     Int
   cohortYear Int
   cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
-  user       User   @relation(fields: [userId], references: [id])
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, cohortYear])
 }
@@ -105,7 +105,7 @@ model Administrator {
   userId    Int
   startDate DateTime
   endDate   DateTime
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
 }
 

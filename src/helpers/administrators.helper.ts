@@ -3,87 +3,53 @@ import { Administrator, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdministrator,
-  getManyAdministrators,
-  getOneAdministrator,
+  findManyAdministratorsWithUserData,
+  findUniqueAdministratorWithUserData,
 } from "src/models/administrators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { hashPassword, generateRandomHashedPassword } from "./users.helper";
+import { hashPassword, generateRandomPassword } from "./authentication.helper";
+import { removePasswordFromUser } from "./users.helper";
 
 const prismaClient = new PrismaClient();
 
-/**
- * @function getAdministratorInputParser Parse the input returned from the prisma.administrator.find function
- * @param administrator The payload returned from prisma.administrator.find
- * @returns Flattened object with both User and Administrator Data
- */
-export const getAdministratorInputParser = (
+export async function parseGetAdministratorInput(
   administrator: Prisma.AdministratorGetPayload<{ include: { user: true } }>
-) => {
+) {
   const { user, id, ...data } = administrator;
-  return { ...user, ...data, administratorId: id };
-};
+  const userWithoutPassword = removePasswordFromUser(user);
+  return { ...userWithoutPassword, ...data, administratorId: id };
+}
 
-export const getAdministratorById = async (administratorId: string) => {
-  const administrator = await getOneAdministrator({
+export async function getManyAdministratorsWithFilter(
+  query: any & { limit?: number; page?: number }
+) {
+  const { limit, page } = query;
+
+  /* Create Filter Object */
+  const adminQuery: Prisma.AdministratorFindManyArgs = {
+    take: limit ?? undefined,
+    skip: limit && page ? limit * page : undefined,
+  };
+
+  const admins = await findManyAdministratorsWithUserData(adminQuery);
+
+  const parsedAdmins = admins.map((admin) => parseGetAdministratorInput(admin));
+  return parsedAdmins;
+}
+
+export async function getOneAdministratorById(administratorId: string) {
+  const administrator = await findUniqueAdministratorWithUserData({
     where: { id: Number(administratorId) },
   });
-  return getAdministratorInputParser(administrator);
-};
+  return parseGetAdministratorInput(administrator);
+}
 
-/**
- * @function getAdministratorsFilterParser Parse the query from the HTTP Request and returns a query object
- * for prisma.administrator.findMany
- * @param query The raw query object from the HTTP Request
- * @returns A filter object that works with prisma.administrator.findMany
- */
-export const getAdministratorsFilterParser = (query: any) => {
-  let filter: Prisma.AdministratorFindManyArgs = {};
-
-  if ((query.page && !query.limit) || (query.limit && !query.page)) {
-    throw new SkylabError(
-      `${
-        query.limit ? "Page" : "Limit"
-      } parameter missing in a pagination query`,
-      HttpStatusCode.BAD_REQUEST
-    );
-  }
-
-  if (query.page && query.limit) {
-    filter = {
-      ...filter,
-      take: Number(query.limit),
-      skip: Number(query.page) * Number(query.limit),
-    };
-  }
-
-  return filter;
-};
-
-/**
- * @function getFilteredAdministrators Retrieve a list of administrators that match the given query parameters
- * @param query The query parameters retrieved from the HTTP Request
- * @returns Array of Administrator Records that match the given query
- */
-export const getFilteredAdministrators = async (query: any) => {
-  const filteredQuery = getAdministratorsFilterParser(query);
-  const administrators = await getManyAdministrators(filteredQuery);
-  const parsedAdministrators = administrators.map(
-    (
-      administrator: Prisma.AdministratorGetPayload<{ include: { user: true } }>
-    ) => getAdministratorInputParser(administrator)
-  );
-  return parsedAdministrators;
-};
-
-export const createNewAdministratorParser = async (
+export async function createUserWithAdministratorRole(
   body: any,
-  isDev: boolean
-): Promise<{
-  user: Prisma.UserCreateInput;
-  administrator: Prisma.AdministratorCreateInput;
-}> => {
+  isDev?: boolean
+) {
   const { administrator, user } = body;
-  if (!administrator || !user || (isDev && !user.password)) {
+  if (isDev && !user.password) {
     throw new SkylabError(
       "Parameters missing from request",
       HttpStatusCode.BAD_REQUEST,
@@ -94,15 +60,7 @@ export const createNewAdministratorParser = async (
   user.password =
     isDev && user.password
       ? await hashPassword(user.password)
-      : await generateRandomHashedPassword();
-
-  return { administrator, user };
-};
-
-export const createNewAdministrator = async (body: any, isDev?: boolean) => {
-  const account = await createNewAdministratorParser(body, isDev ?? false);
-
-  const { user, administrator } = account;
+      : await generateRandomPassword();
 
   const [createdUser, createdAdministrator] = await prismaClient.$transaction([
     prismaClient.user.create({ data: user }),
@@ -114,32 +72,18 @@ export const createNewAdministrator = async (body: any, isDev?: boolean) => {
     }),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...createdUserWithoutPassword } = createdUser;
   return {
-    ...createdUserWithoutPassword,
+    user: removePasswordFromUser(createdUser),
     administrator: createdAdministrator,
   };
-};
+}
 
-export const createManyAdministratorsParser = async (
+export async function createManyUsersWithAdministratorRole(
   body: any,
-  isDev: boolean
-): Promise<
-  {
-    user: Prisma.UserCreateInput;
-    administrator: Prisma.AdministratorCreateInput;
-  }[]
-> => {
+  isDev?: boolean
+) {
   const { count, accounts } = body;
 
-  if (!count || !accounts) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
   if (count !== accounts.length) {
     throw new SkylabError(
       "Count and Accounts Data do not match",
@@ -165,7 +109,7 @@ export const createManyAdministratorsParser = async (
       const password =
         isDev && user.password
           ? await hashPassword(user.password)
-          : await generateRandomHashedPassword();
+          : await generateRandomPassword();
       return {
         user: {
           ...user,
@@ -177,16 +121,7 @@ export const createManyAdministratorsParser = async (
   );
   await Promise.all(accounts);
 
-  return accounts;
-};
-
-export const createManyAdministrators = async (body: any, isDev?: boolean) => {
-  const accounts = await createManyAdministratorsParser(body, isDev ?? false);
-  const createdAccounts: Array<
-    Omit<User, "password"> & {
-      administrator: Administrator;
-    }
-  > = [];
+  const createdAccounts = [];
   for (const account of accounts) {
     const { user, administrator } = account;
     const [createdUser, createdAdministrator] = await prismaClient.$transaction(
@@ -200,38 +135,21 @@ export const createManyAdministrators = async (body: any, isDev?: boolean) => {
         }),
       ]
     );
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...createdUserWithoutPassword } = createdUser;
     createdAccounts.push({
-      ...createdUserWithoutPassword,
+      user: removePasswordFromUser(createdUser),
       administrator: createdAdministrator,
     });
   }
 
   return createdAccounts;
-};
+}
 
-export const addAdministratorToAccountParser = (
-  body: any
-): Prisma.AdministratorCreateInput => {
-  if (!body.administrator) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
-
-  return body.administrator;
-};
-
-export const addAdministratorToAccount = async (userId: string, body: any) => {
-  const administrator = addAdministratorToAccountParser(body);
+export async function addAdministratorRoleToUser(userId: string, body: any) {
+  const { administrator } = body;
   return await createOneAdministrator({
     data: {
       ...administrator,
       user: { connect: { id: Number(userId) } },
     },
   });
-};
+}

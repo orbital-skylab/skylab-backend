@@ -5,68 +5,59 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getFirstStudent Find the first student record with the given query conditions
- * @param query The query conditions for the user
- * @returns The first student record that matches the query conditions
- */
-export const getFirstStudent = async ({
+export async function findFirstStudentWithUserData({
   include,
   ...query
-}: Prisma.StudentFindFirstArgs) => {
-  const student = await prisma.student.findFirst({
+}: Prisma.StudentFindFirstArgs) {
+  const firstStudent = await prisma.student.findFirst({
+    ...query,
+    include: { ...include, user: true },
+    rejectOnNotFound: false,
+  });
+  if (!firstStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return firstStudent;
+}
+
+export async function findUniqueStudent(query: Prisma.StudentFindUniqueArgs) {
+  const uniqueStudent = await prisma.student.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueStudent;
+}
+
+export async function findUniqueStudentWithUserData({
+  include,
+  ...query
+}: Prisma.StudentFindUniqueArgs) {
+  const uniqueStudent = await prisma.student.findUnique({
     include: { ...include, user: true },
     ...query,
     rejectOnNotFound: false,
   });
-
-  if (!student) {
-    throw new SkylabError("Student was not found", HttpStatusCode.NOT_FOUND);
+  if (!uniqueStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return uniqueStudent;
+}
 
-  return student;
-};
-
-/**
- * @function getOneStudent Find a unique student recod with the given query conditions
- * @param query The query conditions for the user
- * @returns The student record that matches the query conditions
- */
-export const getOneStudent = async ({
+export async function findManyStudentsWithUserData({
   include,
   ...query
-}: Prisma.StudentFindUniqueArgs) => {
-  const student = await prisma.student.findUnique({
-    include: { ...include, user: true },
-    ...query,
-    rejectOnNotFound: false,
-  });
-
-  if (!student) {
-    throw new SkylabError("Student was not found", HttpStatusCode.NOT_FOUND);
-  }
-
-  return student;
-};
-
-/**
- * @function getManyStudents Find all the students that match the given query condition
- * @param query The query conditions to be selected upon
- * @returns The array of student records that match the query conditions
- */
-export const getManyStudents = async ({
-  include,
-  ...query
-}: Prisma.StudentFindManyArgs) => {
-  const students = await prisma.student.findMany({
+}: Prisma.StudentFindManyArgs) {
+  const manyStudents = await prisma.student.findMany({
     include: { ...include, user: true },
     ...query,
   });
+  return manyStudents;
+}
 
-  return students;
-};
-
-export const createOneStudent = async (student: Prisma.StudentCreateArgs) => {
+export async function createOneStudent(student: Prisma.StudentCreateArgs) {
   try {
     return await prisma.student.create(student);
   } catch (e) {
@@ -84,11 +75,11 @@ export const createOneStudent = async (student: Prisma.StudentCreateArgs) => {
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
-};
+}
 
-export const createManyStudent = async (
+export async function createManyStudents(
   students: Prisma.StudentCreateManyArgs
-) => {
+) {
   try {
     return await prisma.student.createMany(students);
   } catch (e) {
@@ -104,4 +95,16 @@ export const createManyStudent = async (
       );
     }
   }
-};
+}
+
+export async function updateUniqueStudent(student: Prisma.StudentUpdateArgs) {
+  try {
+    return await prisma.student.update(student);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

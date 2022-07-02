@@ -1,183 +1,190 @@
 import { Router, Request, Response } from "express";
+import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
+import { addAdministratorRoleToUser } from "src/helpers/administrators.helper";
+import { addAdviserRoleToUser } from "src/helpers/advisers.helper";
+import { addMentorRoleToUser } from "src/helpers/mentors.helper";
+import { addStudentRoleToUser } from "src/helpers/students.helper";
+
 import {
-  addAdministratorToAccount,
-  createManyAdministrators,
-  createNewAdministrator,
-} from "src/helpers/administrators.helper";
-import {
-  addAdviserToAccount,
-  createManyAdvisers,
-  createNewAdviser,
-} from "src/helpers/advisers.helper";
-import {
-  addMentorToAccount,
-  createManyMentors,
-  createNewMentor,
-} from "src/helpers/mentors.helper";
-import {
-  createManyStudents,
-  createNewStudent,
-  addStudentToAccount,
-} from "src/helpers/students.helper";
-import {
-  deleteUserById,
-  editUserInformation,
-  getFilteredUsers,
-  getUserByEmail,
+  deleteOneUserById,
+  editOneUserById,
+  getManyUsersWithFilter,
+  getOneUserByEmail,
 } from "src/helpers/users.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import {
+  AddAdministratorRoleToUserValidator,
+  AddAdviserRoleToUserValidator,
+  AddMentorRoleToUserValidator,
+  AddStudentRoleToUserValidator,
+  DeleteUserByIDValidator,
+  GetUserByEmailValidator,
+  GetUsersValidator,
+  UpdateUserByIDValidator,
+} from "src/validators/user.validator";
+import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();
 
-enum UserRoleRoutes {
-  Student = "student",
-  Administrator = "administrator",
-  Mentor = "mentor",
-  Adviser = "adviser",
-}
-
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", GetUsersValidator, async (req: Request, res: Response) => {
+  const errors = validationResult(req).formatWith(errorFormatter);
+  if (!errors.isEmpty()) {
+    return throwValidationError(res, errors);
+  }
   try {
-    const users = await getFilteredUsers(req.query);
+    const users = await getManyUsersWithFilter(req.query);
     return apiResponseWrapper(res, { users: users });
   } catch (e) {
     routeErrorHandler(res, e);
   }
 });
 
-router.post("/create-:role/batch", async (req: Request, res: Response) => {
-  const { role } = req.params;
-  try {
-    let created;
-    switch (role) {
-      case UserRoleRoutes.Student:
-        created = await createManyStudents(req.body);
-        break;
-      case UserRoleRoutes.Mentor:
-        created = await createManyMentors(req.body);
-        break;
-      case UserRoleRoutes.Adviser:
-        created = await createManyAdvisers(req.body);
-        break;
-      case UserRoleRoutes.Administrator:
-        created = await createManyAdministrators(req.body);
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
-    }
-
-    return apiResponseWrapper(res, { [role]: created });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-:role", async (req: Request, res: Response) => {
-  const { role } = req.params;
-  try {
-    let created;
-    switch (role) {
-      case UserRoleRoutes.Student:
-        created = await createNewStudent(req.body);
-        break;
-      case UserRoleRoutes.Mentor:
-        created = await createNewMentor(req.body);
-        break;
-      case UserRoleRoutes.Adviser:
-        created = await createNewAdviser(req.body);
-        break;
-      case UserRoleRoutes.Administrator:
-        created = await createNewAdministrator(req.body);
-        break;
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
-    }
-    return apiResponseWrapper(res, { [role]: created });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/:userId/:role", async (req: Request, res: Response) => {
-  const { userId, role } = req.params;
-
-  try {
-    let created;
-    switch (role) {
-      case UserRoleRoutes.Student:
-        created = await addStudentToAccount(userId, req.body);
-        break;
-      case UserRoleRoutes.Mentor:
-        created = await addMentorToAccount(userId, req.body);
-        break;
-      case UserRoleRoutes.Adviser:
-        created = await addAdviserToAccount(userId, req.body);
-        break;
-      case UserRoleRoutes.Administrator:
-        created = await addAdministratorToAccount(userId, req.body);
-        break;
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
-    }
-
-    return apiResponseWrapper(res, created);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
 router
-  .put("/:userId", async (req: Request, res: Response) => {
-    const { userId } = req.params;
+  .put(
+    "/:userId/student",
+    AddStudentRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
 
-    if (!req.body.user) {
-      throw new SkylabError(
-        "Parameters missing in request body",
-        HttpStatusCode.NOT_FOUND
-      );
-    }
+      const { userId } = req.params;
 
-    try {
-      const editedUser = await editUserInformation(
-        Number(userId),
-        req.body.user
-      );
-      return apiResponseWrapper(res, { user: editedUser });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+      try {
+        const createdStudentRole = await addStudentRoleToUser(userId, req.body);
+        return apiResponseWrapper(res, { student: createdStudentRole });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
-  })
-  .delete("/:userId", async (req: Request, res: Response) => {
-    const { userId } = req.params;
-    try {
-      const deletedUser = await deleteUserById(Number(userId));
-      return apiResponseWrapper(res, { user: deletedUser });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  )
+  .put(
+    "/:userId/mentor",
+    AddMentorRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+
+      const { userId } = req.params;
+      try {
+        const createdMentorRole = await addMentorRoleToUser(userId, req.body);
+        return apiResponseWrapper(res, { mentor: createdMentorRole });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
+  )
+  .put(
+    "/:userId/adviser",
+    AddAdviserRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { userId } = req.params;
+      try {
+        const createdAdviserRole = await addAdviserRoleToUser(userId, req.body);
+        return apiResponseWrapper(res, { adviser: createdAdviserRole });
+      } catch (e) {
+        console.log(e);
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .put(
+    "/:userId/administrator",
+    AddAdministratorRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { userId } = req.params;
+      try {
+        const createAdminRole = await addAdministratorRoleToUser(
+          userId,
+          req.body
+        );
+        return apiResponseWrapper(res, { administrator: createAdminRole });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/:userId/:role", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
   });
 
-router.get("/:email", async (req: Request, res: Response) => {
-  const { email } = req.params;
-  try {
-    const user = await getUserByEmail(email);
-    return apiResponseWrapper(res, { user: user });
-  } catch (e) {
-    return routeErrorHandler(res, e);
-  }
-});
+router
+  .put(
+    "/:userId",
+    UpdateUserByIDValidator,
+    async (req: Request, res: Response) => {
+      const { userId } = req.params;
+
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+
+      try {
+        const editedUser = await editOneUserById(Number(userId), req.body.user);
+        return apiResponseWrapper(res, { user: editedUser });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  )
+  .delete(
+    "/:userId",
+    DeleteUserByIDValidator,
+    async (req: Request, res: Response) => {
+      const { userId } = req.params;
+
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+
+      try {
+        const deletedUser = await deleteOneUserById(Number(userId));
+        return apiResponseWrapper(res, { user: deletedUser });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  )
+  .get(
+    "/:email",
+    GetUserByEmailValidator,
+    async (req: Request, res: Response) => {
+      const { email } = req.params;
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const user = await getOneUserByEmail(email);
+        return apiResponseWrapper(res, { user: user });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  );
 
 export default router;

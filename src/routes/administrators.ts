@@ -1,32 +1,101 @@
 import { Router, Request, Response } from "express";
+import { validationResult } from "express-validator";
+import { SkylabError } from "src/errors/SkylabError";
 import {
-  getFilteredAdministrators,
-  getAdministratorById,
+  createManyUsersWithAdministratorRole,
+  createUserWithAdministratorRole,
+  getManyAdministratorsWithFilter,
+  getOneAdministratorById,
 } from "src/helpers/administrators.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import {
+  BatchCreateAdministratorValidator,
+  CreateAdministratorValidator,
+  GetAdministratorByIDValidator,
+  GetAdministratorsValidator,
+} from "src/validators/administrator.helper";
+import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();
 
-router.get("/", async (req: Request, res: Response) => {
-  try {
-    const administrators = await getFilteredAdministrators(req.query);
-    return apiResponseWrapper(res, { administrators: administrators });
-  } catch (e) {
-    return routeErrorHandler(res, e);
-  }
-});
+router
+  .get("/", GetAdministratorsValidator, async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const administrators = await getManyAdministratorsWithFilter(req.query);
+      return apiResponseWrapper(res, { administrators: administrators });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .post(
+    "/",
+    CreateAdministratorValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdAdmin = await createUserWithAdministratorRole(req.body);
+        return apiResponseWrapper(res, { administrator: createdAdmin });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
-router.get("/:administratorId", async (req: Request, res: Response) => {
-  const { administratorId } = req.params;
-  try {
-    const administrator = await getAdministratorById(administratorId);
-    return apiResponseWrapper(res, { administrator: administrator });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+router.get(
+  "/:adminId",
+  GetAdministratorByIDValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    const { adminId } = req.params;
+    try {
+      const administrator = await getOneAdministratorById(adminId);
+      return apiResponseWrapper(res, { administrator: administrator });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
+
+router.post(
+  "/batch",
+  BatchCreateAdministratorValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const createdAdmins = await createManyUsersWithAdministratorRole(
+        req.body
+      );
+      return apiResponseWrapper(res, { administrators: createdAdmins });
+    } catch (e) {
+      routeErrorHandler(res, e);
+    }
+  }
+);
 
 export default router;
