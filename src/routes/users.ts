@@ -1,21 +1,10 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
-import {
-  addAdministratorRoleToUser,
-  createManyUsersWithAdministratorRole,
-  createUserWithAdministratorRole,
-} from "src/helpers/administrators.helper";
-import {
-  addAdviserRoleToUser,
-  createManyUsersWithAdviserRole,
-  createUserWithAdviserRole,
-} from "src/helpers/advisers.helper";
-import {
-  addMentorRoleToUser,
-  createManyUsersWithMentorRole,
-  createUserWithMentorRole,
-} from "src/helpers/mentors.helper";
+import { addAdministratorRoleToUser } from "src/helpers/administrators.helper";
+import { addAdviserRoleToUser } from "src/helpers/advisers.helper";
+import { addMentorRoleToUser } from "src/helpers/mentors.helper";
+import { addStudentRoleToUser } from "src/helpers/students.helper";
 
 import {
   deleteOneUserById,
@@ -29,11 +18,14 @@ import {
 } from "src/utils/ApiResponseWrapper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
+  AddAdministratorRoleToUserValidator,
+  AddAdviserRoleToUserValidator,
+  AddMentorRoleToUserValidator,
+  AddStudentRoleToUserValidator,
   DeleteUserByIDValidator,
   GetUserByEmailValidator,
   GetUsersValidator,
   UpdateUserByIDValidator,
-  UserRolesEnum,
 } from "src/validators/user.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
 
@@ -52,85 +44,91 @@ router.get("/", GetUsersValidator, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/create-:role/batch", async (req: Request, res: Response) => {
-  const { role } = req.params;
-  try {
-    let created;
-    switch (role) {
-      case UserRolesEnum.Mentor:
-        created = await createManyUsersWithMentorRole(req.body);
-        break;
-      case UserRolesEnum.Adviser:
-        created = await createManyUsersWithAdviserRole(req.body);
-        break;
-      case UserRolesEnum.Administrator:
-        created = await createManyUsersWithAdministratorRole(req.body);
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
+router
+  .put(
+    "/:userId/student",
+    AddStudentRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+
+      const { userId } = req.params;
+
+      try {
+        const createdStudentRole = await addStudentRoleToUser(userId, req.body);
+        return apiResponseWrapper(res, { student: createdStudentRole });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
+  )
+  .put(
+    "/:userId/mentor",
+    AddMentorRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
 
-    return apiResponseWrapper(res, { [role]: created });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/create-:role", async (req: Request, res: Response) => {
-  const { role } = req.params;
-  try {
-    let created;
-    switch (role) {
-      case UserRolesEnum.Mentor:
-        created = await createUserWithMentorRole(req.body);
-        break;
-      case UserRolesEnum.Adviser:
-        created = await createUserWithAdviserRole(req.body);
-        break;
-      case UserRolesEnum.Administrator:
-        created = await createUserWithAdministratorRole(req.body);
-        break;
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
+      const { userId } = req.params;
+      try {
+        const createdMentorRole = await addMentorRoleToUser(userId, req.body);
+        return apiResponseWrapper(res, { mentor: createdMentorRole });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
-    return apiResponseWrapper(res, { [role]: created });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
-
-router.post("/:userId/:role", async (req: Request, res: Response) => {
-  const { userId, role } = req.params;
-
-  try {
-    let created;
-    switch (role) {
-      case UserRolesEnum.Mentor:
-        created = await addMentorRoleToUser(userId, req.body);
-        break;
-      case UserRolesEnum.Adviser:
-        created = await addAdviserRoleToUser(userId, req.body);
-        break;
-      case UserRolesEnum.Administrator:
-        created = await addAdministratorRoleToUser(userId, req.body);
-        break;
-      default:
-        throw new SkylabError(
-          "Invalid role to access endpoint",
-          HttpStatusCode.BAD_REQUEST
-        );
+  )
+  .put(
+    "/:userId/adviser",
+    AddAdviserRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { userId } = req.params;
+      try {
+        const createdAdviserRole = await addAdviserRoleToUser(userId, req.body);
+        return apiResponseWrapper(res, { adviser: createdAdviserRole });
+      } catch (e) {
+        console.log(e);
+        routeErrorHandler(res, e);
+      }
     }
-
-    return apiResponseWrapper(res, created);
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
+  )
+  .put(
+    "/:userId/administrator",
+    AddAdministratorRoleToUserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { userId } = req.params;
+      try {
+        const createAdminRole = await addAdministratorRoleToUser(
+          userId,
+          req.body
+        );
+        return apiResponseWrapper(res, { administrator: createAdminRole });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/:userId/:role", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
 router
   .put(

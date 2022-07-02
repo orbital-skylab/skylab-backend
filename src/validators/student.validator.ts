@@ -11,6 +11,7 @@ import {
   CohortQueryValidator,
   PageQueryValidator,
   LimitQueryValidator,
+  CheckBodyObjectExistsValidator,
 } from "./validator";
 
 export const GetStudentsValidator = [
@@ -20,7 +21,7 @@ export const GetStudentsValidator = [
 ];
 
 export const CreateStudentValidator = [
-  body("user").isObject().withMessage("User object missing in request body"),
+  CheckBodyObjectExistsValidator("user"),
   body("user.email")
     .isEmail()
     .withMessage("User email missing in request body")
@@ -30,9 +31,7 @@ export const CreateStudentValidator = [
         return Promise.reject("User with email provided already exists");
       }
     }),
-  body("student")
-    .isObject()
-    .withMessage("Student object missing in request body"),
+  CheckBodyObjectExistsValidator("student"),
   body("student.matricNo")
     .isString()
     .withMessage("Matric Number missing in student data")
@@ -100,7 +99,5 @@ export const UpdateStudentByIDValidator = [
         return Promise.reject("Student with provided ID does not exist");
       }
     }),
-  body("student")
-    .isObject()
-    .withMessage("Student data provided was not an object"),
+  CheckBodyObjectExistsValidator("student"),
 ];

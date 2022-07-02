@@ -1,5 +1,6 @@
 import { Response } from "express";
 import {
+  body,
   ErrorFormatter,
   param,
   query,
@@ -72,3 +73,9 @@ export const EmailParamValidator = param("email")
       return Promise.reject("No such user exists with this email");
     }
   });
+
+export function CheckBodyObjectExistsValidator(objectName: string) {
+  return body(objectName)
+    .isObject()
+    .withMessage(`${objectName} must be sent in request body as an object`);
+}
