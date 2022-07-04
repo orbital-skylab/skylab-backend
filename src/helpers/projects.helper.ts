@@ -135,8 +135,8 @@ export const getFilteredProjectsWhereInputParser = (filter: any) => {
 };
 
 export const getOneProjectById = async (projectId: number) => {
-  const projectWithId = getOneProject({ where: { id: projectId } });
-  return projectWithId;
+  const projectWithId = await getOneProject({ where: { id: projectId } });
+  return getProjectInputParser(projectWithId);
 };
 
 /**
