@@ -12,6 +12,7 @@ import { findUniqueAdviser } from "src/models/advisers.db";
 import { findUniqueMentor } from "src/models/mentors.db";
 import {
   createProject,
+  deleteProject,
   getManyProjects,
   getManyProjectsLean,
   getOneProject,
@@ -292,4 +293,8 @@ export const getProjectsViaIds = async (users: {
       },
     });
   }
+};
+
+export const deleteOneProjectById = async (projectId: number) => {
+  await deleteProject({ where: { id: projectId } });
 };
