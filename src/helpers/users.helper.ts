@@ -72,10 +72,10 @@ export async function getManyUsersWithFilter(
   return parsedUsers;
 }
 
-export async function getOneUserByEmail(email: string) {
+export async function getOneUserById(userId: number) {
   try {
     return removePasswordFromUser(
-      await findUniqueUser({ where: { email: email } })
+      await findUniqueUser({ where: { id: userId } })
     );
   } catch (e) {
     if (!(e instanceof SkylabError)) {

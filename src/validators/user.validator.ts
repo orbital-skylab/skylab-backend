@@ -1,10 +1,9 @@
-import { body, query } from "express-validator";
+import { body, param, query } from "express-validator";
 import { checkCohortExists } from "./helper/cohort.validator.helper";
 import { checkProjectExists } from "./helper/project.validator.helper";
 import {
   CheckBodyObjectExistsValidator,
   CohortQueryValidator,
-  EmailParamValidator,
   LimitQueryValidator,
   PageQueryValidator,
   SearchQueryValidator,
@@ -60,7 +59,11 @@ export const UpdateUserByIDValidator = [
 
 export const DeleteUserByIDValidator = [UserIDParamValidator];
 
-export const GetUserByEmailValidator = [EmailParamValidator];
+export const GetUserByIDValidator = [
+  param("userId")
+    .isNumeric()
+    .withMessage("User ID to retrieve must be numeric"),
+];
 
 export const AddStudentRoleToUserValidator = [
   UserIDParamValidator,
