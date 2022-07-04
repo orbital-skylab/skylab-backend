@@ -1,35 +1,45 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-/**
- * @function getFirstProject Find the first project record with the given query conditions
- * @param query The query conditions for the project
- * @returns The first project record that matches the query conditions
- */
-export const getFirstProject = async ({
-  include,
-  ...query
-}: Prisma.ProjectFindFirstArgs) => {
-  const project = await prisma.project.findFirst({
-    include: {
-      ...include,
-      adviser: { include: { user: true } },
-      students: { include: { user: true } },
-      mentor: { include: { user: true } },
-    },
+export async function findFirstProject(query: Prisma.ProjectFindFirstArgs) {
+  const firstProject = await prisma.project.findFirst({
     ...query,
     rejectOnNotFound: false,
   });
-
-  if (!project) {
-    throw new SkylabError("Project was not found", HttpStatusCode.NOT_FOUND);
+  if (!firstProject) {
+    throw new SkylabError("Project was not found", HttpStatusCode.BAD_REQUEST);
   }
-  return project;
-};
+  return firstProject;
+}
+
+export async function findUniqueProject(query: Prisma.ProjectFindUniqueArgs) {
+  const uniqueProject = await prisma.project.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueProject) {
+    throw new SkylabError("Project was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueProject;
+}
+
+export async function findUniqueProjectWithusers({
+  include,
+  ...query
+}: Prisma.ProjectFindUniqueArgs) {
+  const uniqueProject = await prisma.project.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+    include: { ...include, students: true, mentor: true, adviser: true },
+  });
+  if (!uniqueProject) {
+    throw new SkylabError("Project was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueProject;
+}
 
 /**
  * @function getOneProject Find a unique project record with the given query conditions
