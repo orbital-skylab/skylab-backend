@@ -10,7 +10,7 @@ import {
   deleteOneUserById,
   editOneUserById,
   getManyUsersWithFilter,
-  getOneUserByEmail,
+  getOneUserById,
 } from "src/helpers/users.helper";
 import {
   apiResponseWrapper,
@@ -23,7 +23,7 @@ import {
   AddMentorRoleToUserValidator,
   AddStudentRoleToUserValidator,
   DeleteUserByIDValidator,
-  GetUserByEmailValidator,
+  GetUserByIDValidator,
   GetUsersValidator,
   UpdateUserByIDValidator,
 } from "src/validators/user.validator";
@@ -170,16 +170,16 @@ router
     }
   )
   .get(
-    "/:email",
-    GetUserByEmailValidator,
+    "/:userId",
+    GetUserByIDValidator,
     async (req: Request, res: Response) => {
-      const { email } = req.params;
+      const { userId } = req.params;
       const errors = validationResult(req).formatWith(errorFormatter);
       if (!errors.isEmpty()) {
         return throwValidationError(res, errors);
       }
       try {
-        const user = await getOneUserByEmail(email);
+        const user = await getOneUserById(Number(userId));
         return apiResponseWrapper(res, { user: user });
       } catch (e) {
         return routeErrorHandler(res, e);

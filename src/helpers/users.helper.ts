@@ -3,7 +3,7 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
   findManyUsersWithRoleInCohort,
-  findUniqueUser,
+  findUniqueUserWithRoleData,
   updateUniqueUser,
 } from "src/models/users.db";
 import { Prisma, User } from "@prisma/client";
@@ -72,10 +72,10 @@ export async function getManyUsersWithFilter(
   return parsedUsers;
 }
 
-export async function getOneUserByEmail(email: string) {
+export async function getOneUserById(userId: number) {
   try {
     return removePasswordFromUser(
-      await findUniqueUser({ where: { email: email } })
+      await findUniqueUserWithRoleData({ where: { id: userId } })
     );
   } catch (e) {
     if (!(e instanceof SkylabError)) {

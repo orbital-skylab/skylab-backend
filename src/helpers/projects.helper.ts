@@ -7,6 +7,7 @@ import {
   createProject,
   getManyProjects,
   getManyProjectsLean,
+  getOneProject,
   updateProject,
 } from "src/models/projects.db";
 import { findUniqueStudent } from "src/models/students.db";
@@ -107,6 +108,11 @@ export const getFilteredProjectsWhereInputParser = (filter: any) => {
   }
 
   return toReturn;
+};
+
+export const getOneProjectById = async (projectId: number) => {
+  const projectWithId = getOneProject({ where: { id: projectId } });
+  return projectWithId;
 };
 
 /**
