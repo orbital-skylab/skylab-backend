@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
