@@ -58,9 +58,12 @@ router
     const { deadlineId } = req.params;
 
     if (!req.body.questions) {
-      throw new SkylabError(
-        "Parameters missing from request body",
-        HttpStatusCode.BAD_REQUEST
+      return routeErrorHandler(
+        res,
+        new SkylabError(
+          "Parameters missing from request body",
+          HttpStatusCode.BAD_REQUEST
+        )
       );
     }
     try {
@@ -93,6 +96,7 @@ router
       const updatedDeadline = await updateOneDeadline(deadlineId, deadline);
       return apiResponseWrapper(res, { deadline: updatedDeadline });
     } catch (e) {
+      console.log(e);
       return routeErrorHandler(res, e);
     }
   })
