@@ -43,12 +43,11 @@ router.post("/sign-in", async (req: Request, res: Response) => {
     const userData = await findUniqueUserWithRoleData({
       where: { email: email },
     });
-    res
+    return res
       .cookie("token", token, {
         httpOnly: true,
         maxAge: 10 * 60 * 60 * 24 * 1000,
         sameSite: "none",
-        secure: true,
       })
       .status(HttpStatusCode.OK)
       .json(userData);
