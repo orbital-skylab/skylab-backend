@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AchievementLevel, Prisma } from "@prisma/client";
+import {
+  AchievementLevel,
+  Adviser,
+  Mentor,
+  Prisma,
+  Student,
+  User,
+} from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { findUniqueAdviser } from "src/models/advisers.db";
 import { findUniqueMentor } from "src/models/mentors.db";
@@ -12,9 +19,7 @@ import {
 } from "src/models/projects.db";
 import { findUniqueStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { parseGetAdviserInput } from "./advisers.helper";
-import { parseGetMentorInput } from "./mentors.helper";
-import { parseGetStudentInput } from "./students.helper";
+import { removePasswordFromUser } from "./users.helper";
 
 /**
  * @function getProjectInputParser Parse the input returned from the prisma.project.find function
@@ -32,11 +37,34 @@ export const getProjectInputParser = (
 ) => {
   const { mentor, students, adviser, ...projectData } = project;
   return {
-    mentor: mentor ? parseGetMentorInput(mentor) : undefined,
-    students: students.map((student) => parseGetStudentInput(student)),
-    advisers: adviser ? parseGetAdviserInput(adviser) : undefined,
+    mentor: mentor ? parseMentorInProject(mentor) : undefined,
+    students: students.map((student) => parseStudentInProject(student)),
+    advisers: adviser ? parseAdviserInProject(adviser) : undefined,
     ...projectData,
   };
+};
+
+export const parseStudentInProject = async (
+  student: Student & { user: User }
+) => {
+  const { user, ...studentData } = student;
+  const userWithoutPassword = removePasswordFromUser(user);
+  const { id, ...studentInfo } = studentData;
+  return { studentId: id, ...userWithoutPassword, ...studentInfo };
+};
+export const parseAdviserInProject = async (
+  adviser: Adviser & { user: User }
+) => {
+  const { user, ...adviserData } = adviser;
+  const userWithoutPassword = removePasswordFromUser(user);
+  const { id, ...adviserInfo } = adviserData;
+  return { adviserId: id, ...userWithoutPassword, ...adviserInfo };
+};
+export const parseMentorInProject = async (mentor: Mentor & { user: User }) => {
+  const { user, ...mentorData } = mentor;
+  const userWithoutPassword = removePasswordFromUser(user);
+  const { id, ...mentorInfo } = mentorData;
+  return { mentorId: id, ...userWithoutPassword, ...mentorInfo };
 };
 
 /**
