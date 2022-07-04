@@ -3,6 +3,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   addUsersToProject,
   createProjectHelper,
+  deleteOneProjectById,
   getFilteredProjects,
   getLeanProjects,
   getOneProjectById,
@@ -103,6 +104,17 @@ router.put("/users", async (req: Request, res: Response) => {
 
   try {
     await addUsersToProject(projectId, users);
+    return res.sendStatus(HttpStatusCode.OK);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.delete("/:projectId", async (req: Request, res: Response) => {
+  const { projectId } = req.params;
+
+  try {
+    await deleteOneProjectById(Number(projectId));
     return res.sendStatus(HttpStatusCode.OK);
   } catch (e) {
     return routeErrorHandler(res, e);

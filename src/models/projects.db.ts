@@ -144,3 +144,15 @@ export const updateProject = async (updates: Prisma.ProjectUpdateArgs) => {
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
+
+export const deleteProject = async (project: Prisma.ProjectDeleteArgs) => {
+  try {
+    await prisma.project.delete(project);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};
