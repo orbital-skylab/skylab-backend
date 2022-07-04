@@ -5,6 +5,7 @@ import {
   createProjectHelper,
   getFilteredProjects,
   getLeanProjects,
+  getOneProjectById,
 } from "src/helpers/projects.helper";
 import {
   apiResponseWrapper,
@@ -62,6 +63,17 @@ router.get("/lean", async (req: Request, res: Response) => {
     return apiResponseWrapper(res, projects);
   } catch (e) {
     return routeErrorHandler(res, e);
+  }
+});
+
+router.get("/:projectId", async (req: Request, res: Response) => {
+  const { projectId } = req.params;
+
+  try {
+    const projectWithId = await getOneProjectById(Number(projectId));
+    return apiResponseWrapper(res, { project: projectWithId });
+  } catch (e) {
+    routeErrorHandler(res, e);
   }
 });
 
