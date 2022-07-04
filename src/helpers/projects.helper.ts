@@ -44,23 +44,19 @@ export const getProjectInputParser = (
   };
 };
 
-export const parseStudentInProject = async (
-  student: Student & { user: User }
-) => {
+export const parseStudentInProject = (student: Student & { user: User }) => {
   const { user, ...studentData } = student;
   const userWithoutPassword = removePasswordFromUser(user);
   const { id, ...studentInfo } = studentData;
   return { studentId: id, ...userWithoutPassword, ...studentInfo };
 };
-export const parseAdviserInProject = async (
-  adviser: Adviser & { user: User }
-) => {
+export const parseAdviserInProject = (adviser: Adviser & { user: User }) => {
   const { user, ...adviserData } = adviser;
   const userWithoutPassword = removePasswordFromUser(user);
   const { id, ...adviserInfo } = adviserData;
   return { adviserId: id, ...userWithoutPassword, ...adviserInfo };
 };
-export const parseMentorInProject = async (mentor: Mentor & { user: User }) => {
+export const parseMentorInProject = (mentor: Mentor & { user: User }) => {
   const { user, ...mentorData } = mentor;
   const userWithoutPassword = removePasswordFromUser(user);
   const { id, ...mentorInfo } = mentorData;
@@ -151,9 +147,9 @@ export const getOneProjectById = async (projectId: number) => {
 export const getFilteredProjects = async (query: any) => {
   const filteredQuery = getFilteredProjectsWhereInputParser(query);
   const projects = await getManyProjects(filteredQuery);
-  const parsedProjects = projects.map((project) =>
-    getProjectInputParser(project)
-  );
+  const parsedProjects = projects.map((project) => {
+    return getProjectInputParser(project);
+  });
   return parsedProjects;
 };
 
