@@ -52,6 +52,8 @@ router.post("/sign-in", async (req: Request, res: Response) => {
         maxAge: 10 * 60 * 60 * 24 * 1000,
         sameSite: "none",
         secure: true,
+        httpOnly: true,
+        path: "/",
       })
       .status(HttpStatusCode.OK)
       .json(userData);
@@ -62,7 +64,9 @@ router.post("/sign-in", async (req: Request, res: Response) => {
 
 router.get("/sign-out", authorize, async (_: Request, res: Response) => {
   try {
-    res.clearCookie("token").sendStatus(HttpStatusCode.OK);
+    res
+      .cookie("token", "", { expires: new Date(1), path: "/" })
+      .sendStatus(HttpStatusCode.OK);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
