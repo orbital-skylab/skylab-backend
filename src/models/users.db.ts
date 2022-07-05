@@ -42,13 +42,22 @@ export async function findUniqueUserWithRoleData(
         where: { cohortYear: academicYear },
       },
       adviser: { where: { cohortYear: academicYear } },
+      administrator: { where: { endDate: { gte: new Date() } } },
     },
     rejectOnNotFound: false,
   });
   if (!user) {
     throw new SkylabError("User was not found", HttpStatusCode.BAD_REQUEST);
   }
-  return user;
+
+  const { student, mentor, administrator, adviser, ...userInfo } = user;
+  return {
+    ...userInfo,
+    student: student[0] ?? {},
+    mentor: mentor[0] ?? {},
+    adviser: adviser[0] ?? {},
+    administrator: administrator[0] ?? {},
+  };
 }
 
 export async function findManyUsers(query: Prisma.UserFindManyArgs) {
