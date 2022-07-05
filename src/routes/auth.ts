@@ -47,6 +47,7 @@ router.post("/sign-in", async (req: Request, res: Response) => {
       .cookie("token", token, {
         maxAge: 10 * 60 * 60 * 24 * 1000,
         sameSite: "none",
+        secure: true,
       })
       .status(HttpStatusCode.OK)
       .json(userData);
