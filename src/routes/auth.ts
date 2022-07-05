@@ -43,17 +43,12 @@ router.post("/sign-in", async (req: Request, res: Response) => {
     const userData = await findUniqueUserWithRoleData({
       where: { email: email },
     });
-    res.header(
-      "Access-Control-Allow-Headers",
-      "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept"
-    );
     return res
       .cookie("token", token, {
         maxAge: 10 * 60 * 60 * 24 * 1000,
         sameSite: "none",
         secure: true,
         httpOnly: true,
-        path: "/",
       })
       .status(HttpStatusCode.OK)
       .json(userData);
@@ -65,7 +60,7 @@ router.post("/sign-in", async (req: Request, res: Response) => {
 router.get("/sign-out", authorize, async (_: Request, res: Response) => {
   try {
     res
-      .cookie("token", "", { expires: new Date(1), path: "/" })
+      .clearCookie("token", { sameSite: "none", secure: true, httpOnly: true })
       .sendStatus(HttpStatusCode.OK);
   } catch (e) {
     return routeErrorHandler(res, e);
