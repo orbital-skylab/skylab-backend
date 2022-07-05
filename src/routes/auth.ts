@@ -43,6 +43,10 @@ router.post("/sign-in", async (req: Request, res: Response) => {
     const userData = await findUniqueUserWithRoleData({
       where: { email: email },
     });
+    res.header(
+      "Access-Control-Allow-Headers",
+      "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept"
+    );
     return res
       .cookie("token", token, {
         maxAge: 10 * 60 * 60 * 24 * 1000,
