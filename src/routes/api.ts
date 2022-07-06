@@ -10,6 +10,7 @@ import devRouter from "./dev";
 import deadlineRouter from "./deadlines";
 import authRouter from "./auth";
 import administratorRouter from "./administrators";
+import seedRouter from "./seed";
 
 // Export the base-router
 const baseRouter = Router();
@@ -25,6 +26,7 @@ baseRouter.use("/dev", devRouter);
 baseRouter.use("/deadlines", deadlineRouter);
 baseRouter.use("/auth", authRouter);
 baseRouter.use("/administrators", administratorRouter);
+baseRouter.use("/seed", seedRouter);
 
 // Export default.
 export default baseRouter;
