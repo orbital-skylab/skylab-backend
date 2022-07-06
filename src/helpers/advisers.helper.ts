@@ -59,6 +59,7 @@ export async function getOneAdviserById(adviserId: number) {
 
 export async function createUserWithAdviserRole(body: any, isDev?: boolean) {
   const { adviser, user } = body;
+
   if (isDev && !user.password) {
     throw new SkylabError(
       "Parameters missing from request",
@@ -71,13 +72,20 @@ export async function createUserWithAdviserRole(body: any, isDev?: boolean) {
       ? await hashPassword(user.password)
       : await generateRandomPassword();
 
-  const { cohortYear, ...adviserData } = adviser;
+  const { cohortYear, projectIds, ...adviserData } = adviser;
 
   const [createdUser, createdAdviser] = await prismaClient.$transaction([
     prismaClient.user.create({ data: user }),
     prismaClient.adviser.create({
       data: {
         ...adviserData,
+        projects: projectIds
+          ? {
+              connect: projectIds.map((projectId: any) => {
+                return { id: Number(projectId) };
+              }),
+            }
+          : undefined,
         user: { connect: { email: user.email } },
         cohort: { connect: { academicYear: cohortYear } },
       },
