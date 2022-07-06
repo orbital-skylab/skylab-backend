@@ -7,7 +7,6 @@ import {
   getManyAdvisersWithFilter,
   getOneAdviserById,
 } from "src/helpers/advisers.helper";
-import { createManyAdvisers } from "src/models/advisers.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,

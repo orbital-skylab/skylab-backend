@@ -5,6 +5,7 @@ import { AchievementLevel } from "@prisma/client";
 const password = "Password123";
 type Batch = {
   count: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   projects: any[];
 };
 
