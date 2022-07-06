@@ -2,6 +2,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
+  findManyUsers,
   findManyUsersWithRoleInCohort,
   findUniqueUserWithRoleData,
   updateUniqueUser,
@@ -13,6 +14,43 @@ export function removePasswordFromUser(user: User) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...userWithoutPassword } = user;
   return userWithoutPassword;
+}
+
+export async function getLeanUsersWithFilter(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query: any & {
+    cohortYear: number;
+    role: string;
+  }
+) {
+  const { cohortYear, role } = query;
+
+  const userQuery: Prisma.UserFindManyArgs = {
+    where: {
+      mentor:
+        role == UserRolesEnum.Mentor
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      student:
+        role == UserRolesEnum.Student
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      adviser:
+        role == UserRolesEnum.Adviser
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      administrator:
+        role == UserRolesEnum.Administrator
+          ? { some: { endDate: { gte: new Date() } } }
+          : undefined,
+    },
+    select: {
+      [role]: { select: { id: true } },
+      name: true,
+    },
+  };
+
+  return await findManyUsers(userQuery);
 }
 
 export async function getManyUsersWithFilter(
