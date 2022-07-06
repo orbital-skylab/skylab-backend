@@ -81,3 +81,8 @@ export async function updateOneProject(query: Prisma.ProjectUpdateArgs) {
   const updatedProject = await prisma.project.update(query);
   return updatedProject;
 }
+
+export async function deleteOneProject(query: Prisma.ProjectDeleteArgs) {
+  const deletedProject = await prisma.project.delete(query);
+  return deletedProject;
+}

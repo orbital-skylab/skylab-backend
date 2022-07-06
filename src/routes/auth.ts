@@ -6,6 +6,7 @@ import {
   sendPasswordResetEmail,
   userLogin,
 } from "src/helpers/authentication.helper";
+import { getOneUserById } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
 import {
   findUniqueUser,
@@ -47,6 +48,8 @@ router.post("/sign-in", async (req: Request, res: Response) => {
       .cookie("token", token, {
         maxAge: 10 * 60 * 60 * 24 * 1000,
         sameSite: "none",
+        secure: true,
+        httpOnly: true,
       })
       .status(HttpStatusCode.OK)
       .json(userData);
@@ -57,7 +60,9 @@ router.post("/sign-in", async (req: Request, res: Response) => {
 
 router.get("/sign-out", authorize, async (_: Request, res: Response) => {
   try {
-    res.clearCookie("token").sendStatus(HttpStatusCode.OK);
+    res
+      .clearCookie("token", { sameSite: "none", secure: true, httpOnly: true })
+      .sendStatus(HttpStatusCode.OK);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -66,7 +71,11 @@ router.get("/sign-out", authorize, async (_: Request, res: Response) => {
 router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
-    const userData = jwt.verify(token, process.env.JWT_SECRET ?? "jwt_secret");
+    const jwtData = jwt.verify(
+      token,
+      process.env.JWT_SECRET ?? "jwt_secret"
+    ) as any;
+    const userData = await getOneUserById(Number(jwtData.id));
     return apiResponseWrapper(res, userData as JwtPayload);
   } catch (e) {
     return routeErrorHandler(res, e);

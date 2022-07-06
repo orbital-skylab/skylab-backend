@@ -13,6 +13,7 @@ import { findUniqueAdviser } from "src/models/advisers.db";
 import { findUniqueMentor } from "src/models/mentors.db";
 import {
   createOneProject,
+  deleteOneProject,
   findManyProjects,
   findManyProjectsWithUserData,
   findUniqueProjectWithUserData,
@@ -209,4 +210,8 @@ export async function getProjectsViaRoleIds(
     "Internal server error occurred",
     HttpStatusCode.INTERNAL_SERVER_ERROR
   );
+}
+
+export async function deleteOneProjectById(projectId: number) {
+  return await deleteOneProject({ where: { id: projectId } });
 }

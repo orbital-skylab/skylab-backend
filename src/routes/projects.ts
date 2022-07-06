@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createProject,
+  deleteOneProjectById,
   editProjectDataByProjectID,
   getManyProjectsLean,
   getManyProjectsWithFilter,
@@ -109,6 +110,16 @@ router
         req.body
       );
       return apiResponseWrapper(res, { project: updatedProject });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .delete("/:projectId", async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+
+    try {
+      const deletedProject = await deleteOneProjectById(Number(projectId));
+      return apiResponseWrapper(res, { project: deletedProject });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
