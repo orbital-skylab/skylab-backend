@@ -74,6 +74,7 @@ router.get("/info", authorize, async (req: Request, res: Response) => {
     const jwtData = jwt.verify(
       token,
       process.env.JWT_SECRET ?? "jwt_secret"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any;
     const userData = await getOneUserById(Number(jwtData.id));
     return apiResponseWrapper(res, userData as JwtPayload);
