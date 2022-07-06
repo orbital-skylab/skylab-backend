@@ -43,8 +43,8 @@ router
     }
 
     try {
-      await createCohort(cohort);
-      return apiResponseWrapper(res, { cohort: cohort });
+      const createdCohort = await createCohort(cohort);
+      return apiResponseWrapper(res, { cohort: createdCohort });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
