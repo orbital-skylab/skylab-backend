@@ -9,6 +9,7 @@ import { addStudentRoleToUser } from "src/helpers/students.helper";
 import {
   deleteOneUserById,
   editOneUserById,
+  getLeanUsersWithFilter,
   getManyUsersWithFilter,
   getOneUserById,
 } from "src/helpers/users.helper";
@@ -24,6 +25,7 @@ import {
   AddStudentRoleToUserValidator,
   DeleteUserByIDValidator,
   GetUserByIDValidator,
+  GetUsersLeanValidator,
   GetUsersValidator,
   UpdateUserByIDValidator,
 } from "src/validators/user.validator";
@@ -43,6 +45,24 @@ router.get("/", GetUsersValidator, async (req: Request, res: Response) => {
     routeErrorHandler(res, e);
   }
 });
+
+router.get(
+  "/lean",
+  GetUsersLeanValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const leanUsers = await getLeanUsersWithFilter(req.query);
+      return apiResponseWrapper(res, { users: leanUsers });
+    } catch (e) {
+      console.log(e);
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 router
   .put(

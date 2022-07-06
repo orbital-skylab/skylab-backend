@@ -33,6 +33,18 @@ export const GetUsersValidator = [
   SearchQueryValidator,
 ];
 
+export const GetUsersLeanValidator = [
+  query("role")
+    .toLowerCase()
+    .isIn([
+      UserRolesEnum.Administrator,
+      UserRolesEnum.Adviser,
+      UserRolesEnum.Mentor,
+      UserRolesEnum.Student,
+    ]),
+  CohortQueryValidator,
+];
+
 export const UpdateUserByIDValidator = [
   UserIDParamValidator,
   CheckBodyObjectExistsValidator("user"),
