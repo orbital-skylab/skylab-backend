@@ -6,6 +6,7 @@ import {
   sendPasswordResetEmail,
   userLogin,
 } from "src/helpers/authentication.helper";
+import { getOneUserById } from "src/helpers/users.helper";
 import authorize from "src/middleware/jwtAuth";
 import {
   findUniqueUser,
@@ -70,7 +71,11 @@ router.get("/sign-out", authorize, async (_: Request, res: Response) => {
 router.get("/info", authorize, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
-    const userData = jwt.verify(token, process.env.JWT_SECRET ?? "jwt_secret");
+    const jwtData = jwt.verify(
+      token,
+      process.env.JWT_SECRET ?? "jwt_secret"
+    ) as any;
+    const userData = await getOneUserById(Number(jwtData.id));
     return apiResponseWrapper(res, userData as JwtPayload);
   } catch (e) {
     return routeErrorHandler(res, e);
