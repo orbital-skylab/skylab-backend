@@ -3,6 +3,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createDeadline,
   deleteOneDeadlineByDeadlineId,
+  editDeadlineByDeadlineId,
   getManyDeadlinesWithFilter,
   getOneDeadlineById,
   getQuestionsOfDeadlineById,
@@ -78,6 +79,18 @@ router
     try {
       const deadlineWithId = await getOneDeadlineById(Number(deadlineId));
       return apiResponseWrapper(res, { deadline: deadlineWithId });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .put("/:deadlineId", async (req: Request, res: Response) => {
+    const { deadlineId } = req.params;
+    try {
+      const updatedDeadline = await editDeadlineByDeadlineId(
+        Number(deadlineId),
+        req.body
+      );
+      return apiResponseWrapper(res, { deadline: updatedDeadline });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
