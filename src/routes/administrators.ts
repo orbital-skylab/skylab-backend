@@ -17,7 +17,7 @@ import {
   CreateAdministratorValidator,
   GetAdministratorByIDValidator,
   GetAdministratorsValidator,
-} from "src/validators/administrator.helper";
+} from "src/validators/administrator.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();

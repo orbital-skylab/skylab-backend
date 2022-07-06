@@ -1,214 +1,163 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Question } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import { Prisma, Question, DeadlineType, Option } from "@prisma/client";
 import {
   createOneDeadline,
   deleteOneDeadline,
-  getManyDeadlines,
-  getOneDeadline,
-  updateDeadline,
+  findManyDeadlines,
+  findUniqueDeadline,
+  findUniqueDeadlineWithQuestionsData,
+  updateOneDeadline,
 } from "src/models/deadline.db";
 import {
   createOneQuestion,
   deleteManyQuestions,
 } from "src/models/questions.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
-export const createNewDeadlineParser = (
-  body: any
-): Prisma.DeadlineCreateInput => {
-  if (!body.deadline) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
+export async function getManyDeadlinesWithFilter(
+  query: any & { cohortYear?: number; name?: string }
+) {
+  const { cohortYear, name } = query;
 
-  const { deadline } = body;
-
-  if (
-    !(deadline.cohortYear && deadline.name && deadline.dueBy && deadline.type)
-  ) {
-    throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
-    );
-  }
-
-  const { cohortYear, dueBy, ...deadlineData } = deadline;
-
-  return {
-    cohort: { connect: { academicYear: cohortYear } },
-    dueBy: new Date(dueBy),
-    ...deadlineData,
+  const deadlinesQuery: Prisma.DeadlineFindManyArgs = {
+    where: {
+      cohortYear: cohortYear ?? undefined,
+      name: { contains: name, mode: "insensitive" },
+    },
   };
-};
 
-export const createNewDeadline = async (body: any) => {
-  const deadline = createNewDeadlineParser(body);
+  const deadlines = await findManyDeadlines(deadlinesQuery);
 
-  try {
-    return await createOneDeadline({ data: deadline });
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    } else {
-      throw e;
-    }
+  return deadlines;
+}
+
+export async function createDeadline(
+  body: any & {
+    deadline: {
+      cohortYear: number;
+      desc?: string;
+      name: string;
+      dueBy: Date;
+      type: DeadlineType;
+    };
   }
-};
+) {
+  const { cohortYear, desc, name, dueBy, type } = body.deadline;
+  return await createOneDeadline({
+    data: {
+      cohort: { connect: { academicYear: cohortYear } },
+      desc: desc ?? undefined,
+      name: name,
+      dueBy: dueBy,
+      type: type,
+    },
+  });
+}
 
-export const getFilteredDeadlines = async (filter: any) => {
-  const { cohortYear, name } = filter;
-  try {
-    const deadlines = await getManyDeadlines({
-      where: {
-        cohortYear: cohortYear ? Number(cohortYear) : undefined,
-        name: name ? name : undefined,
-      },
-      orderBy: {
-        dueBy: "asc",
-      },
-    });
-    return deadlines;
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    }
-    throw e;
-  }
-};
+export async function getOneDeadlineById(deadlineId: number) {
+  const deadline = await findUniqueDeadline({ where: { id: deadlineId } });
+  return deadline;
+}
 
-export const getDeadlineById = async (deadlineId: string) => {
-  try {
-    return await getOneDeadline({ where: { id: Number(deadlineId) } });
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    } else {
-      throw e;
-    }
-  }
-};
+export function parseQuestionsInput(
+  questions: (Question & { options?: Option[] })[]
+) {
+  const parsedQuestions = questions.map(({ options, ...question }) => {
+    const optionsStringArr = options?.map((option) => option.option);
+    return {
+      ...question,
+      options: optionsStringArr ? optionsStringArr : undefined,
+    };
+  });
 
-export const updateOneDeadline = async (
-  deadlineId: string,
-  updates: Omit<Prisma.DeadlineUpdateInput, "questions">
-) => {
-  try {
-    return await updateDeadline({
-      where: { id: Number(deadlineId) },
-      data: updates,
-    });
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    }
-    throw e;
-  }
-};
+  return parsedQuestions;
+}
 
-export const deleteDeadlineById = async (deadlineId: string) => {
-  try {
-    return await deleteOneDeadline({ where: { id: Number(deadlineId) } });
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    }
-    throw e;
-  }
-};
+export async function getQuestionsOfDeadlineById(deadlineId: number) {
+  const deadlineWithQuestions = await findUniqueDeadlineWithQuestionsData({
+    where: { id: deadlineId },
+  });
 
-export const getAllQuestionsOfDeadline = async (deadlineId: string) => {
-  try {
-    const rawDeadlinePayload = await getOneDeadline({
-      where: { id: Number(deadlineId) },
-      include: {
-        questions: {
-          orderBy: { questionNumber: "asc" },
-          include: {
-            options: {
-              select: { option: true },
-            },
-          },
-        },
-      },
-    });
-
-    if (!rawDeadlinePayload) {
-      throw new SkylabError(
-        `Could not find deadline of ID: ${deadlineId}`,
-        HttpStatusCode.BAD_REQUEST
-      );
-    }
-    return getAllQuestionsOfDeadlineParser(
-      <
-        Prisma.DeadlineGetPayload<{
-          include: { questions: { include: { options: true } } };
-        }>
-      >rawDeadlinePayload
-    );
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    }
-    throw e;
-  }
-};
-
-export const getAllQuestionsOfDeadlineParser = async (
-  deadlineWithQuestions: Prisma.DeadlineGetPayload<{
-    include: { questions: { include: { options: true } } };
-  }>
-) => {
-  const { questions, ...deadline } = deadlineWithQuestions;
+  const { questions, ...deadlineData } = deadlineWithQuestions;
   return {
-    questions: questions.map((question) => {
-      const { options, ...questionData } = question;
-      return {
-        options: options.map((option) => option.option),
-        ...questionData,
-      };
-    }),
-    deadline: deadline,
+    deadline: deadlineData,
+    questions: parseQuestionsInput(questions),
   };
-};
+}
 
-export const replaceQuestionsOfDeadline = async (
-  deadlineId: string,
-  questions: Omit<Question & { options: string[] }, "deadlineId">[]
-) => {
-  try {
-    // delete all current questions for the deadline
-    await deleteManyQuestions({ where: { deadlineId: Number(deadlineId) } });
+export async function replaceQuestionsById(
+  deadlineId: number,
+  questions: (Omit<
+    Prisma.QuestionCreateInput,
+    "deadlineId" | "questionNumber" | "deadline" | "options"
+  > & {
+    options?: string[];
+  })[]
+) {
+  await deleteManyQuestions({ where: { deadlineId: deadlineId } });
 
-    const createQuestions = await Promise.all(
-      questions.map(async (question) => {
-        const { options, ...questionData } = question;
-        return await createOneQuestion({
-          data: {
-            ...questionData,
-            deadlineId: Number(deadlineId),
-            options: options
-              ? {
-                  createMany: {
-                    data: options.map((option, index) => {
-                      return { option: option, order: Number(index + 1) };
-                    }),
-                  },
-                }
-              : undefined,
-          },
-        });
-      })
-    );
-    return createQuestions;
-  } catch (e) {
-    if (!(e instanceof SkylabError)) {
-      throw new SkylabError(e.message, HttpStatusCode.INTERNAL_SERVER_ERROR);
-    }
-    throw e;
+  const createdQuestions = await Promise.all(
+    questions.map((question, index) => {
+      return createQuestionHelper(deadlineId, question, index);
+    })
+  );
+
+  return parseQuestionsInput(createdQuestions);
+}
+
+export async function createQuestionHelper(
+  deadlineId: number,
+  {
+    options,
+    ...question
+  }: Omit<
+    Prisma.QuestionCreateInput,
+    "deadlineId" | "questionNumber" | "deadline" | "options" | "id"
+  > & {
+    options?: string[];
+  },
+  index: number
+) {
+  const parsedOptions = options?.map((option, index) => {
+    return {
+      order: index,
+      option: option,
+    };
+  });
+
+  const createdQuestion = await createOneQuestion({
+    data: {
+      questionNumber: index,
+      ...question,
+      deadline: { connect: { id: deadlineId } },
+      options: parsedOptions
+        ? { createMany: { data: parsedOptions } }
+        : undefined,
+    },
+  });
+
+  return createdQuestion;
+}
+
+export async function editDeadlineByDeadlineId(
+  deadlineId: number,
+  body: any & {
+    deadline: Omit<
+      Prisma.DeadlineUpdateInput,
+      "cohort" | "cohortYear" | "questions"
+    >;
   }
-};
+) {
+  const deadline: Prisma.DeadlineUpdateInput = body.deadline;
+  const updatedDeadline = await updateOneDeadline({
+    where: { id: deadlineId },
+    data: deadline,
+  });
+  return updatedDeadline;
+}
+
+export async function deleteOneDeadlineByDeadlineId(deadlineId: number) {
+  const deletedDeadline = await deleteOneDeadline({
+    where: { id: deadlineId },
+  });
+  return deletedDeadline;
+}

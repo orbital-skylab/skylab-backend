@@ -1,120 +1,75 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 const prisma = new PrismaClient();
 
-export const getFirstDeadline = async (query: Prisma.DeadlineFindFirstArgs) => {
-  const deadline = await prisma.deadline.findFirst({
+export async function findFirstDeadline(query: Prisma.DeadlineFindFirstArgs) {
+  const firstDeadline = await prisma.deadline.findFirst({
     ...query,
     rejectOnNotFound: false,
   });
-
-  if (!deadline) {
+  if (!firstDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
   }
+  return firstDeadline;
+}
 
-  return deadline;
-};
-
-export const getOneDeadline = async (query: Prisma.DeadlineFindUniqueArgs) => {
-  try {
-    const deadline = await prisma.deadline.findUnique({
-      ...query,
-      rejectOnNotFound: false,
-    });
-    if (!deadline) {
-      throw new SkylabError(
-        "Deadline was not found",
-        HttpStatusCode.BAD_REQUEST,
-        query.where
-      );
-    }
-    return deadline;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    if (e.code === "P2025") {
-      throw new SkylabError(
-        `Deadline where ${query.where} does not exist`,
-        HttpStatusCode.BAD_REQUEST,
-        e.meta
-      );
-    }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+export async function findUniqueDeadlineWithQuestionsData({
+  include,
+  ...query
+}: Prisma.DeadlineFindUniqueArgs) {
+  const uniqueDeadline = await prisma.deadline.findUnique({
+    ...query,
+    include: { ...include, questions: { include: { options: true } } },
+  });
+  if (!uniqueDeadline) {
+    throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
   }
-};
+  return uniqueDeadline;
+}
 
-export const getManyDeadlines = async (query: Prisma.DeadlineFindManyArgs) => {
+export async function findUniqueDeadline(query: Prisma.DeadlineFindUniqueArgs) {
+  const uniqueDeadline = await prisma.deadline.findUnique(query);
+  if (!uniqueDeadline) {
+    throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueDeadline;
+}
+
+export async function findManyDeadlines(query: Prisma.DeadlineFindManyArgs) {
   const deadlines = await prisma.deadline.findMany(query);
   return deadlines;
-};
+}
 
-export const updateDeadline = async (query: Prisma.DeadlineUpdateArgs) => {
-  try {
-    const deadline = await prisma.deadline.update(query);
+export async function findManyDeadlinesWithQuestionsData({
+  include,
+  ...query
+}: Prisma.DeadlineFindManyArgs) {
+  const deadlines = await prisma.deadline.findMany({
+    ...query,
+    include: {
+      ...include,
+      questions: {
+        include: { options: { orderBy: { order: "asc" } } },
+        orderBy: { questionNumber: "asc" },
+      },
+    },
+  });
+  return deadlines;
+}
 
-    return deadline;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
+export async function updateOneDeadline(query: Prisma.DeadlineUpdateArgs) {
+  const updatedDeadline = await prisma.deadline.update(query);
+  return updatedDeadline;
+}
 
-    if (e.code === "P2025") {
-      throw new SkylabError(
-        `Deadline where ${query.where} does not exist`,
-        HttpStatusCode.BAD_REQUEST,
-        e.meta
-      );
-    }
+export async function deleteOneDeadline(query: Prisma.DeadlineDeleteArgs) {
+  const deletedDeadline = await prisma.deadline.delete(query);
+  return deletedDeadline;
+}
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-};
-
-export const createOneDeadline = async (
-  deadline: Prisma.DeadlineCreateArgs
-) => {
-  try {
-    return await prisma.deadline.create(deadline);
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    if (e.code === "P2002") {
-      throw new SkylabError(
-        "Deadline is not unique",
-        HttpStatusCode.BAD_REQUEST,
-        e.meta
-      );
-    }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-};
-
-export const deleteOneDeadline = async (query: Prisma.DeadlineDeleteArgs) => {
-  try {
-    const deadline = await prisma.deadline.delete(query);
-    return deadline;
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    if (e.code === "P2025") {
-      throw new SkylabError(
-        `Deadline where ${query.where} does not exist`,
-        HttpStatusCode.BAD_REQUEST,
-        e.meta
-      );
-    }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-};
+export async function createOneDeadline(query: Prisma.DeadlineCreateArgs) {
+  const createdDeadline = await prisma.deadline.create(query);
+  return createdDeadline;
+}
