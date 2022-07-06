@@ -7,7 +7,7 @@ type Batch = {
   accounts: any[];
 };
 
-export const seedStudents = async () => {
+export const seedAdmins = async () => {
   const batch: Batch = { count: 100, accounts: [] };
   for (let i = 0; i < batch.count; i++) {
     const firstName = faker.name.firstName();

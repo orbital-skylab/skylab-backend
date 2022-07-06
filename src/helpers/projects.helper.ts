@@ -168,8 +168,8 @@ export async function editProjectDataByProjectID(
             }),
           }
         : undefined,
-      adviser: adviser ? { connect: adviser } : undefined,
-      mentor: mentor ? { connect: mentor } : undefined,
+      adviser: adviser ? { connect: { id: adviser } } : undefined,
+      mentor: mentor ? { connect: { id: mentor } } : undefined,
     },
   });
 }
