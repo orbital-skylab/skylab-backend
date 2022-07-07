@@ -119,14 +119,14 @@ export async function createQuestionHelper(
 ) {
   const parsedOptions = options?.map((option, index) => {
     return {
-      order: index,
+      order: index + 1,
       option: option,
     };
   });
 
   const createdQuestion = await createOneQuestion({
     data: {
-      questionNumber: index,
+      questionNumber: index + 1,
       ...question,
       deadline: { connect: { id: deadlineId } },
       options: parsedOptions
