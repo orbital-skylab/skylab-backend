@@ -4,6 +4,8 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyUsersWithMentorRole,
   createUserWithMentorRole,
+  deleteOneMentorByMentorID,
+  editMentorDataByMentorID,
   getManyMentorsWithFilter,
   getOneMentorById,
 } from "src/helpers/mentors.helper";
@@ -74,22 +76,53 @@ router.post(
   }
 );
 
-router.get(
-  "/:mentorId",
-  GetMentorByIDValidator,
-  async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+router
+  .get(
+    "/:mentorId",
+    GetMentorByIDValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { mentorId } = req.params;
+      try {
+        const mentor = await getOneMentorById(Number(mentorId));
+        return apiResponseWrapper(res, { mentor: mentor });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
+  )
+  .put("/:mentorId", async (req: Request, res: Response) => {
     const { mentorId } = req.params;
     try {
-      const mentor = await getOneMentorById(Number(mentorId));
-      return apiResponseWrapper(res, { mentor: mentor });
+      const updatedMentor = await editMentorDataByMentorID(
+        Number(mentorId),
+        req.body
+      );
+      return apiResponseWrapper(res, { mentor: updatedMentor });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
-  }
-);
+  })
+  .delete("/:mentorId", async (req: Request, res: Response) => {
+    const { mentorId } = req.params;
+    try {
+      const deletedMentor = await deleteOneMentorByMentorID(Number(mentorId));
+      return apiResponseWrapper(res, { mentor: deletedMentor });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .all("/:mentorId", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
 export default router;

@@ -1,6 +1,6 @@
 ## Continuous Integration Workflow
 name: Build and Deploy
-on: [push, pull_request]
+on: [push]
 
 # Target Branch Job
 jobs:

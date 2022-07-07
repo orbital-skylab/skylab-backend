@@ -4,6 +4,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyUsersWithStudentRole,
   createUserWithStudentRole,
+  deleteOneStudentByStudentId,
   editStudentDataByStudentID,
   getManyStudentsWithFilter,
   getOneStudentById,
@@ -125,6 +126,17 @@ router
       }
     }
   )
+  .delete("/:studentId", async (req: Request, res: Response) => {
+    const { studentId } = req.params;
+    try {
+      const deletedStudent = await deleteOneStudentByStudentId(
+        Number(studentId)
+      );
+      return apiResponseWrapper(res, { student: deletedStudent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
   .all("/:studentId", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,

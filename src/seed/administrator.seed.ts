@@ -4,6 +4,7 @@ import { faker } from "@faker-js/faker";
 const password = "Password123";
 type Batch = {
   count: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   accounts: any[];
 };
 

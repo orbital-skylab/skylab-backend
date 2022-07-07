@@ -3,8 +3,10 @@ import { Adviser, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdviser,
+  deleteUniqueAdviser,
   findManyAdvisersWithUserData,
   findUniqueAdviserWithUserData,
+  updateUniqueAdviser,
 } from "src/models/advisers.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
@@ -174,4 +176,19 @@ export async function addAdviserRoleToUser(userId: string, body: any) {
       user: { connect: { id: Number(userId) } },
     },
   });
+}
+
+export async function editAdviserDataByAdviserID(adviserId: number, body: any) {
+  const { adviser } = body;
+  return await updateUniqueAdviser({
+    where: { id: adviserId },
+    data: adviser,
+  });
+}
+
+export async function deleteOneAdviserByAdviserId(adviserId: number) {
+  const deletedAdviser = await deleteUniqueAdviser({
+    where: { id: adviserId },
+  });
+  return deletedAdviser;
 }

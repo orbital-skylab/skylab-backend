@@ -108,3 +108,15 @@ export async function updateUniqueStudent(student: Prisma.StudentUpdateArgs) {
     }
   }
 }
+
+export async function deleteUniqueStudent(query: Prisma.StudentDeleteArgs) {
+  try {
+    return await prisma.student.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

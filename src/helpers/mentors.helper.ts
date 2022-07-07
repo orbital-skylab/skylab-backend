@@ -3,8 +3,10 @@ import { Mentor, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneMentor,
+  deleteUniqueMentor,
   findManyMentorsWithUserData,
   findUniqueMentorWithUserData,
+  updateUniqueMentor,
 } from "src/models/mentors.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
@@ -70,7 +72,7 @@ export async function createUserWithMentorRole(body: any, isDev?: boolean) {
       ? await hashPassword(user.password)
       : await generateRandomPassword();
 
-  const { cohortYear, ...mentorData } = mentor;
+  const { cohortYear, projectIds, ...mentorData } = mentor;
 
   const [createdUser, createdMentor] = await prismaClient.$transaction([
     prismaClient.user.create({ data: user }),
@@ -79,6 +81,13 @@ export async function createUserWithMentorRole(body: any, isDev?: boolean) {
         ...mentorData,
         user: { connect: { email: user.email } },
         cohort: { connect: { academicYear: cohortYear } },
+        projects: projectIds
+          ? {
+              connect: projectIds.map((projectId: any) => {
+                return { id: Number(projectId) };
+              }),
+            }
+          : undefined,
       },
     }),
   ]);
@@ -171,4 +180,17 @@ export async function addMentorRoleToUser(userId: string, body: any) {
       projects: projectIdsToConnect ?? undefined,
     },
   });
+}
+
+export async function editMentorDataByMentorID(mentorId: number, body: any) {
+  const { mentor } = body;
+  return await updateUniqueMentor({
+    where: { id: mentorId },
+    data: mentor,
+  });
+}
+
+export async function deleteOneMentorByMentorID(mentorId: number) {
+  const deletedMentor = await deleteUniqueMentor({ where: { id: mentorId } });
+  return deletedMentor;
 }
