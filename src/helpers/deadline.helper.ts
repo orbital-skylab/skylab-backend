@@ -88,54 +88,40 @@ export async function replaceQuestionsById(
   deadlineId: number,
   questions: (Omit<
     Prisma.QuestionCreateInput,
-    "deadlineId" | "questionNumber" | "deadline" | "options"
+    "deadlineId" | "questionNumber" | "deadline" | "options" | "id"
   > & {
     options?: string[];
   })[]
 ) {
-  await deleteManyQuestions({ where: { deadlineId: deadlineId } });
+  await deleteManyQuestions({ where: { deadline: { id: deadlineId } } });
 
   const createdQuestions = await Promise.all(
-    questions.map((question, index) => {
-      return createQuestionHelper(deadlineId, question, index);
+    questions.map((question, questionIndex) => {
+      const parsedOptions = question.options?.map((option, optionIndex) => {
+        return {
+          order: optionIndex + 1,
+          option: option,
+        };
+      });
+
+      const createdQuestion = createOneQuestion({
+        data: {
+          questionNumber: questionIndex + 1,
+          ...question,
+          deadline: { connect: { id: deadlineId } },
+          options: parsedOptions
+            ? {
+                createMany: { data: parsedOptions },
+              }
+            : undefined,
+        },
+      });
+
+      return createdQuestion;
     })
   );
 
   return parseQuestionsInput(createdQuestions);
-}
-
-export async function createQuestionHelper(
-  deadlineId: number,
-  {
-    options,
-    ...question
-  }: Omit<
-    Prisma.QuestionCreateInput,
-    "deadlineId" | "questionNumber" | "deadline" | "options" | "id"
-  > & {
-    options?: string[];
-  },
-  index: number
-) {
-  const parsedOptions = options?.map((option, index) => {
-    return {
-      order: index + 1,
-      option: option,
-    };
-  });
-
-  const createdQuestion = await createOneQuestion({
-    data: {
-      questionNumber: index + 1,
-      ...question,
-      deadline: { connect: { id: deadlineId } },
-      options: parsedOptions
-        ? { createMany: { data: parsedOptions } }
-        : undefined,
-    },
-  });
-
-  return createdQuestion;
 }
 
 export async function editDeadlineByDeadlineId(
