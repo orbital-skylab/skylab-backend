@@ -70,7 +70,7 @@ export async function createUserWithMentorRole(body: any, isDev?: boolean) {
       ? await hashPassword(user.password)
       : await generateRandomPassword();
 
-  const { cohortYear, ...mentorData } = mentor;
+  const { cohortYear, projectIds, ...mentorData } = mentor;
 
   const [createdUser, createdMentor] = await prismaClient.$transaction([
     prismaClient.user.create({ data: user }),
@@ -79,6 +79,13 @@ export async function createUserWithMentorRole(body: any, isDev?: boolean) {
         ...mentorData,
         user: { connect: { email: user.email } },
         cohort: { connect: { academicYear: cohortYear } },
+        projects: projectIds
+          ? {
+              connect: projectIds.map((projectId: any) => {
+                return { id: Number(projectId) };
+              }),
+            }
+          : undefined,
       },
     }),
   ]);
