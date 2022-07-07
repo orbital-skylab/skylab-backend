@@ -60,6 +60,33 @@ router
   });
 
 router
+  .post(
+    "/batch",
+    BatchCreateStudentValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdStudents = await createManyUsersWithStudentRole(req.body);
+        return apiResponseWrapper(res, { students: createdStudents });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/batch", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
+
+router
   .get(
     "/:studentId",
     GetStudentByIDValidator,
@@ -99,33 +126,6 @@ router
     }
   )
   .all("/:studentId", (_: Request, res: Response) => {
-    return routeErrorHandler(
-      res,
-      new SkylabError(
-        "Invalid method to access endpoint",
-        HttpStatusCode.BAD_REQUEST
-      )
-    );
-  });
-
-router
-  .post(
-    "/batch",
-    BatchCreateStudentValidator,
-    async (req: Request, res: Response) => {
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
-      try {
-        const createdStudents = await createManyUsersWithStudentRole(req.body);
-        return apiResponseWrapper(res, { students: createdStudents });
-      } catch (e) {
-        routeErrorHandler(res, e);
-      }
-    }
-  )
-  .all("/batch", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
       new SkylabError(

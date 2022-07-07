@@ -2,11 +2,11 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import {
+  createManyUsersWithAdviserRole,
   createUserWithAdviserRole,
   getManyAdvisersWithFilter,
   getOneAdviserById,
 } from "src/helpers/advisers.helper";
-import { createManyAdvisers } from "src/models/advisers.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -58,6 +58,34 @@ router
   });
 
 router
+  .post(
+    "/batch",
+    BatchCreateAdviserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdAdvisers = await createManyUsersWithAdviserRole(req.body);
+        return apiResponseWrapper(res, { advisers: createdAdvisers });
+      } catch (e) {
+        console.log(e);
+        routeErrorHandler(res, e);
+      }
+    }
+  )
+  .all("/batch", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
+
+router
   .get(
     "/:adviserId",
     GetAdviserByIDValidator,
@@ -76,33 +104,6 @@ router
     }
   )
   .all("/:adviserId", (_: Request, res: Response) => {
-    return routeErrorHandler(
-      res,
-      new SkylabError(
-        "Invalid method to access endpoint",
-        HttpStatusCode.BAD_REQUEST
-      )
-    );
-  });
-
-router
-  .post(
-    "/batch",
-    BatchCreateAdviserValidator,
-    async (req: Request, res: Response) => {
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
-      try {
-        const createdAdvisers = await createManyAdvisers(req.body);
-        return apiResponseWrapper(res, { advisers: createdAdvisers });
-      } catch (e) {
-        routeErrorHandler(res, e);
-      }
-    }
-  )
-  .all("/batch", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
       new SkylabError(

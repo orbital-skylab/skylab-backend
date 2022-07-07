@@ -61,24 +61,6 @@ router
     );
   });
 
-router.get(
-  "/:adminId",
-  GetAdministratorByIDValidator,
-  async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
-    }
-    const { adminId } = req.params;
-    try {
-      const administrator = await getOneAdministratorById(adminId);
-      return apiResponseWrapper(res, { administrator: administrator });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  }
-);
-
 router.post(
   "/batch",
   BatchCreateAdministratorValidator,
@@ -94,6 +76,24 @@ router.post(
       return apiResponseWrapper(res, { administrators: createdAdmins });
     } catch (e) {
       routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.get(
+  "/:adminId",
+  GetAdministratorByIDValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    const { adminId } = req.params;
+    try {
+      const administrator = await getOneAdministratorById(adminId);
+      return apiResponseWrapper(res, { administrator: administrator });
+    } catch (e) {
+      return routeErrorHandler(res, e);
     }
   }
 );
