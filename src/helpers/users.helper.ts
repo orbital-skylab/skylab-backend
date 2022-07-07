@@ -7,10 +7,24 @@ import {
   findUniqueUserWithRoleData,
   updateUniqueUser,
 } from "src/models/users.db";
-import { Prisma, User } from "@prisma/client";
+import {
+  Administrator,
+  Adviser,
+  Mentor,
+  Prisma,
+  Student,
+  User,
+} from "@prisma/client";
 import { UserRolesEnum } from "src/validators/user.validator";
 
-export function removePasswordFromUser(user: User) {
+export function removePasswordFromUser(
+  user: User & {
+    student?: Student;
+    mentor?: Mentor;
+    adviser?: Adviser;
+    administrator?: Administrator;
+  }
+) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...userWithoutPassword } = user;
   return userWithoutPassword;
