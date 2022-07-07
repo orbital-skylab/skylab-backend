@@ -93,7 +93,7 @@ export async function replaceQuestionsById(
     options?: string[];
   })[]
 ) {
-  await deleteManyQuestions({ where: { deadlineId: deadlineId } });
+  await deleteManyQuestions({ where: { deadline: { id: deadlineId } } });
 
   const createdQuestions = await Promise.all(
     questions.map((question, index) => {
