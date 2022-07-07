@@ -8,7 +8,7 @@ type Batch = {
 };
 
 export const seedAdmins = async () => {
-  const batch: Batch = { count: 100, accounts: [] };
+  const batch: Batch = { count: 10, accounts: [] };
   for (let i = 0; i < batch.count; i++) {
     const account = {
       user: generateFakeUser(),
