@@ -1,7 +1,7 @@
 import { createManyUsersWithAdministratorRole } from "src/helpers/administrators.helper";
-import { faker } from "@faker-js/faker";
+import { generateFakeRoleData, generateFakeUser } from "./seed.helpers";
+import { UserRolesEnum } from "src/validators/user.validator";
 
-const password = "Password123";
 type Batch = {
   count: number;
   accounts: any[];
@@ -10,24 +10,9 @@ type Batch = {
 export const seedAdmins = async () => {
   const batch: Batch = { count: 100, accounts: [] };
   for (let i = 0; i < batch.count; i++) {
-    const firstName = faker.name.firstName();
-    const lastName = faker.name.lastName();
     const account = {
-      user: {
-        name: `${firstName} ${lastName}`,
-        email: faker.internet.email(firstName, lastName, "skylab.com"),
-        password,
-      },
-      administrator: {
-        startDate: faker.date.between(
-          "2020-01-01T00:00:00.000Z",
-          "2021-01-01T00:00:00.000Z"
-        ),
-        endDate: faker.date.between(
-          "2022-01-01T00:00:00.000Z",
-          "2023-01-01T00:00:00.000Z"
-        ),
-      },
+      user: generateFakeUser(),
+      administrator: generateFakeRoleData(UserRolesEnum.Administrator),
     };
     batch.accounts.push(account);
   }
