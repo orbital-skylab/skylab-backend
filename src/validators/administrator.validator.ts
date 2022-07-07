@@ -29,10 +29,10 @@ export const CreateAdministratorValidator = [
     .isObject()
     .withMessage("Admin object missing in request body"),
   body("administrator.startDate")
-    .isDate()
+    .isISO8601()
     .withMessage("Start Date in Admin object must be a valid Date"),
   body("administrator.endDate")
-    .isDate()
+    .isISO8601()
     .withMessage("End Date in Admin object must be a valid Date"),
 ];
 
