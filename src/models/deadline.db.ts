@@ -21,7 +21,13 @@ export async function findUniqueDeadlineWithQuestionsData({
 }: Prisma.DeadlineFindUniqueArgs) {
   const uniqueDeadline = await prisma.deadline.findUnique({
     ...query,
-    include: { ...include, questions: { include: { options: true } } },
+    include: {
+      ...include,
+      questions: {
+        include: { options: { orderBy: { order: "asc" } } },
+        orderBy: { questionNumber: "asc" },
+      },
+    },
   });
   if (!uniqueDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);

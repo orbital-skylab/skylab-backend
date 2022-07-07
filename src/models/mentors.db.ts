@@ -106,3 +106,15 @@ export async function updateUniqueMentor(query: Prisma.MentorUpdateArgs) {
     }
   }
 }
+
+export async function deleteUniqueMentor(query: Prisma.MentorDeleteArgs) {
+  try {
+    return await prisma.mentor.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

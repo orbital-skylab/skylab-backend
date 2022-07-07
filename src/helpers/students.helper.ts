@@ -3,6 +3,7 @@ import { Prisma, PrismaClient, Student, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneStudent,
+  deleteUniqueStudent,
   findManyStudentsWithUserData,
   findUniqueStudentWithUserData,
   updateUniqueStudent,
@@ -57,7 +58,7 @@ export async function getOneStudentById(studentId: number) {
 }
 
 export async function createUserWithStudentRole(body: any, isDev?: boolean) {
-  const { student, user, projectId } = body;
+  const { student, user } = body;
   if (isDev && !user.password) {
     throw new SkylabError(
       "Parameters missing from request",
@@ -71,7 +72,7 @@ export async function createUserWithStudentRole(body: any, isDev?: boolean) {
       ? await hashPassword(user.password)
       : await generateRandomPassword();
 
-  const { cohortYear, ...studentData } = student;
+  const { cohortYear, projectId, ...studentData } = student;
   const [createdUser, createdStudent] = await prismaClient.$transaction([
     prismaClient.user.create({ data: user }),
     prismaClient.student.create({
@@ -183,4 +184,11 @@ export async function editStudentDataByStudentID(studentId: number, body: any) {
     where: { id: studentId },
     data: student,
   });
+}
+
+export async function deleteOneStudentByStudentId(studentId: number) {
+  const deletedStudent = await deleteUniqueStudent({
+    where: { id: studentId },
+  });
+  return deletedStudent;
 }

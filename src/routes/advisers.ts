@@ -4,6 +4,8 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyUsersWithAdviserRole,
   createUserWithAdviserRole,
+  deleteOneAdviserByAdviserId,
+  editAdviserDataByAdviserID,
   getManyAdvisersWithFilter,
   getOneAdviserById,
 } from "src/helpers/advisers.helper";
@@ -103,6 +105,29 @@ router
       }
     }
   )
+  .put("/:adviserId", async (req: Request, res: Response) => {
+    const { adviserId } = req.params;
+    try {
+      const updatedAdviser = await editAdviserDataByAdviserID(
+        Number(adviserId),
+        req.body
+      );
+      return apiResponseWrapper(res, { adviser: updatedAdviser });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .delete(":/adviserId", async (req: Request, res: Response) => {
+    const { adviserId } = req.params;
+    try {
+      const deletedAdviser = await deleteOneAdviserByAdviserId(
+        Number(adviserId)
+      );
+      return apiResponseWrapper(res, { adviser: deletedAdviser });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
   .all("/:adviserId", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,

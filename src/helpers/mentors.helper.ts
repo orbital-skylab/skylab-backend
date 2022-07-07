@@ -3,8 +3,10 @@ import { Mentor, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneMentor,
+  deleteUniqueMentor,
   findManyMentorsWithUserData,
   findUniqueMentorWithUserData,
+  updateUniqueMentor,
 } from "src/models/mentors.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
@@ -178,4 +180,17 @@ export async function addMentorRoleToUser(userId: string, body: any) {
       projects: projectIdsToConnect ?? undefined,
     },
   });
+}
+
+export async function editMentorDataByMentorID(mentorId: number, body: any) {
+  const { mentor } = body;
+  return await updateUniqueMentor({
+    where: { id: mentorId },
+    data: mentor,
+  });
+}
+
+export async function deleteOneMentorByMentorID(mentorId: number) {
+  const deletedMentor = await deleteUniqueMentor({ where: { id: mentorId } });
+  return deletedMentor;
 }
