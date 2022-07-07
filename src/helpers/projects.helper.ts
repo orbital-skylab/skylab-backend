@@ -9,8 +9,6 @@ import {
   User,
 } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueAdviser } from "src/models/advisers.db";
-import { findUniqueMentor } from "src/models/mentors.db";
 import {
   createOneProject,
   deleteOneProject,
@@ -19,7 +17,6 @@ import {
   findUniqueProjectWithUserData,
   updateOneProject,
 } from "src/models/projects.db";
-import { findUniqueStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 
@@ -184,25 +181,16 @@ export async function getProjectsViaRoleIds(
   const { studentId, adviserId, mentorId } = query;
 
   if (studentId) {
-    return await findUniqueStudent({
-      where: { id: Number(studentId) },
-      select: {
-        project: { include: { students: true, mentor: true, adviser: true } },
-      },
+    return await findManyProjects({
+      where: { students: { some: { id: Number(studentId) } } },
     });
   } else if (adviserId) {
-    return await findUniqueAdviser({
-      where: { id: Number(adviserId) },
-      select: {
-        projects: { include: { students: true, mentor: true, adviser: true } },
-      },
+    return await findManyProjects({
+      where: { adviserId: Number(adviserId) },
     });
   } else if (mentorId) {
-    return await findUniqueMentor({
-      where: { id: Number(mentorId) },
-      select: {
-        projects: { include: { students: true, mentor: true, adviser: true } },
-      },
+    return await findManyProjects({
+      where: { mentorUserId: Number(mentorId) },
     });
   }
 
