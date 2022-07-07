@@ -20,26 +20,26 @@ export const generateFakeUser = () => {
 
 export const generateFakeRoleData = (role: UserRolesEnum) => {
   return {
-    cohortYear: role !== UserRolesEnum.Administrator ? COHORT_YEAR : undefined,
-    startDate:
-      role === UserRolesEnum.Administrator
-        ? faker.date.between(
+    ...(role !== UserRolesEnum.Administrator
+      ? { cohortYear: COHORT_YEAR }
+      : {}),
+    ...(role === UserRolesEnum.Administrator
+      ? {
+          startDate: faker.date.between(
             new Date(COHORT_YEAR - 1, 0, 0).toISOString(),
             new Date(COHORT_YEAR, 0, 0).toISOString()
-          )
-        : undefined,
-    endDate:
-      role === UserRolesEnum.Administrator
-        ? faker.date.between(
+          ),
+          endDate: faker.date.between(
             new Date(COHORT_YEAR + 1, 0, 0).toISOString(),
             new Date(COHORT_YEAR + 2, 0, 0).toISOString()
-          )
-        : undefined,
-    matricNo: [UserRolesEnum.Student, UserRolesEnum.Adviser].includes(role)
-      ? faker.random.alphaNumeric(7)
-      : undefined,
-    nusnetId: [UserRolesEnum.Student, UserRolesEnum.Adviser].includes(role)
-      ? faker.random.alphaNumeric(7)
-      : undefined,
+          ),
+        }
+      : {}),
+    ...([UserRolesEnum.Student, UserRolesEnum.Adviser].includes(role)
+      ? {
+          matricNo: faker.random.alphaNumeric(7),
+          nusnetId: faker.random.alphaNumeric(7),
+        }
+      : {}),
   };
 };
