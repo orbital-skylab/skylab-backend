@@ -143,7 +143,9 @@ export async function createManyUsersWithMentorRole(
     const { user, mentor } = account;
     const { cohortYear, ...mentorData } = mentor;
     const [createdUser, createdMentor] = await prismaClient.$transaction([
-      prismaClient.user.create({ data: user }),
+      prismaClient.user.create({
+        data: { ...user, password: generateRandomPassword() },
+      }),
       prismaClient.mentor.create({
         data: {
           ...mentorData,
