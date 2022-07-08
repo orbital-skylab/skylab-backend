@@ -57,6 +57,13 @@ export async function getOneStudentById(studentId: number) {
   return parseGetStudentInput(student);
 }
 
+export async function getOneStudentByNusnetId(nusnetId: string) {
+  const student = await findUniqueStudentWithUserData({
+    where: { nusnetId: nusnetId },
+  });
+  return student;
+}
+
 export async function createUserWithStudentRole(body: any, isDev?: boolean) {
   const { student, user } = body;
   if (isDev && !user.password) {
