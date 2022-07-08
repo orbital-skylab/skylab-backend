@@ -69,7 +69,10 @@ export async function findManyProjectsWithUserData({
 
 export async function createOneProject(query: Prisma.ProjectCreateArgs) {
   const createdProject = await prisma.project.create(query);
-  return createdProject;
+  const projectWithUserData = await findManyProjectsWithUserData({
+    where: { id: createdProject.id },
+  });
+  return projectWithUserData;
 }
 
 export async function createManyProjects(query: Prisma.ProjectCreateManyArgs) {
