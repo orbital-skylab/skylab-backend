@@ -4,8 +4,10 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createManyUsersWithAdministratorRole,
   createUserWithAdministratorRole,
+  deleteOneAdministratorByAdminId,
   getManyAdministratorsWithFilter,
   getOneAdministratorById,
+  updateAdministratorDataByAdminID,
 } from "src/helpers/administrators.helper";
 import {
   apiResponseWrapper,
@@ -80,22 +82,55 @@ router.post(
   }
 );
 
-router.get(
-  "/:adminId",
-  GetAdministratorByIDValidator,
-  async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+router
+  .get(
+    "/:adminId",
+    GetAdministratorByIDValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { adminId } = req.params;
+      try {
+        const administrator = await getOneAdministratorById(adminId);
+        return apiResponseWrapper(res, { administrator: administrator });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
+  )
+  .put("/:adminId", async (req: Request, res: Response) => {
     const { adminId } = req.params;
     try {
-      const administrator = await getOneAdministratorById(adminId);
-      return apiResponseWrapper(res, { administrator: administrator });
+      const updateAdmin = await updateAdministratorDataByAdminID(
+        Number(adminId),
+        req.body
+      );
+      return apiResponseWrapper(res, { administrator: updateAdmin });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
-  }
-);
+  })
+  .delete("/:adminId", async (req: Request, res: Response) => {
+    const { adminId } = req.params;
+    try {
+      const deletedAdmin = await deleteOneAdministratorByAdminId(
+        Number(adminId)
+      );
+      return apiResponseWrapper(res, { administrator: deletedAdmin });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  })
+  .all("/:adminId", (_: Request, res: Response) => {
+    return routeErrorHandler(
+      res,
+      new SkylabError(
+        "Invalid method to access endpoint",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
 
 export default router;
