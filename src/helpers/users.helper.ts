@@ -3,7 +3,6 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
   findManyLeanUsers,
-  findManyUsers,
   findManyUsersWithRoleInCohort,
   findUniqueUserWithRoleData,
   updateUniqueUser,
