@@ -147,7 +147,9 @@ export async function createManyUsersWithAdviserRole(
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
     const [createdUser, createdAdviser] = await prismaClient.$transaction([
-      prismaClient.user.create({ data: user }),
+      prismaClient.user.create({
+        data: { ...user, password: generateRandomPassword() },
+      }),
       prismaClient.adviser.create({
         data: {
           ...adviserData,
