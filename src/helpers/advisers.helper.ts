@@ -104,16 +104,16 @@ export async function createManyUsersWithAdviserRole(
   body: any,
   isDev?: boolean
 ) {
-  const { count, accounts } = body;
+  const { count, advisers } = body;
 
-  if (count != accounts.length) {
+  if (count != advisers.length) {
     throw new SkylabError(
       "Count and Projects Data do not match",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  accounts.map(
+  advisers.map(
     async (account: {
       user: User;
       adviser: Adviser;
@@ -138,10 +138,10 @@ export async function createManyUsersWithAdviserRole(
       };
     }
   );
-  await Promise.all(accounts);
+  await Promise.all(advisers);
 
   const createdAccounts = [];
-  for (const account of accounts) {
+  for (const account of advisers) {
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
     const [createdUser, createdAdviser] = await prismaClient.$transaction([
