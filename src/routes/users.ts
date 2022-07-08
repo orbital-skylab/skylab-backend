@@ -72,7 +72,6 @@ router.post("/attach-adviser/batch", async (req: Request, res: Response) => {
     const advisers = await addAdviserRoleToManyUsers(req.body);
     return apiResponseWrapper(res, { advisers: advisers });
   } catch (e) {
-    console.log(e);
     return routeErrorHandler(res, e);
   }
 });
