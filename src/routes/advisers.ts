@@ -69,7 +69,10 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const createdAdvisers = await createManyUsersWithAdviserRole(req.body);
+        const createdAdvisers = await createManyUsersWithAdviserRole(
+          req.body,
+          false
+        );
         return apiResponseWrapper(res, { advisers: createdAdvisers });
       } catch (e) {
         console.log(e);
