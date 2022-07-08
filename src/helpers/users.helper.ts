@@ -2,6 +2,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
+  findManyLeanUsers,
   findManyUsers,
   findManyUsersWithRoleInCohort,
   findUniqueUserWithRoleData,
@@ -24,33 +25,7 @@ export async function getLeanUsersWithFilter(
   }
 ) {
   const { cohortYear, role } = query;
-
-  const userQuery: Prisma.UserFindManyArgs = {
-    where: {
-      mentor:
-        role == UserRolesEnum.Mentor
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      student:
-        role == UserRolesEnum.Student
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      adviser:
-        role == UserRolesEnum.Adviser
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      administrator:
-        role == UserRolesEnum.Administrator
-          ? { some: { endDate: { gte: new Date() } } }
-          : undefined,
-    },
-    select: {
-      [role]: { select: { id: true } },
-      name: true,
-    },
-  };
-
-  return await findManyUsers(userQuery);
+  return await findManyLeanUsers(Number(cohortYear), role);
 }
 
 export async function getManyUsersWithFilter(
