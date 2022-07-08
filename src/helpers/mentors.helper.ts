@@ -98,10 +98,7 @@ export async function createUserWithMentorRole(body: any, isDev?: boolean) {
   };
 }
 
-export async function createManyUsersWithMentorRole(
-  body: any,
-  isDev?: boolean
-) {
+export async function createManyUsersWithMentorRole(body: any, isDev: boolean) {
   const { count, mentors } = body;
 
   if (count != mentors.length) {

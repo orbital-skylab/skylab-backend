@@ -104,7 +104,7 @@ export async function createUserWithAdviserRole(body: any, isDev?: boolean) {
 
 export async function createManyUsersWithAdviserRole(
   body: any,
-  isDev?: boolean
+  isDev: boolean
 ) {
   const { count, advisers } = body;
 

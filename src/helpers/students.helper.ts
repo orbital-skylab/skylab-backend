@@ -99,7 +99,7 @@ export async function createUserWithStudentRole(body: any, isDev?: boolean) {
 
 export async function createManyUsersWithStudentRole(
   body: any,
-  isDev?: boolean
+  isDev: boolean
 ) {
   const { count, projects } = body;
 
