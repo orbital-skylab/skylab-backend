@@ -14,11 +14,11 @@ const router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    // await seedCohorts();
-    // await seedStudents();
-    // await seedMentors();
-    // await seedAdvisers();
-    // await seedAdmins();
+    await seedCohorts();
+    await seedStudents();
+    await seedMentors();
+    await seedAdvisers();
+    await seedAdmins();
     await seedDeadlines();
     return apiResponseWrapper(res, { response: "Donezo" });
   } catch (e) {

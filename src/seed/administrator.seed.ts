@@ -4,6 +4,7 @@ import { UserRolesEnum } from "src/validators/user.validator";
 
 type Batch = {
   count: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   accounts: any[];
 };
 
