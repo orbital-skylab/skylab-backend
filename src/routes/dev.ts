@@ -109,7 +109,10 @@ router.post("/create-adviser", async (req: Request, res: Response) => {
 router.post("/:userId/adviser", async (req: Request, res: Response) => {
   const { userId } = req.params;
   try {
-    const createdAdviserData = await addAdviserRoleToUser(userId, req.body);
+    const createdAdviserData = await addAdviserRoleToUser(
+      Number(userId),
+      req.body
+    );
     return apiResponseWrapper(res, createdAdviserData);
   } catch (e) {
     routeErrorHandler(res, e);

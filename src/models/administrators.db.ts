@@ -123,3 +123,17 @@ export async function updateUniqueAdministrator(
     }
   }
 }
+
+export async function deleteUniqueAdministrator(
+  query: Prisma.AdministratorDeleteArgs
+) {
+  try {
+    return await prisma.administrator.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

@@ -10,6 +10,8 @@ import {
 } from "src/models/advisers.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
+import { getCurrentCohort } from "./cohorts.helper";
+import { getOneStudentByNusnetId } from "./students.helper";
 import { removePasswordFromUser } from "./users.helper";
 
 const prismaClient = new PrismaClient();
@@ -104,16 +106,16 @@ export async function createManyUsersWithAdviserRole(
   body: any,
   isDev?: boolean
 ) {
-  const { count, accounts } = body;
+  const { count, advisers } = body;
 
-  if (count != accounts.length) {
+  if (count != advisers.length) {
     throw new SkylabError(
       "Count and Projects Data do not match",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  accounts.map(
+  advisers.map(
     async (account: {
       user: User;
       adviser: Adviser;
@@ -138,10 +140,10 @@ export async function createManyUsersWithAdviserRole(
       };
     }
   );
-  await Promise.all(accounts);
+  await Promise.all(advisers);
 
   const createdAccounts = [];
-  for (const account of accounts) {
+  for (const account of advisers) {
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
     const [createdUser, createdAdviser] = await prismaClient.$transaction([
@@ -166,7 +168,7 @@ export async function createManyUsersWithAdviserRole(
   return createdAccounts;
 }
 
-export async function addAdviserRoleToUser(userId: string, body: any) {
+export async function addAdviserRoleToUser(userId: number, body: any) {
   const { adviser } = body;
   const { cohortYear, ...adviserData } = adviser;
   return await createOneAdviser({
@@ -191,4 +193,29 @@ export async function deleteOneAdviserByAdviserId(adviserId: number) {
     where: { id: adviserId },
   });
   return deletedAdviser;
+}
+
+export async function addAdviserRoleToManyUsers(body: any) {
+  const { count, nusnetIds } = body;
+  if (count != nusnetIds.length) {
+    throw new SkylabError(
+      "Count does not match length of nusnetIds array",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const currentCohortYear = await (await getCurrentCohort()).academicYear;
+  const advisers = await Promise.all(
+    nusnetIds.map(async (nusnetId: string) => {
+      const student = await getOneStudentByNusnetId(nusnetId);
+      const createdAdviser = await addAdviserRoleToUser(student.userId, {
+        adviser: {
+          nusnetId: nusnetId,
+          cohortYear: currentCohortYear,
+        },
+      });
+      return createdAdviser;
+    })
+  );
+  return advisers;
 }

@@ -2,7 +2,10 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import { addAdministratorRoleToUser } from "src/helpers/administrators.helper";
-import { addAdviserRoleToUser } from "src/helpers/advisers.helper";
+import {
+  addAdviserRoleToManyUsers,
+  addAdviserRoleToUser,
+} from "src/helpers/advisers.helper";
 import { addMentorRoleToUser } from "src/helpers/mentors.helper";
 import { addStudentRoleToUser } from "src/helpers/students.helper";
 
@@ -64,6 +67,15 @@ router.get(
   }
 );
 
+router.post("/attach-adviser/batch", async (req: Request, res: Response) => {
+  try {
+    const advisers = await addAdviserRoleToManyUsers(req.body);
+    return apiResponseWrapper(res, { advisers: advisers });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
 router
   .put(
     "/:userId/student",
@@ -112,7 +124,10 @@ router
       }
       const { userId } = req.params;
       try {
-        const createdAdviserRole = await addAdviserRoleToUser(userId, req.body);
+        const createdAdviserRole = await addAdviserRoleToUser(
+          Number(userId),
+          req.body
+        );
         return apiResponseWrapper(res, { adviser: createdAdviserRole });
       } catch (e) {
         console.log(e);

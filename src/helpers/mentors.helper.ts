@@ -102,16 +102,16 @@ export async function createManyUsersWithMentorRole(
   body: any,
   isDev?: boolean
 ) {
-  const { count, accounts } = body;
+  const { count, mentors } = body;
 
-  if (count != accounts.length) {
+  if (count != mentors.length) {
     throw new SkylabError(
       "Count and Projects Data do not match",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  accounts.map(
+  mentors.map(
     async (account: {
       user: User;
       mentor: Mentor;
@@ -136,10 +136,10 @@ export async function createManyUsersWithMentorRole(
       };
     }
   );
-  await Promise.all(accounts);
+  await Promise.all(mentors);
 
   const createdAccounts = [];
-  for (const account of accounts) {
+  for (const account of mentors) {
     const { user, mentor } = account;
     const { cohortYear, ...mentorData } = mentor;
     const [createdUser, createdMentor] = await prismaClient.$transaction([

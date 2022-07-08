@@ -3,8 +3,10 @@ import { Administrator, Prisma, PrismaClient, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdministrator,
+  deleteUniqueAdministrator,
   findManyAdministratorsWithUserData,
   findUniqueAdministratorWithUserData,
+  updateUniqueAdministrator,
 } from "src/models/administrators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { hashPassword, generateRandomPassword } from "./authentication.helper";
@@ -152,4 +154,22 @@ export async function addAdministratorRoleToUser(userId: string, body: any) {
       user: { connect: { id: Number(userId) } },
     },
   });
+}
+
+export async function updateAdministratorDataByAdminID(
+  adminId: number,
+  body: any
+) {
+  const { administrator } = body;
+  return await updateUniqueAdministrator({
+    where: { id: adminId },
+    data: administrator,
+  });
+}
+
+export async function deleteOneAdministratorByAdminId(adminId: number) {
+  const deletedAdministrator = await deleteUniqueAdministrator({
+    where: { id: adminId },
+  });
+  return deletedAdministrator;
 }

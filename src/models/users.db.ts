@@ -3,6 +3,7 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { getCurrentCohort } from "src/helpers/cohorts.helper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { UserRolesEnum } from "src/validators/user.validator";
 
 const prisma = new PrismaClient();
 
@@ -58,6 +59,57 @@ export async function findUniqueUserWithRoleData(
     adviser: adviser[0] ?? {},
     administrator: administrator[0] ?? {},
   };
+}
+
+export async function findManyLeanUsers(cohortYear: number, role: string) {
+  const users = await prisma.user.findMany({
+    where: {
+      mentor:
+        role == UserRolesEnum.Mentor
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      student:
+        role == UserRolesEnum.Student
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      adviser:
+        role == UserRolesEnum.Adviser
+          ? { some: { cohortYear: cohortYear } }
+          : undefined,
+      administrator:
+        role == UserRolesEnum.Administrator
+          ? { some: { endDate: { gte: new Date() } } }
+          : undefined,
+    },
+    select: {
+      student:
+        role == UserRolesEnum.Student
+          ? { where: { cohortYear: cohortYear }, select: { id: true } }
+          : false,
+      mentor:
+        role == UserRolesEnum.Mentor
+          ? { where: { cohortYear: cohortYear }, select: { id: true } }
+          : false,
+      adviser:
+        role == UserRolesEnum.Adviser
+          ? { where: { cohortYear: cohortYear }, select: { id: true } }
+          : false,
+      administrator:
+        role == UserRolesEnum.Administrator ? { select: { id: true } } : false,
+      name: true,
+    },
+  });
+
+  return users.map((user) => {
+    const { student, administrator, adviser, mentor, name } = user;
+    return {
+      name: name,
+      student: student ? student[0] : undefined,
+      administrator: administrator ? administrator[0] : undefined,
+      adviser: adviser ? adviser[0] : undefined,
+      mentor: mentor ? mentor[0] : undefined,
+    };
+  });
 }
 
 export async function findManyUsers(query: Prisma.UserFindManyArgs) {
