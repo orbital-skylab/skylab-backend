@@ -60,5 +60,5 @@ export const CreateAdviserValidator = [
 
 export const BatchCreateAdviserValidator = [
   body("count").isNumeric().withMessage("Count must be a numeric value"),
-  body("accounts").isArray().withMessage("Accounts was not input as an array"),
+  body("advisers").isArray().withMessage("Advisers was not input as an array"),
 ];
