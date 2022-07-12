@@ -137,24 +137,35 @@ model Deadline {
   dueBy      DateTime
   desc       String?
   type       DeadlineType
+  updatedAt  DateTime     @updatedAt
+  sections   Section[]
 
-  questions Question[]
   @@unique([name, cohortYear])
+}
+
+model Section {
+  id            Int        @id @default(autoincrement())
+  name          String
+  desc          String?
+  sectionNumber Int
+  deadline      Deadline   @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
+  deadlineId    Int
+  questions     Question[]
+
+  @@unique([deadlineId, sectionNumber])
 }
 
 model Question {
   id             Int          @id @default(autoincrement())
-  deadline       Deadline     @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
-  deadlineId     Int
   questionNumber Int
   question       String
   desc           String
   type           QuestionType
   isAnonymous    Boolean      @default(false)
-
-  answers Answer[]
-  options Option[] //for MCQ/Multi-select questions
-  @@unique([deadlineId, questionNumber])
+  answers        Answer[]
+  options        Option[] //for MCQ/Multi-select questions
+  section        Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId      Int
 }
 
 model Option {

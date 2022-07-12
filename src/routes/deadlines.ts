@@ -4,10 +4,10 @@ import {
   createDeadline,
   deleteOneDeadlineByDeadlineId,
   editDeadlineByDeadlineId,
+  getAllQuestionsById,
   getManyDeadlinesWithFilter,
   getOneDeadlineById,
-  getQuestionsOfDeadlineById,
-  replaceQuestionsById,
+  replaceSectionsById,
 } from "src/helpers/deadline.helper";
 import {
   apiResponseWrapper,
@@ -52,7 +52,7 @@ router
   .get("/:deadlineId/questions", async (req: Request, res: Response) => {
     const { deadlineId } = req.params;
     try {
-      const deadlineWithQuestions = await getQuestionsOfDeadlineById(
+      const deadlineWithQuestions = await getAllQuestionsById(
         Number(deadlineId)
       );
       return apiResponseWrapper(res, deadlineWithQuestions);
@@ -63,9 +63,9 @@ router
   .put("/:deadlineId/questions", async (req: Request, res: Response) => {
     const { deadlineId } = req.params;
     try {
-      const updatedDeadline = await replaceQuestionsById(
+      const updatedDeadline = await replaceSectionsById(
         Number(deadlineId),
-        req.body.questions
+        req.body.sections
       );
       return apiResponseWrapper(res, { deadline: updatedDeadline });
     } catch (e) {
