@@ -69,6 +69,7 @@ router
       );
       return apiResponseWrapper(res, { deadline: updatedDeadline });
     } catch (e) {
+      console.log(e);
       return routeErrorHandler(res, e);
     }
   });

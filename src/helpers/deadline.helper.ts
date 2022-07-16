@@ -131,6 +131,7 @@ export async function replaceSectionsById(
           data: {
             ...questionData,
             questionNumber: questionNumber,
+            section: { connect: { id: createdSection.id } },
             options: options ? { createMany: { data: options } } : undefined,
           },
         });
