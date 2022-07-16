@@ -77,7 +77,7 @@ export async function getAllQuestionsById(deadlineId: number) {
 
   const { sections, ...deadlineData } = deadlineWithQuestions;
   return {
-    ...deadlineData,
+    deadline: { ...deadlineData },
     sections: sections.map((section) => {
       const { questions, ...sectionData } = section;
       return {
