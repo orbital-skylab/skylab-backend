@@ -23,12 +23,18 @@ export async function findUniqueDeadlineWithQuestionsData({
     ...query,
     include: {
       ...include,
-      questions: {
-        include: { options: { orderBy: { order: "asc" } } },
-        orderBy: { questionNumber: "asc" },
+      sections: {
+        include: {
+          questions: {
+            include: { options: { orderBy: { order: "asc" } } },
+            orderBy: { questionNumber: "asc" },
+          },
+        },
+        orderBy: { sectionNumber: "asc" },
       },
     },
   });
+
   if (!uniqueDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
   }
@@ -56,9 +62,14 @@ export async function findManyDeadlinesWithQuestionsData({
     ...query,
     include: {
       ...include,
-      questions: {
-        include: { options: { orderBy: { order: "asc" } } },
-        orderBy: { questionNumber: "asc" },
+      sections: {
+        include: {
+          questions: {
+            include: { options: { orderBy: { order: "asc" } } },
+            orderBy: { questionNumber: "asc" },
+          },
+        },
+        orderBy: { sectionNumber: "asc" },
       },
     },
   });

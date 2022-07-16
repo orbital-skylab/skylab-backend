@@ -8,10 +8,8 @@ import {
   findUniqueDeadlineWithQuestionsData,
   updateOneDeadline,
 } from "src/models/deadline.db";
-import {
-  createOneQuestion,
-  deleteManyQuestions,
-} from "src/models/questions.db";
+import { createOneQuestion } from "src/models/questions.db";
+import { createOneSection, deleteManySections } from "src/models/sections.db";
 
 export async function getManyDeadlinesWithFilter(
   query: any & { cohortYear?: number; name?: string }
@@ -72,56 +70,79 @@ export function parseQuestionsInput(
   return parsedQuestions;
 }
 
-export async function getQuestionsOfDeadlineById(deadlineId: number) {
+export async function getAllQuestionsById(deadlineId: number) {
   const deadlineWithQuestions = await findUniqueDeadlineWithQuestionsData({
     where: { id: deadlineId },
   });
 
-  const { questions, ...deadlineData } = deadlineWithQuestions;
+  const { sections, ...deadlineData } = deadlineWithQuestions;
   return {
-    deadline: deadlineData,
-    questions: parseQuestionsInput(questions),
+    ...deadlineData,
+    sections: sections.map((section) => {
+      const { questions, ...sectionData } = section;
+      return {
+        ...sectionData,
+        questions: parseQuestionsInput(questions),
+      };
+    }),
   };
 }
 
-export async function replaceQuestionsById(
+export async function replaceSectionsById(
   deadlineId: number,
-  questions: (Omit<
-    Prisma.QuestionCreateInput,
-    "deadlineId" | "questionNumber" | "deadline" | "options" | "id"
+  sections: (Omit<
+    Prisma.SectionCreateInput,
+    "sectionNumber" | "deadlineId" | "deadline"
   > & {
-    options?: string[];
+    questions: (Omit<
+      Prisma.QuestionCreateInput,
+      "deadlineId" | "questionNumber" | "deadline" | "options" | "id"
+    > & {
+      options?: string[];
+    })[];
   })[]
 ) {
-  await deleteManyQuestions({ where: { deadline: { id: deadlineId } } });
+  /* Delete all the previous questions */
+  await deleteManySections({ where: { deadlineId: deadlineId } });
 
-  const createdQuestions = await Promise.all(
-    questions.map((question, questionIndex) => {
-      const parsedOptions = question.options?.map((option, optionIndex) => {
-        return {
-          order: optionIndex + 1,
-          option: option,
-        };
-      });
+  const pCreateSections = sections.map(async (section, index) => {
+    const sectionNumber = index + 1;
+    const { questions, ...sectionData } = section;
+    const createdSection = await createOneSection({
+      data: {
+        ...sectionData,
+        sectionNumber: sectionNumber,
+        deadline: { connect: { id: deadlineId } },
+      },
+    });
+    const createdQuestions = await Promise.all(
+      questions.map(async (question, index) => {
+        const questionNumber = index + 1;
+        const { options: optionsData, ...questionData } = question;
 
-      const createdQuestion = createOneQuestion({
-        data: {
-          questionNumber: questionIndex + 1,
-          ...question,
-          deadline: { connect: { id: deadlineId } },
-          options: parsedOptions
-            ? {
-                createMany: { data: parsedOptions },
-              }
-            : undefined,
-        },
-      });
+        const options = optionsData?.map((option, optionIndex) => {
+          return {
+            order: optionIndex + 1,
+            option: option,
+          };
+        });
 
-      return createdQuestion;
-    })
-  );
+        const createdQuestion = await createOneQuestion({
+          data: {
+            ...questionData,
+            questionNumber: questionNumber,
+            section: { connect: { id: createdSection.id } },
+            options: options ? { createMany: { data: options } } : undefined,
+          },
+        });
+        return createdQuestion;
+      })
+    );
+    return { section: createdSection, questions: createdQuestions };
+  });
 
-  return parseQuestionsInput(createdQuestions);
+  const createdSections = await Promise.all(pCreateSections);
+  return createdSections;
 }
 
 export async function editDeadlineByDeadlineId(
