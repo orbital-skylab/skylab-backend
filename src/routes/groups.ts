@@ -1,4 +1,3 @@
-import { group } from "console";
 import { Request, Response, Router } from "express";
 import {
   createGroupWithAdviser,
