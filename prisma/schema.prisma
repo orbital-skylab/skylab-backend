@@ -21,10 +21,8 @@ model User {
   password        String          @db.VarChar(255) //Hashed
   administrator   Administrator[]
   adviser         Adviser[]
-  facilitator     Facilitator[]
   mentor          Mentor[]
   student         Student[]
-  tutor           Tutor[]
   submitter       Submitter?      @relation(fields: [submitterId], references: [id], onDelete: Cascade)
   submitterId     Int?
 }
@@ -32,13 +30,11 @@ model User {
 model Cohort {
   startDate    DateTime?
   endDate      DateTime?
-  academicYear Int           @id
+  academicYear Int        @id
   advisers     Adviser[]
-  facilitators Facilitator[]
   mentors      Mentor[]
   projects     Project[]
   students     Student[]
-  tutors       Tutor[]
   deadlines    Deadline[]
 }
 
@@ -76,26 +72,6 @@ model Mentor {
   cohort     Cohort    @relation(fields: [cohortYear], references: [academicYear])
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects   Project[]
-
-  @@unique([userId, cohortYear])
-}
-
-model Facilitator {
-  id         Int    @id @default(autoincrement())
-  userId     Int
-  cohortYear Int
-  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, cohortYear])
-}
-
-model Tutor {
-  id         Int    @id @default(autoincrement())
-  userId     Int
-  cohortYear Int
-  cohort     Cohort @relation(fields: [cohortYear], references: [academicYear])
-  user       User   @relation(fields: [userId], references: [id])
 
   @@unique([userId, cohortYear])
 }
