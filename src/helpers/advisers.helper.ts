@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Adviser, Prisma, PrismaClient, User } from "@prisma/client";
+import { Adviser, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdviser,
@@ -13,8 +13,7 @@ import { generateRandomPassword, hashPassword } from "./authentication.helper";
 import { getCurrentCohort } from "./cohorts.helper";
 import { getOneStudentByNusnetId } from "./students.helper";
 import { removePasswordFromUser } from "./users.helper";
-
-const prismaClient = new PrismaClient();
+import { prisma } from "../client";
 
 export function parseGetAdviserInput(
   adviser: Prisma.AdviserGetPayload<{ include: { user: true } }>
@@ -78,9 +77,9 @@ export async function createUserWithAdviserRole(body: any, isDev?: boolean) {
 
   const { cohortYear, projectIds, ...adviserData } = adviser;
 
-  const [createdUser, createdAdviser] = await prismaClient.$transaction([
-    prismaClient.user.create({ data: user }),
-    prismaClient.adviser.create({
+  const [createdUser, createdAdviser] = await prisma.$transaction([
+    prisma.user.create({ data: user }),
+    prisma.adviser.create({
       data: {
         ...adviserData,
         projects: projectIds
@@ -146,11 +145,11 @@ export async function createManyUsersWithAdviserRole(
   for (const account of advisers) {
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
-    const [createdUser, createdAdviser] = await prismaClient.$transaction([
-      prismaClient.user.create({
+    const [createdUser, createdAdviser] = await prisma.$transaction([
+      prisma.user.create({
         data: { ...user },
       }),
-      prismaClient.adviser.create({
+      prisma.adviser.create({
         data: {
           ...adviserData,
           user: { connect: { email: user.email } },

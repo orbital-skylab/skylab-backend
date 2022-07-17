@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, PrismaClient, Student, User } from "@prisma/client";
+import { Prisma, Student, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneStudent,
@@ -11,8 +11,7 @@ import {
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
 import { removePasswordFromUser } from "./users.helper";
-
-const prismaClient = new PrismaClient();
+import { prisma } from "../client";
 
 export function parseGetStudentInput(student: Student & { user: User }) {
   const { user, id, ...data } = student;
@@ -80,9 +79,9 @@ export async function createUserWithStudentRole(body: any, isDev?: boolean) {
       : await generateRandomPassword();
 
   const { cohortYear, projectId, ...studentData } = student;
-  const [createdUser, createdStudent] = await prismaClient.$transaction([
-    prismaClient.user.create({ data: user }),
-    prismaClient.student.create({
+  const [createdUser, createdStudent] = await prisma.$transaction([
+    prisma.user.create({ data: user }),
+    prisma.student.create({
       data: {
         ...studentData,
         user: { connect: { email: user.email } },
@@ -143,9 +142,9 @@ export async function createManyUsersWithStudentRole(
     const { project, student: _student } = account;
     const { user, student } = _student;
     const { cohortYear, ...studentData } = student;
-    const [createdUser, createdStudent] = await prismaClient.$transaction([
-      prismaClient.user.create({ data: user }),
-      prismaClient.student.create({
+    const [createdUser, createdStudent] = await prisma.$transaction([
+      prisma.user.create({ data: user }),
+      prisma.student.create({
         data: {
           ...studentData,
           user: { connect: { email: user.email } },

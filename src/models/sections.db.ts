@@ -1,6 +1,5 @@
-import { Prisma, PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import { prisma } from "../client";
 
 export async function createOneSection(query: Prisma.SectionCreateArgs) {
   const createdSection = await prisma.section.create(query);

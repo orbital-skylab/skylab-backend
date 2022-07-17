@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../client";
 export const checkMatricNoExists = async (matricNo: string) => {
   try {
     const student = await prisma.student.findUnique({
