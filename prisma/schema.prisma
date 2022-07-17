@@ -23,8 +23,10 @@ model User {
   adviser         Adviser[]
   mentor          Mentor[]
   student         Student[]
-  submitter       Submitter?      @relation(fields: [submitterId], references: [id], onDelete: Cascade)
   submitterId     Int?
+  submitted       Submission[]    @relation("from_user")
+  received        Submission[]    @relation("to_user")
+
 }
 
 model Cohort {
@@ -62,6 +64,7 @@ model Adviser {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects   Project[]
 
+  EvaluationGroup EvaluationGroup[]
   @@unique([userId, cohortYear])
 }
 
@@ -96,10 +99,12 @@ model Project {
   cohort       Cohort           @relation(fields: [cohortYear], references: [academicYear])
   mentor       Mentor?          @relation(fields: [mentorUserId], references: [id])
   students     Student[]
-  submitter    Submitter?       @relation(fields: [submitterId], references: [id])
-  submitterId  Int?
   proposalPdf  String?
 
+  EvaluationGroup   EvaluationGroup? @relation(fields: [evaluationGroupId], references: [id])
+  evaluationGroupId Int?
+  submitted         Submission[]     @relation(name: "from_project")
+  received          Submission[]     @relation(name: "to_project")
 
   @@unique([name, cohortYear])
 }
@@ -153,13 +158,26 @@ model Option {
   @@unique([questionId, order])
 }
 
+model EvaluationGroup {
+  id        Int       @id @default(autoincrement())
+  adviser   Adviser   @relation(fields: [adviserId], references: [id])
+  adviserId Int
+  projects  Project[]
+}
+
 model Submission {
-  id          Int        @id @default(autoincrement())
-  submitter   Submitter? @relation(fields: [submitterId], references: [id], name: "submitter")
-  evaluatee   Submitter? @relation(fields: [evaluateeId], references: [id], name: "evaluatee")
-  answers     Answer[]
-  evaluateeId Int?
-  submitterId Int?
+  id            Int      @id @default(autoincrement())
+  Answer        Answer[]
+  isDraft       Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+  fromUser      User?    @relation(fields: [fromUserId], references: [id], name: "from_user")
+  toUser        User?    @relation(fields: [toUserId], references: [id], name: "to_user")
+  fromProject   Project? @relation(fields: [fromProjectId], references: [id], name: "from_project")
+  toProject     Project? @relation(fields: [toProjectId], references: [id], name: "to_project")
+  fromUserId    Int?
+  toUserId      Int?
+  fromProjectId Int?
+  toProjectId   Int?
 }
 
 model Answer {
@@ -170,14 +188,6 @@ model Answer {
   submissionId Int
 
   @@id([submissionId, questionId, answer])
-}
-
-model Submitter {
-  id        Int          @id @default(autoincrement())
-  users     User[]
-  projects  Project[]
-  submitter Submission[] @relation("submitter")
-  evaluatee Submission[] @relation("evaluatee")
 }
 
 enum DeadlineType {
