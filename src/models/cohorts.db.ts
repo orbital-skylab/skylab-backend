@@ -1,9 +1,8 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-
-const prisma = new PrismaClient();
+import { prisma } from "../client";
 
 /**
  * @function getFirstCohort Find the first cohort that matches the given query conditions

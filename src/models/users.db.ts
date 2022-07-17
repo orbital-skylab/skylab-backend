@@ -1,11 +1,10 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
 import { getCurrentCohort } from "src/helpers/cohorts.helper";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { UserRolesEnum } from "src/validators/user.validator";
-
-const prisma = new PrismaClient();
+import { prisma } from "../client";
 
 export async function findFirstUser(query: Prisma.UserFindFirstArgs) {
   const firstUser = await prisma.user.findFirst({

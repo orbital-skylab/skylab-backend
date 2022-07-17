@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Administrator, Prisma, PrismaClient, User } from "@prisma/client";
+import { Administrator, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdministrator,
@@ -11,8 +11,7 @@ import {
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { hashPassword, generateRandomPassword } from "./authentication.helper";
 import { removePasswordFromUser } from "./users.helper";
-
-const prismaClient = new PrismaClient();
+import { prisma } from "../client";
 
 export async function parseGetAdministratorInput(
   administrator: Prisma.AdministratorGetPayload<{ include: { user: true } }>
@@ -64,9 +63,9 @@ export async function createUserWithAdministratorRole(
       ? await hashPassword(user.password)
       : await generateRandomPassword();
 
-  const [createdUser, createdAdministrator] = await prismaClient.$transaction([
-    prismaClient.user.create({ data: user }),
-    prismaClient.administrator.create({
+  const [createdUser, createdAdministrator] = await prisma.$transaction([
+    prisma.user.create({ data: user }),
+    prisma.administrator.create({
       data: {
         ...administrator,
         user: { connect: { email: user.email } },
@@ -126,17 +125,15 @@ export async function createManyUsersWithAdministratorRole(
   const createdAccounts = [];
   for (const account of accounts) {
     const { user, administrator } = account;
-    const [createdUser, createdAdministrator] = await prismaClient.$transaction(
-      [
-        prismaClient.user.create({ data: user }),
-        prismaClient.administrator.create({
-          data: {
-            ...administrator,
-            user: { connect: { email: user.email } },
-          },
-        }),
-      ]
-    );
+    const [createdUser, createdAdministrator] = await prisma.$transaction([
+      prisma.user.create({ data: user }),
+      prisma.administrator.create({
+        data: {
+          ...administrator,
+          user: { connect: { email: user.email } },
+        },
+      }),
+    ]);
     createdAccounts.push({
       user: removePasswordFromUser(createdUser),
       administrator: createdAdministrator,

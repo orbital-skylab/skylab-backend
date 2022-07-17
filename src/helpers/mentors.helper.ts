@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Mentor, Prisma, PrismaClient, User } from "@prisma/client";
+import { Mentor, Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneMentor,
@@ -11,8 +11,7 @@ import {
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
 import { removePasswordFromUser } from "./users.helper";
-
-const prismaClient = new PrismaClient();
+import { prisma } from "../client";
 
 export function parseGetMentorInput(
   mentor: Prisma.MentorGetPayload<{ include: { user: true } }>
@@ -74,9 +73,9 @@ export async function createUserWithMentorRole(body: any, isDev?: boolean) {
 
   const { cohortYear, projectIds, ...mentorData } = mentor;
 
-  const [createdUser, createdMentor] = await prismaClient.$transaction([
-    prismaClient.user.create({ data: user }),
-    prismaClient.mentor.create({
+  const [createdUser, createdMentor] = await prisma.$transaction([
+    prisma.user.create({ data: user }),
+    prisma.mentor.create({
       data: {
         ...mentorData,
         user: { connect: { email: user.email } },
@@ -142,11 +141,11 @@ export async function createManyUsersWithMentorRole(
   for (const account of mentors) {
     const { user, mentor } = account;
     const { cohortYear, ...mentorData } = mentor;
-    const [createdUser, createdMentor] = await prismaClient.$transaction([
-      prismaClient.user.create({
+    const [createdUser, createdMentor] = await prisma.$transaction([
+      prisma.user.create({
         data: { ...user },
       }),
-      prismaClient.mentor.create({
+      prisma.mentor.create({
         data: {
           ...mentorData,
           user: { connect: { email: user.email } },
