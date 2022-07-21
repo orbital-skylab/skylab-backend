@@ -91,12 +91,12 @@ model Project {
   id                Int              @id @default(autoincrement())
   name              String
   adviserId         Int?
-  mentorUserId      Int?
+  mentorId          Int?
   achievement       AchievementLevel
   cohortYear        Int
   adviser           Adviser?         @relation(fields: [adviserId], references: [id])
   cohort            Cohort           @relation(fields: [cohortYear], references: [academicYear])
-  mentor            Mentor?          @relation(fields: [mentorUserId], references: [id])
+  mentor            Mentor?          @relation(fields: [mentorId], references: [id])
   students          Student[]
   proposalPdf       String?
   teamName          String?
