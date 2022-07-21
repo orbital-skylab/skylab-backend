@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Administrator, Prisma, User } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdministrator,
@@ -92,38 +92,35 @@ export async function createManyUsersWithAdministratorRole(
     );
   }
 
-  accounts.map(
-    async (account: {
-      user: User;
-      administrator: Administrator;
-    }): Promise<{
-      user: User;
-      administrator: Administrator;
-    }> => {
+  const accountsWithHashedPasswords = await Promise.all(
+    (
+      accounts as {
+        user: User;
+        administrator: Prisma.AdministratorCreateInput;
+      }[]
+    ).map(async (account) => {
       if (isDev && !account.user.password) {
         throw new SkylabError(
           "All accounts should have a password input",
           HttpStatusCode.BAD_REQUEST
         );
       }
+
       const { user, administrator } = account;
-      const password =
-        isDev && user.password
-          ? await hashPassword(user.password)
-          : await generateRandomPassword();
       return {
         user: {
           ...user,
-          password,
+          password:
+            isDev && user.password
+              ? await hashPassword(user.password)
+              : await generateRandomPassword(),
         },
         administrator,
       };
-    }
+    })
   );
-  await Promise.all(accounts);
-
   const createdAccounts = [];
-  for (const account of accounts) {
+  for (const account of accountsWithHashedPasswords) {
     const { user, administrator } = account;
     const [createdUser, createdAdministrator] = await prisma.$transaction([
       prisma.user.create({ data: user }),
