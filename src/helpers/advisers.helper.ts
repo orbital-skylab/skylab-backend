@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Adviser, Prisma, User } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAdviser,
@@ -114,35 +114,36 @@ export async function createManyUsersWithAdviserRole(
     );
   }
 
-  advisers.map(
-    async (account: {
-      user: User;
-      adviser: Adviser;
-    }): Promise<{ user: User; adviser: Adviser & { cohortYear: number } }> => {
+  const accountsWithHashedPasswords = await Promise.all(
+    (
+      advisers as {
+        user: User;
+        adviser: Prisma.AdviserCreateInput & { cohortYear: number };
+      }[]
+    ).map(async (account) => {
       if (isDev && !account.user.password) {
         throw new SkylabError(
           "All accounts should have a password input",
           HttpStatusCode.BAD_REQUEST
         );
       }
+
       const { user, adviser } = account;
-      const password =
-        isDev && user.password
-          ? await hashPassword(user.password)
-          : await generateRandomPassword();
       return {
         user: {
           ...user,
-          password,
+          password:
+            isDev && user.password
+              ? await hashPassword(user.password)
+              : await generateRandomPassword(),
         },
         adviser,
       };
-    }
+    })
   );
-  await Promise.all(advisers);
 
   const createdAccounts = [];
-  for (const account of advisers) {
+  for (const account of accountsWithHashedPasswords) {
     const { user, adviser } = account;
     const { cohortYear, ...adviserData } = adviser;
     const [createdUser, createdAdviser] = await prisma.$transaction([
