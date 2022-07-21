@@ -67,8 +67,6 @@ export const UpdateUserByIDValidator = [
     .isURL()
     .withMessage("Must be a valid URL"),
   body("user.selfIntro").optional().isString(),
-  body("user.teamName").optional().isString(),
-  body("user.hasDropped").optional().isBoolean(),
 ];
 
 export const DeleteUserByIDValidator = [UserIDParamValidator];

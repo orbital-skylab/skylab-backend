@@ -99,6 +99,8 @@ model Project {
   mentor            Mentor?          @relation(fields: [mentorId], references: [id])
   students          Student[]
   proposalPdf       String?
+  posterUrl         String?
+  videoUrl          String?
   teamName          String?
   hasDropped        Boolean          @default(false)
   EvaluationGroup   EvaluationGroup? @relation(fields: [evaluationGroupId], references: [id])
