@@ -75,17 +75,18 @@ export async function getManyProjectsWithFilter(
     achievement?: AchievementLevel;
     cohortYear?: number;
     search?: string;
+    dropped?: boolean;
   }
 ) {
-  const { limit, page, achievement, cohortYear, search } = query;
+  const { limit, page, achievement, cohortYear, search, dropped } = query;
 
   const projectQuery: Prisma.ProjectFindManyArgs = {
-    take: Number(limit) ?? undefined,
-    skip:
-      Number(limit) && Number(page) ? Number(limit) * Number(page) : undefined,
+    take: limit ? Number(limit) : undefined,
+    skip: limit && page ? Number(limit) * Number(page) : undefined,
     where: {
       achievement: achievement ?? undefined,
-      cohortYear: Number(cohortYear) ?? undefined,
+      hasDropped: dropped ? (dropped == "true" ? true : false) : undefined,
+      cohortYear: cohortYear ? Number(cohortYear) : undefined,
       OR: search
         ? [
             { name: { search: search } },
@@ -95,6 +96,7 @@ export async function getManyProjectsWithFilter(
           ]
         : undefined,
     },
+    orderBy: { id: "asc" },
   };
 
   const projects = await findManyProjectsWithUserData(projectQuery);
@@ -111,10 +113,17 @@ export async function getOneProjectById(projectId: number) {
   return parseGetProjectInput(projectWithId);
 }
 
-export async function getManyProjectsLean(cohortYear: number) {
+export async function getManyProjectsLean(
+  cohortYear: number,
+  hasDropped?: boolean
+) {
   const leanProjects = await findManyProjects({
-    where: { cohortYear: cohortYear },
+    where: {
+      cohortYear: cohortYear,
+      hasDropped: hasDropped,
+    },
     select: { id: true, name: true },
+    orderBy: { id: "asc" },
   });
   return leanProjects;
 }

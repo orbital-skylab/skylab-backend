@@ -81,10 +81,19 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
 });
 
 router.get("/lean", async (req: Request, res: Response) => {
-  const { cohortYear } = req.query;
+  const { cohortYear, dropped } = req.query;
+
   try {
-    const projects = await getManyProjectsLean(Number(cohortYear));
-    return apiResponseWrapper(res, { projects: projects });
+    if (!dropped) {
+      const projects = await getManyProjectsLean(Number(cohortYear));
+      return apiResponseWrapper(res, { projects: projects });
+    } else {
+      const projects = await getManyProjectsLean(
+        Number(cohortYear),
+        dropped == "true" ? true : false
+      );
+      return apiResponseWrapper(res, { projects: projects });
+    }
   } catch (e) {
     return routeErrorHandler(res, e);
   }

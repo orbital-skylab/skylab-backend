@@ -10,6 +10,8 @@ export const GetProjectsValidator = [
   LimitQueryValidator,
   CohortQueryValidator.optional(),
   query("search").isString().optional(),
+  query("achievement").isString().optional(),
+  query("hasDropped").isBoolean().optional(),
 ];
 
 export const CreateProjectValidator = [

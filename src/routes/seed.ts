@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", async (_: Request, res: Response) => {
   try {
     await seedAll();
     return apiResponseWrapper(res, { response: "Donezo" });
