@@ -9,8 +9,6 @@ import {
   User,
 } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueAdviser } from "src/models/advisers.db";
-import { findUniqueMentor } from "src/models/mentors.db";
 import {
   createOneProject,
   deleteOneProject,
@@ -20,7 +18,6 @@ import {
   findUniqueProjectWithUserData,
   updateOneProject,
 } from "src/models/projects.db";
-import { findUniqueStudent } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 
@@ -184,12 +181,6 @@ export async function editProjectDataByProjectID(
   });
 }
 
-export async function getAllProjectsOfAdviser(adviserId: number) {
-  return await findManyProjectsWithUserData({
-    where: { adviserId: adviserId },
-  });
-}
-
 export async function getProjectsViaRoleIds(
   query: any & {
     studentId?: number;
@@ -199,33 +190,15 @@ export async function getProjectsViaRoleIds(
 ) {
   const { studentId, adviserId, mentorId } = query;
 
-  if (studentId) {
-    return await findUniqueStudent({
-      where: { id: Number(studentId) },
-      select: {
-        project: { include: { students: true, mentor: true, adviser: true } },
-      },
-    });
-  } else if (adviserId) {
-    return await findUniqueAdviser({
-      where: { id: Number(adviserId) },
-      select: {
-        projects: { include: { students: true, mentor: true, adviser: true } },
-      },
-    });
-  } else if (mentorId) {
-    return await findUniqueMentor({
-      where: { id: Number(mentorId) },
-      select: {
-        projects: { include: { students: true, mentor: true, adviser: true } },
-      },
-    });
-  }
+  const projects = await findManyProjectsWithUserData({
+    where: {
+      students: studentId ? { some: { id: Number(studentId) } } : undefined,
+      adviserId: adviserId ? Number(adviserId) : undefined,
+      mentorId: mentorId ? Number(mentorId) : undefined,
+    },
+  });
 
-  throw new SkylabError(
-    "Internal server error occurred",
-    HttpStatusCode.INTERNAL_SERVER_ERROR
-  );
+  return projects.map((project) => parseGetProjectInput(project));
 }
 
 export async function deleteOneProjectById(projectId: number) {
