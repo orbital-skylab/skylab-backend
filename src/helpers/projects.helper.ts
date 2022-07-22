@@ -8,7 +8,6 @@ import {
   Student,
   User,
 } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneProject,
   deleteOneProject,
@@ -18,7 +17,6 @@ import {
   findUniqueProjectWithUserData,
   updateOneProject,
 } from "src/models/projects.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 
 export function parseGetProjectInput(
