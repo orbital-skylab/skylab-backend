@@ -50,7 +50,7 @@ router.get("/student/:studentId", async (req: Request, res: Response) => {
     const project = await getProjectsViaRoleIds({
       studentId: Number(studentId),
     });
-    return apiResponseWrapper(res, { projects: project });
+    return apiResponseWrapper(res, project);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -62,7 +62,7 @@ router.get("/adviser/:adviserId", async (req: Request, res: Response) => {
     const projects = await getProjectsViaRoleIds({
       adviserId: Number(adviserId),
     });
-    return apiResponseWrapper(res, { projects: projects });
+    return apiResponseWrapper(res, projects);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -74,7 +74,7 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
     const projects = await getProjectsViaRoleIds({
       mentorId: Number(mentorId),
     });
-    return apiResponseWrapper(res, { projects: projects });
+    return apiResponseWrapper(res, projects);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
