@@ -206,7 +206,7 @@ export async function addAdviserRoleToManyUsers(body: any) {
     );
   }
 
-  const currentCohortYear = await (await getCurrentCohort()).academicYear;
+  const currentCohortYear = (await getCurrentCohort()).academicYear;
   const advisers = await Promise.all(
     nusnetIds.map(async (nusnetId: string) => {
       const student = await getOneStudentByNusnetId(nusnetId);

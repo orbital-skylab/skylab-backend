@@ -63,8 +63,6 @@ model Adviser {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects   Project[]
 
-  EvaluationGroup EvaluationGroup[]
-
   @@unique([userId, cohortYear])
 }
 
@@ -88,25 +86,25 @@ model Administrator {
 }
 
 model Project {
-  id                Int              @id @default(autoincrement())
-  name              String
-  adviserId         Int?
-  mentorId          Int?
-  achievement       AchievementLevel
-  cohortYear        Int
-  adviser           Adviser?         @relation(fields: [adviserId], references: [id])
-  cohort            Cohort           @relation(fields: [cohortYear], references: [academicYear])
-  mentor            Mentor?          @relation(fields: [mentorId], references: [id])
-  students          Student[]
-  proposalPdf       String?
-  posterUrl         String?
-  videoUrl          String?
-  teamName          String?
-  hasDropped        Boolean          @default(false)
-  EvaluationGroup   EvaluationGroup? @relation(fields: [evaluationGroupId], references: [id])
-  evaluationGroupId Int?
-  submitted         Submission[]     @relation(name: "from_project")
-  received          Submission[]     @relation(name: "to_project")
+  id          Int                  @id @default(autoincrement())
+  name        String
+  adviserId   Int?
+  mentorId    Int?
+  achievement AchievementLevel
+  cohortYear  Int
+  adviser     Adviser?             @relation(fields: [adviserId], references: [id])
+  cohort      Cohort               @relation(fields: [cohortYear], references: [academicYear])
+  mentor      Mentor?              @relation(fields: [mentorId], references: [id])
+  students    Student[]
+  proposalPdf String?
+  posterUrl   String?
+  videoUrl    String?
+  teamName    String?
+  hasDropped  Boolean              @default(false)
+  submitted   Submission[]         @relation(name: "from_project")
+  received    Submission[]         @relation(name: "to_project")
+  evaluator   EvaluationRelation[] @relation(name: "evaluator")
+  evaluatee   EvaluationRelation[] @relation(name: "evaluatee")
 
   @@unique([name, cohortYear])
 }
@@ -160,11 +158,14 @@ model Option {
   @@unique([questionId, order])
 }
 
-model EvaluationGroup {
-  id        Int       @id @default(autoincrement())
-  adviser   Adviser   @relation(fields: [adviserId], references: [id])
-  adviserId Int
-  projects  Project[]
+model EvaluationRelation {
+  id            Int     @id @default(autoincrement())
+  fromProject   Project @relation(fields: [fromProjectId], references: [id], name: "evaluator")
+  fromProjectId Int
+  toProject     Project @relation(fields: [toProjectId], references: [id], name: "evaluatee")
+  toProjectId   Int
+
+  @@unique([fromProjectId, toProjectId])
 }
 
 model Submission {
