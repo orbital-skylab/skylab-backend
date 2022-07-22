@@ -3,6 +3,7 @@ import { validationResult } from "express-validator";
 import { getOneProjectById } from "src/helpers/projects.helper";
 import {
   createRelation,
+  createRelationsByGroup,
   deleteEvaluationRelationByID,
   deleteEvaluationRelationsOfAdviser,
   deleteEvaluationRelationsOfProject,
@@ -60,6 +61,17 @@ router
       return routeErrorHandler(res, e);
     }
   });
+
+router.post("/group", async (req: Request, res: Response) => {
+  try {
+    const createRelationsRequest = await createRelationsByGroup(req.body);
+    return apiResponseWrapper(res, {
+      message: `${createRelationsRequest.count} was created successfully`,
+    });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 router
   .get(

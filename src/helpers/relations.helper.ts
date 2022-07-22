@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { EvaluationRelation } from "@prisma/client";
 import {
+  createManyRelations,
   createOneRelation,
   deleteManyRelations,
   deleteOneRelation,
@@ -27,6 +28,28 @@ export async function createRelation(body: {
     where: { id: createdRelation.id },
     include: { toProject: true, fromProject: true },
   });
+}
+
+export async function createRelationsByGroup(body: { projectIds: number[] }) {
+  const { projectIds } = body;
+
+  const createManyRelationArgs: {
+    fromProjectId: number;
+    toProjectId: number;
+  }[] = [];
+
+  for (const fromProjectId of projectIds) {
+    for (const toProjectId of projectIds) {
+      if (fromProjectId !== toProjectId) {
+        createManyRelationArgs.push({
+          fromProjectId: fromProjectId,
+          toProjectId: toProjectId,
+        });
+      }
+    }
+  }
+
+  return await createManyRelations({ data: createManyRelationArgs });
 }
 
 export async function getManyRelationsWithFilter(query: any) {
