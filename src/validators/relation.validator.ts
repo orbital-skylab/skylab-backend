@@ -42,7 +42,30 @@ export const GetRelationsWithAdviserIDValidator = [
     }),
 ];
 
-export const DeleteRelationsWithAdviserIDValidaotr = [
+export const DeleteRelationByRelationIDValidator = [
+  param("relationId")
+    .isNumeric()
+    .withMessage("Relation ID Parameter must be numeric"),
+];
+
+export const UpdateRelationByRelationIDValidator = [
+  param("relationId")
+    .isNumeric()
+    .withMessage("Relation ID Parameter must be numeric"),
+  body("relation")
+    .isObject()
+    .withMessage("Data to update relation must be in request body"),
+  body("relation.fromProjectId")
+    .isNumeric()
+    .withMessage("fromProjectId field must be numeric")
+    .optional(),
+  body("relation.toProjectId")
+    .isNumeric()
+    .withMessage("toProjectId field must be numeric")
+    .optional(),
+];
+
+export const DeleteRelationsWithAdviserIDValidator = [
   param("adviserId")
     .isNumeric()
     .custom(async (value) => {
