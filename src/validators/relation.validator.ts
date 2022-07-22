@@ -1,7 +1,6 @@
 import { body, param, query } from "express-validator";
 import { checkAdviserIdExists } from "./helper/adviser.validator.helper";
 import { checkProjectExists } from "./helper/project.validator.helper";
-import { CheckBodyObjectExistsValidator } from "./validator";
 
 export const CreateRelationValidator = [
   body("relation")
