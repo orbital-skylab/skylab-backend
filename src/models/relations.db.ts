@@ -7,6 +7,12 @@ export async function createOneRelation(
   return await prisma.evaluationRelation.create(relation);
 }
 
+export async function updateOneRelation(
+  query: Prisma.EvaluationRelationUpdateArgs
+) {
+  return await prisma.evaluationRelation.update(query);
+}
+
 export async function findUniqueRelation(
   query: Prisma.EvaluationRelationFindUniqueArgs
 ) {

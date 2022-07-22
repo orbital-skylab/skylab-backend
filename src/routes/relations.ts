@@ -6,6 +6,7 @@ import {
   deleteEvaluationRelationByID,
   deleteEvaluationRelationsOfAdviser,
   deleteEvaluationRelationsOfProject,
+  editOneEvaluationRelationByRelationID,
   getManyRelationsWithAdviserID,
   getManyRelationsWithFilter,
 } from "src/helpers/relations.helper";
@@ -15,10 +16,12 @@ import {
 } from "src/utils/ApiResponseWrapper";
 import {
   CreateRelationValidator,
-  DeleteRelationsWithAdviserIDValidaotr,
+  DeleteRelationByRelationIDValidator,
+  DeleteRelationsWithAdviserIDValidator,
   DeleteRelationsWithProjectIDValidator,
   GetRelationsValidator,
   GetRelationsWithAdviserIDValidator,
+  UpdateRelationByRelationIDValidator,
 } from "src/validators/relation.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
 
@@ -80,7 +83,7 @@ router
   )
   .delete(
     "/adviser/:adviserId",
-    DeleteRelationsWithAdviserIDValidaotr,
+    DeleteRelationsWithAdviserIDValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
       if (!errors.isEmpty()) {
@@ -118,16 +121,45 @@ router.delete(
   }
 );
 
-router.delete("/:relationId", async (req: Request, res: Response) => {
-  const { relationId } = req.params;
-  try {
-    const deletedRelation = await deleteEvaluationRelationByID(
-      Number(relationId)
-    );
-    return apiResponseWrapper(res, { relation: deletedRelation });
-  } catch (e) {
-    return routeErrorHandler(res, e);
-  }
-});
+router
+  .delete(
+    "/:relationId",
+    DeleteRelationByRelationIDValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { relationId } = req.params;
+      try {
+        const deletedRelation = await deleteEvaluationRelationByID(
+          Number(relationId)
+        );
+        return apiResponseWrapper(res, { relation: deletedRelation });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  )
+  .put(
+    "/:relationId",
+    UpdateRelationByRelationIDValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      const { relationId } = req.params;
+      try {
+        const updatedRelation = await editOneEvaluationRelationByRelationID(
+          Number(relationId),
+          req.body
+        );
+        return apiResponseWrapper(res, { relation: updatedRelation });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  );
 
 export default router;

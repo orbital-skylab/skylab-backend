@@ -6,6 +6,7 @@ import {
   deleteOneRelation,
   findManyRelations,
   findUniqueRelation,
+  updateOneRelation,
 } from "src/models/relations.db";
 import {
   getAdviserByProjectID,
@@ -87,6 +88,23 @@ export async function deleteEvaluationRelationsOfAdviser(adviserId: number) {
     },
   });
   return deletedRelations;
+}
+
+export async function editOneEvaluationRelationByRelationID(
+  relationId: number,
+  body: any
+) {
+  const { relation } = body;
+  const { fromProjectId, toProjectId } = relation;
+  return await updateOneRelation({
+    where: { id: relationId },
+    data: {
+      fromProject: fromProjectId
+        ? { connect: { id: fromProjectId } }
+        : undefined,
+      toProject: toProjectId ? { connect: { id: toProjectId } } : undefined,
+    },
+  });
 }
 
 export async function deleteEvaluationRelationByRelationID(relationId: number) {
