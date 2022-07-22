@@ -184,6 +184,12 @@ export async function editProjectDataByProjectID(
   });
 }
 
+export async function getAllProjectsOfAdviser(adviserId: number) {
+  return await findManyProjectsWithUserData({
+    where: { adviserId: adviserId },
+  });
+}
+
 export async function getProjectsViaRoleIds(
   query: any & {
     studentId?: number;
