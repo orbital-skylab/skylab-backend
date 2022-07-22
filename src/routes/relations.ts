@@ -3,6 +3,7 @@ import { validationResult } from "express-validator";
 import { getOneProjectById } from "src/helpers/projects.helper";
 import {
   createRelation,
+  deleteEvaluationRelationByID,
   deleteEvaluationRelationsOfAdviser,
   deleteEvaluationRelationsOfProject,
   getManyRelationsWithAdviserID,
@@ -116,5 +117,17 @@ router.delete(
     }
   }
 );
+
+router.delete("/:relationId", async (req: Request, res: Response) => {
+  const { relationId } = req.params;
+  try {
+    const deletedRelation = await deleteEvaluationRelationByID(
+      Number(relationId)
+    );
+    return apiResponseWrapper(res, { relation: deletedRelation });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 export default router;

@@ -4,6 +4,7 @@ import {
   deleteManyRelations,
   deleteOneRelation,
   findManyRelations,
+  findUniqueRelation,
 } from "src/models/relations.db";
 import { getProjectIDsByAdviserID } from "./projects.helper";
 
@@ -17,7 +18,10 @@ export async function createRelation(body: {
       toProject: { connect: { id: toProjectId } },
     },
   });
-  return createdRelation;
+  return await findUniqueRelation({
+    where: { id: createdRelation.id },
+    include: { toProject: true, fromProject: true },
+  });
 }
 
 export async function getManyRelationsWithFilter(query: any) {
@@ -72,4 +76,11 @@ export async function deleteEvaluationRelationsOfAdviser(adviserId: number) {
     },
   });
   return deletedRelations;
+}
+
+export async function deleteEvaluationRelationByRelationID(relationId: number) {
+  const deletedRelation = await deleteEvaluationRelationByID(
+    Number(relationId)
+  );
+  return deletedRelation;
 }
