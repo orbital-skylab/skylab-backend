@@ -224,3 +224,10 @@ export async function getProjectsViaRoleIds(
 export async function deleteOneProjectById(projectId: number) {
   return await deleteOneProject({ where: { id: projectId } });
 }
+
+export async function getProjectIDsByAdviserID(adviserId: number) {
+  return await findManyProjects({
+    where: { adviserId: adviserId },
+    select: { id: true },
+  });
+}
