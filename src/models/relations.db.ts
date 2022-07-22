@@ -48,7 +48,7 @@ export async function findManyRelations(
 ) {
   return await prisma.evaluationRelation.findMany({
     ...query,
-    orderBy: { fromProjectId: "asc", toProjectId: "asc" },
+    orderBy: [{ fromProjectId: "asc" }, { toProjectId: "asc" }],
   });
 }
 
