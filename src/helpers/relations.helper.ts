@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { EvaluationRelation, Project } from "@prisma/client";
+import { EvaluationRelation } from "@prisma/client";
 import {
   createOneRelation,
   deleteManyRelations,
@@ -7,10 +7,8 @@ import {
   findManyRelations,
   findUniqueRelation,
 } from "src/models/relations.db";
-import { getOneAdviserById } from "./advisers.helper";
 import {
   getAdviserByProjectID,
-  getOneProjectById,
   getProjectIDsByAdviserID,
 } from "./projects.helper";
 
