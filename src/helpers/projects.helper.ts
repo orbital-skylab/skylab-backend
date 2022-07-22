@@ -16,6 +16,7 @@ import {
   deleteOneProject,
   findManyProjects,
   findManyProjectsWithUserData,
+  findUniqueProject,
   findUniqueProjectWithUserData,
   updateOneProject,
 } from "src/models/projects.db";
@@ -229,5 +230,12 @@ export async function getProjectIDsByAdviserID(adviserId: number) {
   return await findManyProjects({
     where: { adviserId: adviserId },
     select: { id: true },
+  });
+}
+
+export async function getAdviserByProjectID(projectId: number) {
+  return await findUniqueProject({
+    where: { id: projectId },
+    select: { adviser: true },
   });
 }
