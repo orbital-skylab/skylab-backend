@@ -4,7 +4,7 @@ import { UserRolesEnum } from "src/validators/user.validator";
 import { generateFakeRoleData, generateFakeUser } from "./seed.helpers";
 
 export const seedAdvisers = async () => {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 1; i < 101; i++) {
     await createUserWithAdviserRole(
       {
         user: generateFakeUser(),
@@ -12,7 +12,7 @@ export const seedAdvisers = async () => {
       },
       true
     );
-    await editProjectDataByProjectID(i + 1, {
+    await editProjectDataByProjectID(i, {
       adviser: i,
     });
   }
