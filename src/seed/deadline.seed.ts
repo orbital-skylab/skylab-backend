@@ -11,7 +11,7 @@ export const seedDeadlines = async () => {
           desc: faker.lorem.lines(2),
           name: i == 0 ? "Pre Liftoff Survey" : `Milestone ${i}`,
           dueBy: faker.date.between(cohorts[j].startDate, cohorts[j].endDate),
-          type: i == 0 ? "Survey" : "Milestone",
+          type: i == 0 ? "Feedback" : "Milestone",
         },
       });
     }

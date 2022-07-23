@@ -28,28 +28,54 @@ export async function getManyDeadlinesWithFilter(
   return deadlines;
 }
 
-export async function createDeadline(
-  body: any & {
-    deadline: {
-      cohortYear: number;
-      desc?: string;
-      name: string;
-      dueBy: Date;
-      type: DeadlineType;
-    };
-  }
-) {
-  const { cohortYear, desc, name, dueBy, type } = body.deadline;
+export async function createDeadline(body: {
+  deadline: {
+    cohortYear: number;
+    name: string;
+    dueBy: Date;
+    type: DeadlineType;
+    desc?: string;
+    evaluatingDeadlineId?: number; // If type == "Evaluation"
+  };
+}) {
+  const { deadline: deadlineData } = body;
+  const { evaluatingDeadlineId, cohortYear, ...deadline } = deadlineData;
   return await createOneDeadline({
     data: {
       cohort: { connect: { academicYear: cohortYear } },
-      desc: desc ?? undefined,
-      name: name,
-      dueBy: dueBy,
-      type: type,
+      ...deadline,
+      evaluation:
+        deadline.type === "Evaluation"
+          ? {
+              create: { milestone: { connect: { id: evaluatingDeadlineId } } },
+            }
+          : undefined,
     },
   });
 }
+
+// export async function createDeadline(
+//   body: any & {
+//     deadline: {
+//       cohortYear: number;
+//       desc?: string;
+//       name: string;
+//       dueBy: Date;
+//       type: DeadlineType;
+//     };
+//   }
+// ) {
+//   const { cohortYear, desc, name, dueBy, type } = body.deadline;
+//   return await createOneDeadline({
+//     data: {
+//       cohort: { connect: { academicYear: cohortYear } },
+//       desc: desc ?? undefined,
+//       name: name,
+//       dueBy: dueBy,
+//       type: type,
+//     },
+//   });
+// }
 
 export async function getOneDeadlineById(deadlineId: number) {
   const deadline = await findUniqueDeadline({ where: { id: deadlineId } });

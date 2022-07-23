@@ -12,6 +12,7 @@ import authRouter from "./auth";
 import administratorRouter from "./administrators";
 import seedRouter from "./seed";
 import relationRouter from "./relations";
+import dashboardRouter from "./dashboard";
 
 // Export the base-router
 const baseRouter = Router();
@@ -29,6 +30,7 @@ baseRouter.use("/auth", authRouter);
 baseRouter.use("/administrators", administratorRouter);
 baseRouter.use("/seed", seedRouter);
 baseRouter.use("/relations", relationRouter);
+baseRouter.use("/dashboard", dashboardRouter);
 
 // Export default.
 export default baseRouter;

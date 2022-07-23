@@ -53,6 +53,14 @@ export async function findManyDeadlines(query: Prisma.DeadlineFindManyArgs) {
   return deadlines;
 }
 
+export async function findManyEvaluations(query: Prisma.DeadlineFindManyArgs) {
+  const evaluations = await prisma.deadline.findMany({
+    ...query,
+    include: { evaluation: true },
+  });
+  return evaluations;
+}
+
 export async function findManyDeadlinesWithQuestionsData({
   include,
   ...query
