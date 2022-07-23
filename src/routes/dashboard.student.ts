@@ -13,7 +13,7 @@ const router = Router();
 router.get("/:studentId/deadlines", async (req: Request, res: Response) => {
   const { studentId } = req.params;
   try {
-    const deadlines = getDeadlinesByStudentId(Number(studentId));
+    const deadlines = await getDeadlinesByStudentId(Number(studentId));
     return apiResponseWrapper(res, { deadlines: deadlines });
   } catch (e) {
     return routeErrorHandler(res, e);
@@ -25,9 +25,8 @@ router.get(
   async (req: Request, res: Response) => {
     const { studentId } = req.params;
     try {
-      const peerEvaluationsFeedbacks = getPeerEvaluationFeedbackByStudentID(
-        Number(studentId)
-      );
+      const peerEvaluationsFeedbacks =
+        await getPeerEvaluationFeedbackByStudentID(Number(studentId));
       return apiResponseWrapper(res, { deadlines: peerEvaluationsFeedbacks });
     } catch (e) {
       return routeErrorHandler(res, e);

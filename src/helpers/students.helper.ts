@@ -114,7 +114,6 @@ export async function createManyUsersWithStudentRole(
     const { students, ...projectData } = project;
     for (const student of students) {
       if (projectData.cohortYear !== student.student.cohortYear) {
-        console.log(projectData, student.student.cohortYear);
         throw new SkylabError(
           "Project cohort and student cohort does not match",
           HttpStatusCode.BAD_REQUEST

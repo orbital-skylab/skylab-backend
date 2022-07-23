@@ -100,7 +100,6 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 
     const expiryDate = new Date();
     expiryDate.setMinutes(expiryDate.getMinutes() + 30);
-    console.log(expiryDate.toString());
     const token = jwt.sign({ id, expiryDate }, password);
 
     sendPasswordResetEmail(email, id, token, origin);
