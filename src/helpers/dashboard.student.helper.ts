@@ -239,9 +239,9 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
     };
   });
 
-  const peerEvaluationsFeedbacks = (
-    await Promise.all([pEvaluationsToProject, pFeedbacksToProject])
-  ).flat();
+  const peerEvaluationsFeedbacks = await Promise.all(
+    [pEvaluationsToProject, pFeedbacksToProject].flat()
+  );
 
   return peerEvaluationsFeedbacks;
 }
