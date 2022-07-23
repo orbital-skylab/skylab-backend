@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "DeadlineType" AS ENUM ('Milestone', 'Evaluation', 'Survey', 'Other');
+CREATE TYPE "DeadlineType" AS ENUM ('Milestone', 'Evaluation', 'Feedback', 'Application', 'Other');
 
 -- CreateEnum
 CREATE TYPE "QuestionType" AS ENUM ('ShortAnswer', 'Paragraph', 'MultipleChoice', 'Checkboxes', 'Dropdown', 'Url', 'Date', 'Time');
@@ -79,11 +79,14 @@ CREATE TABLE "Project" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "adviserId" INTEGER,
-    "mentorUserId" INTEGER,
+    "mentorId" INTEGER,
     "achievement" "AchievementLevel" NOT NULL,
     "cohortYear" INTEGER NOT NULL,
     "proposalPdf" TEXT,
-    "evaluationGroupId" INTEGER,
+    "posterUrl" TEXT,
+    "videoUrl" TEXT,
+    "teamName" TEXT,
+    "hasDropped" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
 );
@@ -100,6 +103,15 @@ CREATE TABLE "Deadline" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Deadline_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Evaluation" (
+    "id" SERIAL NOT NULL,
+    "deadlineId" INTEGER NOT NULL,
+    "milestoneId" INTEGER NOT NULL,
+
+    CONSTRAINT "Evaluation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -134,11 +146,12 @@ CREATE TABLE "Option" (
 );
 
 -- CreateTable
-CREATE TABLE "EvaluationGroup" (
+CREATE TABLE "EvaluationRelation" (
     "id" SERIAL NOT NULL,
-    "adviserId" INTEGER NOT NULL,
+    "fromProjectId" INTEGER NOT NULL,
+    "toProjectId" INTEGER NOT NULL,
 
-    CONSTRAINT "EvaluationGroup_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "EvaluationRelation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -150,6 +163,7 @@ CREATE TABLE "Submission" (
     "toUserId" INTEGER,
     "fromProjectId" INTEGER,
     "toProjectId" INTEGER,
+    "deadlineId" INTEGER NOT NULL,
 
     CONSTRAINT "Submission_pkey" PRIMARY KEY ("id")
 );
@@ -188,10 +202,25 @@ CREATE UNIQUE INDEX "Project_name_cohortYear_key" ON "Project"("name", "cohortYe
 CREATE UNIQUE INDEX "Deadline_name_cohortYear_key" ON "Deadline"("name", "cohortYear");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Evaluation_deadlineId_key" ON "Evaluation"("deadlineId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Evaluation_milestoneId_key" ON "Evaluation"("milestoneId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Section_deadlineId_sectionNumber_key" ON "Section"("deadlineId", "sectionNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Option_questionId_order_key" ON "Option"("questionId", "order");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EvaluationRelation_fromProjectId_toProjectId_key" ON "EvaluationRelation"("fromProjectId", "toProjectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Submission_deadlineId_fromProjectId_toProjectId_toUserId_key" ON "Submission"("deadlineId", "fromProjectId", "toProjectId", "toUserId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Submission_deadlineId_fromUserId_toProjectId_key" ON "Submission"("deadlineId", "fromUserId", "toProjectId");
 
 -- AddForeignKey
 ALTER TABLE "Student" ADD CONSTRAINT "Student_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -224,13 +253,16 @@ ALTER TABLE "Project" ADD CONSTRAINT "Project_cohortYear_fkey" FOREIGN KEY ("coh
 ALTER TABLE "Project" ADD CONSTRAINT "Project_adviserId_fkey" FOREIGN KEY ("adviserId") REFERENCES "Adviser"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_mentorUserId_fkey" FOREIGN KEY ("mentorUserId") REFERENCES "Mentor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_evaluationGroupId_fkey" FOREIGN KEY ("evaluationGroupId") REFERENCES "EvaluationGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Project" ADD CONSTRAINT "Project_mentorId_fkey" FOREIGN KEY ("mentorId") REFERENCES "Mentor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Deadline" ADD CONSTRAINT "Deadline_cohortYear_fkey" FOREIGN KEY ("cohortYear") REFERENCES "Cohort"("academicYear") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Evaluation" ADD CONSTRAINT "Evaluation_deadlineId_fkey" FOREIGN KEY ("deadlineId") REFERENCES "Deadline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Evaluation" ADD CONSTRAINT "Evaluation_milestoneId_fkey" FOREIGN KEY ("milestoneId") REFERENCES "Deadline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Section" ADD CONSTRAINT "Section_deadlineId_fkey" FOREIGN KEY ("deadlineId") REFERENCES "Deadline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -242,7 +274,10 @@ ALTER TABLE "Question" ADD CONSTRAINT "Question_sectionId_fkey" FOREIGN KEY ("se
 ALTER TABLE "Option" ADD CONSTRAINT "Option_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "Question"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EvaluationGroup" ADD CONSTRAINT "EvaluationGroup_adviserId_fkey" FOREIGN KEY ("adviserId") REFERENCES "Adviser"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EvaluationRelation" ADD CONSTRAINT "EvaluationRelation_fromProjectId_fkey" FOREIGN KEY ("fromProjectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EvaluationRelation" ADD CONSTRAINT "EvaluationRelation_toProjectId_fkey" FOREIGN KEY ("toProjectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Submission" ADD CONSTRAINT "Submission_fromUserId_fkey" FOREIGN KEY ("fromUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -255,6 +290,9 @@ ALTER TABLE "Submission" ADD CONSTRAINT "Submission_fromProjectId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "Submission" ADD CONSTRAINT "Submission_toProjectId_fkey" FOREIGN KEY ("toProjectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Submission" ADD CONSTRAINT "Submission_deadlineId_fkey" FOREIGN KEY ("deadlineId") REFERENCES "Deadline"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Answer" ADD CONSTRAINT "Answer_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "Question"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

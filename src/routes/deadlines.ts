@@ -1,4 +1,5 @@
 import { Request, Response, Router } from "express";
+import { validationResult } from "express-validator";
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createDeadline,
@@ -18,11 +19,16 @@ import {
   CreateDeadlineValidator,
   GetDeadlinesValidator,
 } from "src/validators/deadline.validator";
+import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();
 
 router
   .get("/", GetDeadlinesValidator, async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
     try {
       const deadlines = await getManyDeadlinesWithFilter(req.query);
       return apiResponseWrapper(res, { deadlines: deadlines });
@@ -31,6 +37,10 @@ router
     }
   })
   .post("/", CreateDeadlineValidator, async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
     try {
       const createdDeadline = await createDeadline(req.body);
       return apiResponseWrapper(res, { deadline: createdDeadline });

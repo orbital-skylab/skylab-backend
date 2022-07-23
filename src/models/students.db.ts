@@ -45,6 +45,35 @@ export async function findUniqueStudentWithUserData({
   return uniqueStudent;
 }
 
+export async function findUniqueStudentWithProjectData({
+  include,
+  ...query
+}: Prisma.StudentFindUniqueArgs) {
+  const uniqueStudent = await prisma.student.findUnique({
+    include: { ...include, project: true },
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueStudent;
+}
+
+export async function findUniqueStudentWithProjectWithAdviserData({
+  include,
+  ...query
+}: Prisma.StudentFindUniqueArgs) {
+  const uniqueStudent = await prisma.student.findUnique({
+    ...query,
+    include: { ...include, project: { include: { adviser: true } } },
+  });
+  if (!uniqueStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueStudent;
+}
+
 export async function findManyStudentsWithUserData({
   include,
   ...query

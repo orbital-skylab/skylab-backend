@@ -120,8 +120,19 @@ model Deadline {
   type       DeadlineType
   updatedAt  DateTime     @updatedAt
   sections   Section[]
+  Submission Submission[]
+  evaluation Evaluation?  @relation("deadline")
+  evaluating Evaluation?  @relation("milestone")
 
   @@unique([name, cohortYear])
+}
+
+model Evaluation {
+  id          Int      @id @default(autoincrement())
+  deadline    Deadline @relation(fields: [deadlineId], references: [id], name: "deadline", onDelete: Cascade)
+  deadlineId  Int      @unique
+  milestone   Deadline @relation(fields: [milestoneId], references: [id], name: "milestone", onDelete: Cascade)
+  milestoneId Int      @unique
 }
 
 model Section {
@@ -170,6 +181,7 @@ model EvaluationRelation {
 
 model Submission {
   id            Int      @id @default(autoincrement())
+  deadline      Deadline @relation(fields: [deadlineId], references: [id])
   Answer        Answer[]
   isDraft       Boolean  @default(true)
   updatedAt     DateTime @updatedAt
@@ -181,6 +193,10 @@ model Submission {
   toUserId      Int?
   fromProjectId Int?
   toProjectId   Int?
+  deadlineId    Int
+
+  @@unique([deadlineId, fromProjectId, toProjectId, toUserId]) // Milestone/Evaluation/Feedback
+  @@unique([deadlineId, fromUserId, toProjectId]) // Adviser Evaluation
 }
 
 model Answer {
@@ -196,7 +212,8 @@ model Answer {
 enum DeadlineType {
   Milestone
   Evaluation
-  Survey
+  Feedback
+  Application
   Other
 }
 
