@@ -61,7 +61,6 @@ router.get(
       const leanUsers = await getLeanUsersWithFilter(req.query);
       return apiResponseWrapper(res, { users: leanUsers });
     } catch (e) {
-      console.log(e);
       return routeErrorHandler(res, e);
     }
   }
@@ -130,7 +129,6 @@ router
         );
         return apiResponseWrapper(res, { adviser: createdAdviserRole });
       } catch (e) {
-        console.log(e);
         routeErrorHandler(res, e);
       }
     }

@@ -75,7 +75,6 @@ router
         );
         return apiResponseWrapper(res, { advisers: createdAdvisers });
       } catch (e) {
-        console.log(e);
         routeErrorHandler(res, e);
       }
     }
