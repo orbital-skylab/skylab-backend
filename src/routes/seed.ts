@@ -4,6 +4,7 @@ import { seedAdvisers } from "src/seed/adviser.seed";
 import { seedCohorts } from "src/seed/cohort.seed";
 import { seedDeadlines } from "src/seed/deadline.seed";
 import { seedMentors } from "src/seed/mentor.seed";
+import { seedRelations } from "src/seed/relation.seed";
 import { seedAll } from "src/seed/seed.index";
 import { seedStudents } from "src/seed/student.seed";
 import {
@@ -67,6 +68,13 @@ router.post("/deadlines", async (_: Request, res: Response) => {
     return apiResponseWrapper(res, { response: "Donezo" });
   } catch (e) {
     return routeErrorHandler(res, e);
+  }
+});
+router.post("/relations", async (_: Request, res: Response) => {
+  try {
+    await seedRelations();
+  } catch (e) {
+    routeErrorHandler(res, e);
   }
 });
 
