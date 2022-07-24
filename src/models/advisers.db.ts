@@ -45,6 +45,21 @@ export async function findUniqueAdviserWithUserData({
   return uniqueAdviser;
 }
 
+export async function findUniqueAdviserWithProjectData({
+  include,
+  ...query
+}: Prisma.AdviserFindUniqueArgs) {
+  const uniqueAdviser = await prisma.adviser.findUnique({
+    include: { ...include, projects: true },
+    ...query,
+    rejectOnNotFound: false,
+  });
+  if (!uniqueAdviser) {
+    throw new SkylabError("Adviser was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueAdviser;
+}
+
 export async function findManyAdvisersWithUserData({
   include,
   ...query
