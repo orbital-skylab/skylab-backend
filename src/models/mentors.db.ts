@@ -30,6 +30,21 @@ export async function findUniqueMentor(query: Prisma.MentorFindUniqueArgs) {
   return uniqueMentor;
 }
 
+export async function findUniqueMentorWithProjectData({
+  include,
+  ...query
+}: Prisma.MentorFindUniqueArgs) {
+  const uniqueMentor = await prisma.mentor.findUnique({
+    ...query,
+    include: { ...include, projects: true },
+    rejectOnNotFound: false,
+  });
+  if (!uniqueMentor) {
+    throw new SkylabError("Mentor was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueMentor;
+}
+
 export async function findUniqueMentorWithUserData({
   include,
   ...query
