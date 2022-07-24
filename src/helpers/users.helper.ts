@@ -3,12 +3,20 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
   findManyLeanUsers,
-  findManyUsersWithRoleInCohort,
+  findManyUsers,
   findUniqueUserWithRoleData,
   updateUniqueUser,
 } from "src/models/users.db";
-import { Prisma, User } from "@prisma/client";
+import {
+  Administrator,
+  Adviser,
+  Mentor,
+  Prisma,
+  Student,
+  User,
+} from "@prisma/client";
 import { UserRolesEnum } from "src/validators/user.validator";
+import { getOneCohort } from "src/models/cohorts.db";
 
 export function removePasswordFromUser(user: User) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -27,6 +35,64 @@ export async function getLeanUsersWithFilter(
   return await findManyLeanUsers(Number(cohortYear), role);
 }
 
+export async function getUsersFilterRoleInputParser(
+  role: UserRolesEnum,
+  cohortYear: number
+): Promise<{
+  where: Prisma.UserWhereInput;
+  include: Prisma.UserInclude;
+}> {
+  const cohort = cohortYear
+    ? await getOneCohort({ where: { academicYear: cohortYear } })
+    : undefined;
+  const startDate = cohort ? cohort.startDate : undefined;
+  const endDate = cohort ? cohort.endDate : undefined;
+  if (role && cohort) {
+    return {
+      where: { [role]: { some: { cohortYear: cohortYear } } },
+      include: { [role]: true },
+    };
+  } else if (!role && cohort) {
+    return {
+      where: {
+        OR: [
+          { student: { some: { cohortYear: cohortYear } } },
+          { mentor: { some: { cohortYear: cohortYear } } },
+          { adviser: { some: { cohortYear: cohortYear } } },
+          {
+            administrator: {
+              some: { endDate: { gte: startDate, lte: endDate } },
+            },
+          },
+        ],
+      },
+      include: {
+        student: true,
+        mentor: true,
+        administrator: true,
+        adviser: true,
+      },
+    };
+  } else if (role && !cohort) {
+    return {
+      where: {
+        [role]: { some: {} },
+      },
+      include: { [role]: true },
+    };
+  } else {
+    return {
+      where: {},
+      include: {
+        student: true,
+        mentor: true,
+        administrator: true,
+        adviser: true,
+      },
+    };
+  }
+}
+
 export async function getManyUsersWithFilter(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: any & {
@@ -39,34 +105,33 @@ export async function getManyUsersWithFilter(
 ) {
   const { role, limit, page, cohortYear, search } = query;
   /* Create Filter Object */
-  const userQuery: Prisma.UserFindManyArgs = {
+  let userQuery: Prisma.UserFindManyArgs = {
     take: limit ?? undefined,
     skip: limit && page ? limit * page : undefined,
     where: {
       name: search
         ? { contains: query.search, mode: "insensitive" }
         : undefined,
-      mentor:
-        role == UserRolesEnum.Mentor
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      student:
-        role == UserRolesEnum.Student
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      adviser:
-        role == UserRolesEnum.Adviser
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      administrator:
-        role == UserRolesEnum.Administrator
-          ? { some: { endDate: { gte: new Date() } } }
-          : undefined,
     },
   };
 
-  /* Fetch Users with Filter Object */
-  const users = await findManyUsersWithRoleInCohort(userQuery, cohortYear);
+  const roleCohortQuery = await getUsersFilterRoleInputParser(role, cohortYear);
+
+  userQuery = {
+    ...userQuery,
+    include: roleCohortQuery.include,
+    where: {
+      ...userQuery.where,
+      ...roleCohortQuery.where,
+    },
+  };
+
+  const users: (User & {
+    student?: Student[];
+    mentor?: Mentor[];
+    administrator?: Administrator[];
+    adviser?: Adviser[];
+  })[] = await findManyUsers(userQuery);
 
   /* Parse Users Objects */
   const parsedUsers = users.map((user) => {
@@ -74,10 +139,10 @@ export async function getManyUsersWithFilter(
     const userInfoWithoutPassword = removePasswordFromUser(userInfo);
     return {
       ...userInfoWithoutPassword,
-      student: student[0] ?? {},
-      mentor: mentor[0] ?? {},
-      adviser: adviser[0] ?? {},
-      administrator: administrator[0] ?? {},
+      student: student ? student[0] ?? {} : {},
+      mentor: mentor ? mentor[0] ?? {} : {},
+      adviser: adviser ? adviser[0] ?? {} : undefined,
+      administrator: administrator ? administrator[0] ?? {} : undefined,
     };
   });
 

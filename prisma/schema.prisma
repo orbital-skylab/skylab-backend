@@ -29,8 +29,8 @@ model User {
 }
 
 model Cohort {
-  startDate    DateTime?
-  endDate      DateTime?
+  startDate    DateTime
+  endDate      DateTime
   academicYear Int        @id
   advisers     Adviser[]
   mentors      Mentor[]
