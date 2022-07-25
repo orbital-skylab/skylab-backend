@@ -62,7 +62,7 @@ router.get("/adviser/:adviserId", async (req: Request, res: Response) => {
     const projects = await getProjectsViaRoleIds({
       adviserId: Number(adviserId),
     });
-    return apiResponseWrapper(res, projects);
+    return apiResponseWrapper(res, { projects: projects });
   } catch (e) {
     return routeErrorHandler(res, e);
   }

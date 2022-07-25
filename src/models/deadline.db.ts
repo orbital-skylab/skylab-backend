@@ -7,6 +7,7 @@ export async function findFirstDeadline(query: Prisma.DeadlineFindFirstArgs) {
   const firstDeadline = await prisma.deadline.findFirst({
     ...query,
     rejectOnNotFound: false,
+    include: { ...query.include, evaluating: true },
   });
   if (!firstDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
@@ -31,6 +32,7 @@ export async function findUniqueDeadlineWithQuestionsData({
         },
         orderBy: { sectionNumber: "asc" },
       },
+      evaluating: true,
     },
   });
 
@@ -41,7 +43,10 @@ export async function findUniqueDeadlineWithQuestionsData({
 }
 
 export async function findUniqueDeadline(query: Prisma.DeadlineFindUniqueArgs) {
-  const uniqueDeadline = await prisma.deadline.findUnique(query);
+  const uniqueDeadline = await prisma.deadline.findUnique({
+    ...query,
+    include: { evaluating: true },
+  });
   if (!uniqueDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
   }
@@ -49,7 +54,10 @@ export async function findUniqueDeadline(query: Prisma.DeadlineFindUniqueArgs) {
 }
 
 export async function findManyDeadlines(query: Prisma.DeadlineFindManyArgs) {
-  const deadlines = await prisma.deadline.findMany(query);
+  const deadlines = await prisma.deadline.findMany({
+    ...query,
+    include: { evaluating: true },
+  });
   return deadlines;
 }
 
@@ -78,6 +86,7 @@ export async function findManyDeadlinesWithQuestionsData({
         },
         orderBy: { sectionNumber: "asc" },
       },
+      evaluating: true,
     },
   });
   return deadlines;
@@ -95,5 +104,8 @@ export async function deleteOneDeadline(query: Prisma.DeadlineDeleteArgs) {
 
 export async function createOneDeadline(query: Prisma.DeadlineCreateArgs) {
   const createdDeadline = await prisma.deadline.create(query);
-  return createdDeadline;
+  const deadlineToReturn = await prisma.deadline.findUnique({
+    where: { id: createdDeadline.id },
+  });
+  return deadlineToReturn;
 }
