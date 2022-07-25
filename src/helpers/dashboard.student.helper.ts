@@ -129,7 +129,7 @@ export async function getEvaluationsByStudent(
   const evaluationSubmissions = cohortEvaluations.map(async (evaluation) => {
     const requiredEvaluationSubmissions = await Promise.all(
       projectRelations.map(async ({ toProjectId }) => {
-        if (!evaluation.evaluation) {
+        if (!evaluation.evaluatingMilestoneId) {
           throw new SkylabError(
             "Evaluation missing metadata",
             HttpStatusCode.INTERNAL_SERVER_ERROR
@@ -148,7 +148,7 @@ export async function getEvaluationsByStudent(
 
         const pToProjSubmission = findFirstSubmission({
           where: {
-            deadlineId: evaluation.evaluation.milestoneId,
+            deadlineId: evaluation.evaluatingMilestoneId,
             fromProjectId: toProjectId,
           },
         });
@@ -159,11 +159,8 @@ export async function getEvaluationsByStudent(
           pToProjSubmission,
         ]);
 
-        const { evaluation: metadata, ...evaluationData } = evaluation;
-
         return {
-          deadline: evaluationData,
-          evaluatingMilestoneId: metadata.milestoneId,
+          deadline: evaluation,
           toProject: toProject,
           submission: submission ? submission : undefined,
           toProjectSubmission: toProjSubmission ? toProjSubmission : undefined,
@@ -209,7 +206,7 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
   ]);
 
   const pEvaluationsToProject = cohortEvaluations.map(async (evaluation) => {
-    if (!evaluation.evaluation) {
+    if (!evaluation.evaluating) {
       throw new SkylabError(
         "Evaluation missing metadata",
         HttpStatusCode.INTERNAL_SERVER_ERROR
@@ -221,13 +218,8 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
       include: { fromProject: true, fromUser: true },
     });
 
-    const { evaluation: metadata, ...evaluationData } = evaluation;
-
     return {
-      deadline: {
-        ...evaluationData,
-        milestoneId: metadata.milestoneId,
-      },
+      deadline: evaluation,
       submissions: receivedEvaluations,
     };
   });

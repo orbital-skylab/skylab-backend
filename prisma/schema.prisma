@@ -110,29 +110,22 @@ model Project {
 }
 
 model Deadline {
-  id         Int          @id @default(autoincrement())
-  name       String
-  cohort     Cohort       @relation(fields: [cohortYear], references: [academicYear])
-  cohortYear Int
-  createdOn  DateTime     @default(now())
-  dueBy      DateTime
-  desc       String?
-  type       DeadlineType
-  updatedAt  DateTime     @updatedAt
-  sections   Section[]
-  Submission Submission[]
-  evaluation Evaluation?  @relation("self")
-  evaluating Evaluation?  @relation("milestone")
+  id                    Int          @id @default(autoincrement())
+  name                  String
+  cohort                Cohort       @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear            Int
+  createdOn             DateTime     @default(now())
+  dueBy                 DateTime
+  desc                  String?
+  type                  DeadlineType
+  updatedAt             DateTime     @updatedAt
+  sections              Section[]
+  Submission            Submission[]
+  evaluating            Deadline?    @relation(fields: [evaluatingMilestoneId], references: [id], name: "evaluation")
+  evaluatingMilestoneId Int          @unique
+  evaluatedBy           Deadline?    @relation(name: "evaluation")
 
   @@unique([name, cohortYear])
-}
-
-model Evaluation {
-  id          Int      @id @default(autoincrement())
-  deadline    Deadline @relation(fields: [deadlineId], references: [id], name: "self", onDelete: Cascade)
-  deadlineId  Int      @unique
-  milestone   Deadline @relation(fields: [milestoneId], references: [id], name: "milestone", onDelete: Cascade)
-  milestoneId Int      @unique
 }
 
 model Section {

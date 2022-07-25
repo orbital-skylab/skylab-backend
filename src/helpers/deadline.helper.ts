@@ -44,10 +44,10 @@ export async function createDeadline(body: {
     data: {
       cohort: { connect: { academicYear: cohortYear } },
       ...deadline,
-      evaluation:
+      evaluating:
         deadline.type === "Evaluation"
           ? {
-              create: { milestone: { connect: { id: evaluatingMilestoneId } } },
+              connect: { id: evaluatingMilestoneId },
             }
           : undefined,
     },

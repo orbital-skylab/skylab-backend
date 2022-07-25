@@ -3,11 +3,14 @@ import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { prisma } from "../client";
 
-export async function findFirstDeadline(query: Prisma.DeadlineFindFirstArgs) {
+export async function findFirstDeadline({
+  include,
+  ...query
+}: Prisma.DeadlineFindFirstArgs) {
   const firstDeadline = await prisma.deadline.findFirst({
     ...query,
     rejectOnNotFound: false,
-    include: { ...query.include, evaluating: true },
+    include: { ...include, evaluating: true },
   });
   if (!firstDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
@@ -42,10 +45,13 @@ export async function findUniqueDeadlineWithQuestionsData({
   return uniqueDeadline;
 }
 
-export async function findUniqueDeadline(query: Prisma.DeadlineFindUniqueArgs) {
+export async function findUniqueDeadline({
+  include,
+  ...query
+}: Prisma.DeadlineFindUniqueArgs) {
   const uniqueDeadline = await prisma.deadline.findUnique({
     ...query,
-    include: { evaluating: true },
+    include: { ...include, evaluating: true },
   });
   if (!uniqueDeadline) {
     throw new SkylabError("Deadline was not found", HttpStatusCode.BAD_REQUEST);
@@ -53,18 +59,24 @@ export async function findUniqueDeadline(query: Prisma.DeadlineFindUniqueArgs) {
   return uniqueDeadline;
 }
 
-export async function findManyDeadlines(query: Prisma.DeadlineFindManyArgs) {
+export async function findManyDeadlines({
+  include,
+  ...query
+}: Prisma.DeadlineFindManyArgs) {
   const deadlines = await prisma.deadline.findMany({
     ...query,
-    include: { evaluating: true },
+    include: { ...include, evaluating: true },
   });
   return deadlines;
 }
 
-export async function findManyEvaluations(query: Prisma.DeadlineFindManyArgs) {
+export async function findManyEvaluations({
+  include,
+  ...query
+}: Prisma.DeadlineFindManyArgs) {
   const evaluations = await prisma.deadline.findMany({
     ...query,
-    include: { evaluation: true },
+    include: { ...include, evaluating: true },
   });
   return evaluations;
 }
