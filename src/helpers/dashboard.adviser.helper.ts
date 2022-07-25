@@ -40,7 +40,7 @@ export async function getEvaluationsByAdviser(
   const evaluationSubmissions = cohortEvaluations.map(async (evaluation) => {
     const requiredEvaluationSubmissions = await Promise.all(
       projects.map(async (project) => {
-        if (!evaluation.evaluating) {
+        if (!evaluation.evaluating || !evaluation.evaluatingMilestoneId) {
           throw new SkylabError(
             "Evaluation missing metadata",
             HttpStatusCode.INTERNAL_SERVER_ERROR
