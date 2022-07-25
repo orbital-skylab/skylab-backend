@@ -149,17 +149,22 @@ export async function replaceSectionsById(
 
 export async function editDeadlineByDeadlineId(
   deadlineId: number,
-  body: any & {
+  body: {
     deadline: Omit<
       Prisma.DeadlineUpdateInput,
       "cohort" | "cohortYear" | "questions"
-    >;
+    > & { evaluatingMilestoneId?: number };
   }
 ) {
-  const deadline: Prisma.DeadlineUpdateInput = body.deadline;
+  const { evaluatingMilestoneId, ...deadline } = body.deadline;
   const updatedDeadline = await updateOneDeadline({
     where: { id: deadlineId },
-    data: deadline,
+    data: {
+      ...deadline,
+      evaluating: evaluatingMilestoneId
+        ? { connect: { id: evaluatingMilestoneId } }
+        : undefined,
+    },
     include: { evaluating: true },
   });
   return updatedDeadline;
