@@ -38,10 +38,9 @@ export async function getEvaluationsByAdviser(
   });
 
   const evaluationSubmissions = cohortEvaluations.map(async (evaluation) => {
-    const { evaluation: metadata, ...evaluationData } = evaluation;
     const requiredEvaluationSubmissions = await Promise.all(
       projects.map(async (project) => {
-        if (!metadata) {
+        if (!evaluation.evaluating) {
           throw new SkylabError(
             "Evaluation missing metadata",
             HttpStatusCode.INTERNAL_SERVER_ERROR
@@ -60,7 +59,7 @@ export async function getEvaluationsByAdviser(
 
         const pProjectSubmission = findFirstSubmission({
           where: {
-            deadlineId: metadata.milestoneId,
+            deadlineId: evaluation.evaluatingMilestoneId,
             fromProjectId: toProjectId,
             isDraft: false,
           },
@@ -73,10 +72,7 @@ export async function getEvaluationsByAdviser(
         ]);
 
         return {
-          deadline: {
-            ...evaluationData,
-            milestoneId: metadata.milestoneId,
-          },
+          deadline: evaluation,
           toProject: {
             ...project,
             submissionId: projectSubmission ? projectSubmission.id : undefined,
@@ -186,8 +182,7 @@ export async function getProjectEvaluationSubmissionsByAdviser(
   });
 
   const projectEvaluationSubmissions = evaluations.map(async (evaluation) => {
-    const { evaluation: metadata, ...evaluationData } = evaluation;
-    if (!metadata) {
+    if (!evaluation.evaluating) {
       throw new SkylabError(
         "Evaluation missing metadata",
         HttpStatusCode.INTERNAL_SERVER_ERROR
@@ -202,10 +197,7 @@ export async function getProjectEvaluationSubmissionsByAdviser(
       include: { toProject: true },
     });
     return {
-      deadline: {
-        ...evaluationData,
-        milestoneId: metadata.milestoneId,
-      },
+      deadline: evaluation,
       submissions: submissions,
     };
   });
