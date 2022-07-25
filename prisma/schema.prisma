@@ -175,7 +175,7 @@ model EvaluationRelation {
 model Submission {
   id            Int      @id @default(autoincrement())
   deadline      Deadline @relation(fields: [deadlineId], references: [id])
-  Answer        Answer[]
+  answers       Answer[]
   isDraft       Boolean  @default(true)
   updatedAt     DateTime @updatedAt
   fromUser      User?    @relation(fields: [fromUserId], references: [id], name: "from_user")
@@ -193,8 +193,8 @@ model Submission {
 }
 
 model Answer {
-  submission   Submission @relation(fields: [submissionId], references: [id])
-  question     Question   @relation(fields: [questionId], references: [id])
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
   questionId   Int
   answer       String
   submissionId Int

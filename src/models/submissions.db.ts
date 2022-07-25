@@ -21,3 +21,17 @@ export async function findManySubmissions(
   const submissions = await prisma.submission.findMany(query);
   return submissions;
 }
+
+export async function createUniqueSubmission(
+  query: Prisma.SubmissionCreateArgs
+) {
+  const createdSubmission = await prisma.submission.create(query);
+  return createdSubmission;
+}
+
+export async function updateUniqueSubmission(
+  query: Prisma.SubmissionUpdateArgs
+) {
+  const updatedSubmission = await prisma.submission.update(query);
+  return updatedSubmission;
+}

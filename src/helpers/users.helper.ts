@@ -61,7 +61,12 @@ export async function getUsersFilterRoleInputParser(
           { adviser: { some: { cohortYear: cohortYear } } },
           {
             administrator: {
-              some: { endDate: { gte: startDate, lte: endDate } },
+              some: {
+                OR: [
+                  { endDate: { gte: startDate, lte: endDate } },
+                  { startDate: { gte: startDate, lte: endDate } },
+                ],
+              },
             },
           },
         ],
