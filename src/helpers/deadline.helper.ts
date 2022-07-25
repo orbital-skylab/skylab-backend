@@ -63,10 +63,9 @@ export function parseQuestionsInput(
   questions: (Question & { options?: Option[] })[]
 ) {
   const parsedQuestions = questions.map(({ options, ...question }) => {
-    const optionsStringArr = options?.map((option) => option.option);
     return {
       ...question,
-      options: optionsStringArr ? optionsStringArr : undefined,
+      options: options ? options.map((option) => option.option) : undefined,
     };
   });
 
@@ -109,7 +108,7 @@ export async function replaceSectionsById(
   await deleteManySections({ where: { deadlineId: deadlineId } });
 
   const pCreateSections = sections.map(async (section, index) => {
-    const sectionNumber = index + 1;
+    const sectionNumber: number = index + 1;
     const { questions, ...sectionData } = section;
     const createdSection = await createOneSection({
       data: {
@@ -161,8 +160,9 @@ export async function editDeadlineByDeadlineId(
   const updatedDeadline = await updateOneDeadline({
     where: { id: deadlineId },
     data: deadline,
+    include: { evaluating: true },
   });
-  return await findUniqueDeadline({ where: { id: updatedDeadline.id } });
+  return updatedDeadline;
 }
 
 export async function deleteOneDeadlineByDeadlineId(deadlineId: number) {

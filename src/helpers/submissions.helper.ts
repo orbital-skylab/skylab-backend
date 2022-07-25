@@ -71,16 +71,9 @@ export async function updateOneSubmissionBySubmissionId(
   data: { answers?: Omit<Answer, "submissionId">[]; isDraft?: boolean }
 ) {
   const { answers, isDraft } = data;
-  await deleteManyAnswers({ where: { submissionId: submissionId } });
-
-  if (isDraft) {
-    await updateUniqueSubmission({
-      where: { id: submissionId },
-      data: { isDraft: isDraft },
-    });
-  }
 
   if (answers) {
+    await deleteManyAnswers({ where: { submissionId: submissionId } });
     await Promise.all(
       answers.map(async ({ questionId, answer }) => {
         return await createUniqueAnswer({
@@ -94,5 +87,13 @@ export async function updateOneSubmissionBySubmissionId(
     );
   }
 
-  return await findUniqueSubmission({ where: { id: submissionId } });
+  if (isDraft) {
+    return await updateUniqueSubmission({
+      where: { id: submissionId },
+      data: { isDraft: isDraft },
+      include: { answers: true },
+    });
+  } else {
+    return await findUniqueSubmission({ where: { id: submissionId } });
+  }
 }
