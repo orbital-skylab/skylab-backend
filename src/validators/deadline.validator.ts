@@ -24,7 +24,7 @@ export const CreateDeadlineValidator = [
     .isISO8601()
     .withMessage("Deadline due date must be present and in IS8601 format"),
   body("deadline.type").isIn(Object.values(DeadlineType)),
-  body("deadline.evaluatingDeadlineId")
+  body("deadline.evaluatingMilestoneId")
     .if(body("deadline.type").equals("Evaluation"))
     .notEmpty()
     .isNumeric()
