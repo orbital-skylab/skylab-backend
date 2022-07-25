@@ -121,7 +121,7 @@ model Deadline {
   updatedAt  DateTime     @updatedAt
   sections   Section[]
   Submission Submission[]
-  evaluation Evaluation?  @relation("deadline")
+  evaluation Evaluation?  @relation("self")
   evaluating Evaluation?  @relation("milestone")
 
   @@unique([name, cohortYear])
@@ -129,7 +129,7 @@ model Deadline {
 
 model Evaluation {
   id          Int      @id @default(autoincrement())
-  deadline    Deadline @relation(fields: [deadlineId], references: [id], name: "deadline", onDelete: Cascade)
+  deadline    Deadline @relation(fields: [deadlineId], references: [id], name: "self", onDelete: Cascade)
   deadlineId  Int      @unique
   milestone   Deadline @relation(fields: [milestoneId], references: [id], name: "milestone", onDelete: Cascade)
   milestoneId Int      @unique

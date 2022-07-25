@@ -1,4 +1,4 @@
-import { Adviser, Project, Student } from "@prisma/client";
+import { Adviser, Deadline, Project, Student } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
 import { findUniqueProject } from "src/models/projects.db";
@@ -45,20 +45,22 @@ export async function getFeedbacksByStudent(
     where: { cohortYear: cohortYear, type: "Feedback" },
   });
 
-  const pFeedbackSubmissions = cohortFeedbacks.map(async (feedback) => {
-    const submission = await findFirstSubmission({
-      where: {
-        deadlineId: feedback.id,
-        fromProjectId: project.id,
-        toUserId: project.adviserId,
-      },
-    });
-    return {
-      ...feedback,
-      toUser: project.adviser,
-      submission: submission ? submission : undefined,
-    };
-  });
+  const pFeedbackSubmissions = cohortFeedbacks.map(
+    async (feedback: Deadline) => {
+      const submission = await findFirstSubmission({
+        where: {
+          deadlineId: feedback.id,
+          fromProjectId: project.id,
+          toUserId: project.adviserId,
+        },
+      });
+      return {
+        deadline: feedback,
+        toUser: project.adviser,
+        submission: submission ? submission : undefined,
+      };
+    }
+  );
 
   return await Promise.all(pFeedbackSubmissions);
 }
@@ -80,17 +82,20 @@ export async function getMilestonesByStudent(
     orderBy: { createdOn: "asc" },
   });
 
-  const milestoneSubmissions = cohortMilestones.map(async (deadline) => {
-    const submission = await findFirstSubmission({
-      where: { deadlineId: deadline.id, fromProjectId: project.id },
-      rejectOnNotFound: false,
-    });
+  const milestoneSubmissions = cohortMilestones.map(
+    async (deadline: Deadline) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const submission = await findFirstSubmission({
+        where: { deadlineId: deadline.id, fromProjectId: project.id },
+        rejectOnNotFound: false,
+      });
 
-    return {
-      ...deadline,
-      submission: submission ? submission : undefined,
-    };
-  });
+      return {
+        deadline: deadline,
+        submission: submission ? submission : undefined,
+      };
+    }
+  );
   return await Promise.all(milestoneSubmissions);
 }
 
@@ -157,8 +162,8 @@ export async function getEvaluationsByStudent(
         const { evaluation: metadata, ...evaluationData } = evaluation;
 
         return {
-          ...evaluationData,
-          milestoneId: metadata.milestoneId,
+          deadline: evaluationData,
+          evaluatingMilestoneId: metadata.milestoneId,
           toProject: toProject,
           submission: submission ? submission : undefined,
           toProjectSubmission: toProjSubmission ? toProjSubmission : undefined,
