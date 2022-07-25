@@ -122,7 +122,7 @@ model Deadline {
   sections              Section[]
   Submission            Submission[]
   evaluating            Deadline?    @relation(fields: [evaluatingMilestoneId], references: [id], name: "evaluation")
-  evaluatingMilestoneId Int          @unique
+  evaluatingMilestoneId Int?         @unique
   evaluatedBy           Deadline?    @relation(name: "evaluation")
 
   @@unique([name, cohortYear])
