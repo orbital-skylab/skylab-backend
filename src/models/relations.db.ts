@@ -52,6 +52,17 @@ export async function findManyRelations(
   });
 }
 
+export async function findManyRelationsWithFromProjectData({
+  include,
+  ...query
+}: Prisma.EvaluationRelationFindManyArgs) {
+  return await prisma.evaluationRelation.findMany({
+    ...query,
+    orderBy: [{ fromProjectId: "asc" }, { toProjectId: "asc" }],
+    include: { ...include, fromProject: true },
+  });
+}
+
 export async function deleteOneRelation(
   relation: Prisma.EvaluationRelationDeleteArgs
 ) {

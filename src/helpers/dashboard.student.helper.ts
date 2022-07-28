@@ -1,13 +1,25 @@
-import { Adviser, Deadline, Project, Student } from "@prisma/client";
+import {
+  Adviser,
+  Deadline,
+  EvaluationRelation,
+  Project,
+  Student,
+} from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
+import { findUniqueAdviser } from "src/models/advisers.db";
 import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
 import { findUniqueProject } from "src/models/projects.db";
-import { findManyRelations } from "src/models/relations.db";
+import {
+  findManyRelations,
+  findManyRelationsWithFromProjectData,
+} from "src/models/relations.db";
 import { findUniqueStudentWithProjectWithAdviserData } from "src/models/students.db";
 import {
   findFirstSubmission,
   findManySubmissions,
+  findUniqueSubmission,
 } from "src/models/submissions.db";
+import { findUniqueUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export async function getDeadlinesByStudentId(studentId: number) {
@@ -178,67 +190,88 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
     where: { id: studentId },
   });
 
-  if (!student.project) {
+  if (!student.projectId || !student.project) {
     throw new SkylabError(
       "This student is not part of a project, and hence has no deadlines!",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  if (!student.project.adviser) {
+  const { project, projectId, cohortYear } = student;
+
+  if (!project.adviser) {
     throw new SkylabError(
       "This student in in a project with no advisers, and hence is not required to submit feedback!",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
+  const { adviser } = project;
+
+  const pAdviserUser = findUniqueUser({ where: { id: adviser.userId } });
+
   const pCohortEvaluations = findManyEvaluations({
-    where: { cohortYear: student.cohortYear, type: "Evaluation" },
+    where: { cohortYear: cohortYear, type: "Evaluation" },
   });
 
   const pCohortFeedbacks = findManyDeadlines({
-    where: { cohortYear: student.cohortYear, type: "Feedback" },
+    where: { cohortYear: cohortYear, type: "Feedback" },
   });
 
-  const [cohortEvaluations, cohortFeedbacks] = await Promise.all([
+  const [adviserUser, cohortEvaluations, cohortFeedbacks] = await Promise.all([
+    pAdviserUser,
     pCohortEvaluations,
     pCohortFeedbacks,
   ]);
 
-  const pEvaluationsToProject = cohortEvaluations.map(async (evaluation) => {
-    if (!evaluation.evaluating) {
-      throw new SkylabError(
-        "Evaluation missing metadata",
-        HttpStatusCode.INTERNAL_SERVER_ERROR
-      );
+  const relations = await findManyRelationsWithFromProjectData({
+    where: {
+      toProjectId: projectId,
+    },
+  });
+
+  const pProjectSubmissions = [...cohortEvaluations, ...cohortFeedbacks].map(
+    async (deadline) => {
+      const pPeerSubmissions = relations.map(async (relation) => {
+        const submission = await findFirstSubmission({
+          where: {
+            deadlineId: deadline.id,
+            fromProjectId: relation.fromProjectId,
+            toProjectId: projectId,
+          },
+        });
+        return {
+          ...submission,
+          fromProject: relation.fromProject,
+        };
+      });
+
+      if (deadline.type !== "Evaluation") {
+        return {
+          deadline: deadline,
+          submissions: await Promise.all(pPeerSubmissions),
+        };
+      }
+
+      const pAdviserSubmission = findFirstSubmission({
+        where: {
+          deadlineId: deadline.id,
+          fromUserId: adviserUser.id,
+          toProjectId: projectId,
+        },
+      });
+
+      return {
+        deadline: deadline,
+        submissions: (
+          await Promise.all([
+            ...pPeerSubmissions,
+            { fromUser: adviserUser, ...(await pAdviserSubmission) },
+          ])
+        ).flat(),
+      };
     }
-
-    const receivedEvaluations = await findManySubmissions({
-      where: { deadlineId: evaluation.id, toProjectId: student.projectId },
-      include: { fromProject: true, fromUser: true },
-    });
-
-    return {
-      deadline: evaluation,
-      submissions: receivedEvaluations,
-    };
-  });
-
-  const pFeedbacksToProject = cohortFeedbacks.map(async (feedback) => {
-    const receivedFeedbacks = await findManySubmissions({
-      where: { deadlineId: feedback.id, toProjectId: student.projectId },
-      include: { fromUser: true },
-    });
-
-    return {
-      deadline: feedback,
-      submissions: receivedFeedbacks,
-    };
-  });
-
-  const peerEvaluationsFeedbacks = await Promise.all(
-    [pEvaluationsToProject, pFeedbacksToProject].flat()
   );
 
-  return peerEvaluationsFeedbacks;
+  return await Promise.all(pProjectSubmissions);
 }
