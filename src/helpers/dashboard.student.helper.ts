@@ -219,6 +219,8 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
     },
   });
 
+  console.log("Here");
+
   const pProjectSubmissions = [...cohortEvaluations, ...cohortFeedbacks].map(
     async (deadline) => {
       const pPeerSubmissions = relations.map(async (relation) => {
@@ -250,14 +252,17 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
         },
       });
 
+      const [peerSubmissions, adviserSubmission] = await Promise.all([
+        pPeerSubmissions,
+        pAdviserSubmission,
+      ]);
+
       return {
         deadline: deadline,
-        submissions: (
-          await Promise.all([
-            ...pPeerSubmissions,
-            { fromUser: adviserUser, ...(await pAdviserSubmission) },
-          ])
-        ).flat(),
+        submissions: [
+          ...peerSubmissions,
+          { fromUser: adviserUser, ...adviserSubmission },
+        ],
       };
     }
   );
