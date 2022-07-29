@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma, Question, DeadlineType, Option } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneDeadline,
   deleteOneDeadline,
@@ -10,6 +11,7 @@ import {
 } from "src/models/deadline.db";
 import { createOneQuestion } from "src/models/questions.db";
 import { createOneSection, deleteManySections } from "src/models/sections.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export async function getManyDeadlinesWithFilter(
   query: any & { cohortYear?: number; name?: string }
@@ -40,7 +42,7 @@ export async function createDeadline(body: {
 }) {
   const { deadline: deadlineData } = body;
   const { evaluatingMilestoneId, cohortYear, ...deadline } = deadlineData;
-  return await createOneDeadline({
+  const createdDeadline = await createOneDeadline({
     data: {
       cohort: { connect: { academicYear: cohortYear } },
       ...deadline,
@@ -52,6 +54,14 @@ export async function createDeadline(body: {
           : undefined,
     },
   });
+
+  if (!createdDeadline) {
+    throw new SkylabError(
+      "Error occurred while creating deadline",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+  return await findUniqueDeadline({ where: { id: createdDeadline.id } });
 }
 
 export async function getOneDeadlineById(deadlineId: number) {
