@@ -1,12 +1,5 @@
-import {
-  Adviser,
-  Deadline,
-  EvaluationRelation,
-  Project,
-  Student,
-} from "@prisma/client";
+import { Adviser, Deadline, Project, Student } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueAdviser } from "src/models/advisers.db";
 import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
 import { findUniqueProject } from "src/models/projects.db";
 import {
@@ -14,11 +7,7 @@ import {
   findManyRelationsWithFromProjectData,
 } from "src/models/relations.db";
 import { findUniqueStudentWithProjectWithAdviserData } from "src/models/students.db";
-import {
-  findFirstSubmission,
-  findManySubmissions,
-  findUniqueSubmission,
-} from "src/models/submissions.db";
+import { findFirstSubmission } from "src/models/submissions.db";
 import { findUniqueUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
