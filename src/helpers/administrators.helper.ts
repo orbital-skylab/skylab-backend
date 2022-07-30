@@ -119,25 +119,37 @@ export async function createManyUsersWithAdministratorRole(
       };
     })
   );
-  const createdAccounts = [];
-  for (const account of accountsWithHashedPasswords) {
-    const { user, administrator } = account;
-    const [createdUser, createdAdministrator] = await prisma.$transaction([
-      prisma.user.create({ data: user }),
-      prisma.administrator.create({
-        data: {
-          ...administrator,
-          user: { connect: { email: user.email } },
-        },
-      }),
-    ]);
-    createdAccounts.push({
-      user: removePasswordFromUser(createdUser),
-      administrator: createdAdministrator,
-    });
-  }
 
-  return createdAccounts;
+  const createAccountAttempts = await Promise.allSettled(
+    accountsWithHashedPasswords.map(async (account) => {
+      const { user, administrator } = account;
+      const [createdUser, createdAdministrator] = await prisma.$transaction([
+        prisma.user.create({ data: user }),
+        prisma.administrator.create({
+          data: {
+            ...administrator,
+            user: { connect: { email: user.email } },
+          },
+        }),
+      ]);
+      return {
+        user: removePasswordFromUser(createdUser),
+        administrator: createdAdministrator,
+      };
+    })
+  );
+
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return {
+          rowNumber: index + 1,
+          message: attempt.reason?.message,
+          meta: attempt.reason?.meta,
+        };
+      }
+    })
+    .filter((error) => error);
 }
 
 export async function addAdministratorRoleToUser(userId: string, body: any) {
