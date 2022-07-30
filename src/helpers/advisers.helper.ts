@@ -142,32 +142,43 @@ export async function createManyUsersWithAdviserRole(
     })
   );
 
-  const createdAccounts = [];
-  for (const account of accountsWithHashedPasswords) {
-    const { user, adviser } = account;
-    const { cohortYear, ...adviserData } = adviser;
-    const [createdUser, createdAdviser] = await prisma.$transaction([
-      prisma.user.create({
-        data: { ...user },
-      }),
-      prisma.adviser.create({
-        data: {
-          ...adviserData,
-          user: { connect: { email: user.email } },
-          cohort: { connect: { academicYear: cohortYear } },
-        },
-      }),
-    ]);
+  const createAccountAttempts = await Promise.allSettled(
+    accountsWithHashedPasswords.map(async (account) => {
+      const { user, adviser } = account;
+      const { cohortYear, ...adviserData } = adviser;
+      const [createdUser, createdAdviser] = await prisma.$transaction([
+        prisma.user.create({
+          data: { ...user },
+        }),
+        prisma.adviser.create({
+          data: {
+            ...adviserData,
+            user: { connect: { email: user.email } },
+            cohort: { connect: { academicYear: cohortYear } },
+          },
+        }),
+      ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...createdUserWithoutPassword } = createdUser;
-    createdAccounts.push({
-      ...createdUserWithoutPassword,
-      adviser: createdAdviser,
-    });
-  }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...createdUserWithoutPassword } = createdUser;
+      return {
+        ...createdUserWithoutPassword,
+        adviser: createdAdviser,
+      };
+    })
+  );
 
-  return createdAccounts;
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return {
+          rowNumber: index + 1,
+          message: attempt.reason?.message,
+          meta: attempt.reason?.meta,
+        };
+      }
+    })
+    .filter((error) => error);
 }
 
 export async function addAdviserRoleToUser(userId: number, body: any) {

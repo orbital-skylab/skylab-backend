@@ -69,11 +69,11 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const createdAdvisers = await createManyUsersWithAdviserRole(
+        const createAdviserErrors = await createManyUsersWithAdviserRole(
           req.body,
           false
         );
-        return apiResponseWrapper(res, { advisers: createdAdvisers });
+        return apiResponseWrapper(res, { errors: createAdviserErrors });
       } catch (e) {
         routeErrorHandler(res, e);
       }
