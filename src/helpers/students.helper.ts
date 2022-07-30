@@ -136,38 +136,52 @@ export async function createManyUsersWithStudentRole(
     }
   }
 
-  const createdAccounts = [];
-  for (const account of accounts) {
-    const { project, student: _student } = account;
-    const { user, student } = _student;
-    const { cohortYear, ...studentData } = student;
-    const [createdUser, createdStudent] = await prisma.$transaction([
-      prisma.user.create({ data: user }),
-      prisma.student.create({
-        data: {
-          ...studentData,
-          user: { connect: { email: user.email } },
-          cohort: { connect: { academicYear: cohortYear } },
-          project: {
-            connectOrCreate: {
-              where: {
-                name_cohortYear: { name: project.name, cohortYear: cohortYear },
+  const createAccountAttempts = await Promise.allSettled(
+    accounts.map(async (account) => {
+      const { project, student: _student } = account;
+      const { user, student } = _student;
+      const { cohortYear, ...studentData } = student;
+      const [createdUser, createdStudent] = await prisma.$transaction([
+        prisma.user.create({ data: user }),
+        prisma.student.create({
+          data: {
+            ...studentData,
+            user: { connect: { email: user.email } },
+            cohort: { connect: { academicYear: cohortYear } },
+            project: {
+              connectOrCreate: {
+                where: {
+                  name_cohortYear: {
+                    name: project.name,
+                    cohortYear: cohortYear,
+                  },
+                },
+                create: project,
               },
-              create: project,
             },
           },
-        },
-      }),
-    ]);
+        }),
+      ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    createdAccounts.push({
-      user: removePasswordFromUser(createdUser),
-      student: createdStudent,
-    });
-  }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      return {
+        user: removePasswordFromUser(createdUser),
+        student: createdStudent,
+      };
+    })
+  );
 
-  return createdAccounts;
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return {
+          rowNumber: index + 1,
+          message: attempt.reason?.message,
+          meta: attempt.reason?.meta,
+        };
+      }
+    })
+    .filter((error) => error);
 }
 
 export async function addStudentRoleToUser(userId: string, body: any) {

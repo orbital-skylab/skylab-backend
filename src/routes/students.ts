@@ -70,11 +70,11 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const createdStudents = await createManyUsersWithStudentRole(
+        const createStudentErrors = await createManyUsersWithStudentRole(
           req.body,
           false
         );
-        return apiResponseWrapper(res, { students: createdStudents });
+        return apiResponseWrapper(res, { errors: createStudentErrors });
       } catch (e) {
         routeErrorHandler(res, e);
       }
