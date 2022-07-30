@@ -68,11 +68,11 @@ router.post(
       return throwValidationError(res, errors);
     }
     try {
-      const createdMentors = await createManyUsersWithMentorRole(
+      const createMentorErrors = await createManyUsersWithMentorRole(
         req.body,
         false
       );
-      return apiResponseWrapper(res, { mentors: createdMentors });
+      return apiResponseWrapper(res, { errors: createMentorErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }

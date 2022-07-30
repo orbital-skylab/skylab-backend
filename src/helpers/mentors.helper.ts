@@ -138,32 +138,43 @@ export async function createManyUsersWithMentorRole(
     })
   );
 
-  const createdAccounts = [];
-  for (const account of accountsWithHashedPasswords) {
-    const { user, mentor } = account;
-    const { cohortYear, ...mentorData } = mentor;
-    const [createdUser, createdMentor] = await prisma.$transaction([
-      prisma.user.create({
-        data: { ...user },
-      }),
-      prisma.mentor.create({
-        data: {
-          ...mentorData,
-          user: { connect: { email: user.email } },
-          cohort: { connect: { academicYear: cohortYear } },
-        },
-      }),
-    ]);
+  const createAccountAttempts = await Promise.allSettled(
+    accountsWithHashedPasswords.map(async (account) => {
+      const { user, mentor } = account;
+      const { cohortYear, ...mentorData } = mentor;
+      const [createdUser, createdMentor] = await prisma.$transaction([
+        prisma.user.create({
+          data: { ...user },
+        }),
+        prisma.mentor.create({
+          data: {
+            ...mentorData,
+            user: { connect: { email: user.email } },
+            cohort: { connect: { academicYear: cohortYear } },
+          },
+        }),
+      ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...createdUserWithoutPassword } = createdUser;
-    createdAccounts.push({
-      ...createdUserWithoutPassword,
-      mentor: createdMentor,
-    });
-  }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...createdUserWithoutPassword } = createdUser;
+      return {
+        ...createdUserWithoutPassword,
+        mentor: createdMentor,
+      };
+    })
+  );
 
-  return createdAccounts;
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return {
+          rowNumber: index + 1,
+          message: attempt.reason?.message,
+          meta: attempt.reason?.meta,
+        };
+      }
+    })
+    .filter((error) => error);
 }
 
 export async function addMentorRoleToUser(userId: string, body: any) {
