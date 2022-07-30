@@ -76,7 +76,7 @@ export async function getDeadlinesByStudentId(studentId: number) {
         };
       });
       return await Promise.all(pEvaluationDeadlines);
-    } else if (deadline.type == "Feedback") {
+    } else {
       const submission = await findFirstSubmission({
         where: {
           deadlineId: deadline.id,
