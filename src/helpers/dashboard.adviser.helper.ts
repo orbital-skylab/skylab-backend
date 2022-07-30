@@ -2,10 +2,8 @@ import { Adviser, Project } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { findUniqueAdviserWithProjectData } from "src/models/advisers.db";
 import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
-import {
-  findFirstSubmission,
-  findManySubmissions,
-} from "src/models/submissions.db";
+import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
+import { findFirstSubmission } from "src/models/submissions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export async function getDeadlinesByAdviserId(adviserId: number) {
@@ -133,102 +131,68 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
 
   const projectIds = adviser.projects.map(({ id }) => id);
 
-  const pDeadlineSubmissions = [
-    getProjectMilestoneSubmissionsByAdviser(adviser, projectIds),
-    getProjectEvaluationSubmissionsByAdviser(adviser, projectIds),
-    getProjectFeedbackSubmissionsByAdviser(adviser, projectIds),
-  ];
-
-  return (await Promise.all(pDeadlineSubmissions)).flat();
-}
-
-export async function getProjectMilestoneSubmissionsByAdviser(
-  adviser: Adviser & { projects: Project[] },
-  projectIds: number[]
-) {
-  const { cohortYear } = adviser;
-
-  const milestones = await findManyDeadlines({
-    where: { cohortYear: cohortYear, type: "Milestone" },
+  const relations = await findManyRelationsWithFromToProjectData({
+    where: { fromProjectId: { in: projectIds } },
   });
 
-  const projectMilestoneSubmissions = milestones.map(async (milestone) => {
-    const submissions = await findManySubmissions({
-      where: {
-        deadlineId: milestone.id,
-        fromProjectId: { in: projectIds },
-        isDraft: false,
-      },
-      include: { fromProject: true },
-    });
-
-    return {
-      deadline: milestone,
-      submissions: submissions,
-    };
+  const cohortDeadlines = await findManyDeadlines({
+    where: { cohortYear: adviser.cohortYear },
   });
 
-  return await Promise.all(projectMilestoneSubmissions);
-}
-
-export async function getProjectEvaluationSubmissionsByAdviser(
-  adviser: Adviser & { projects: Project[] },
-  projectIds: number[]
-) {
-  const { cohortYear } = adviser;
-
-  const evaluations = await findManyEvaluations({
-    where: { cohortYear: cohortYear, type: "Evaluation" },
-  });
-
-  const projectEvaluationSubmissions = evaluations.map(async (evaluation) => {
-    if (!evaluation.evaluating) {
-      throw new SkylabError(
-        "Evaluation missing metadata",
-        HttpStatusCode.INTERNAL_SERVER_ERROR
-      );
+  const pProjectSubmissions = cohortDeadlines.map(async (deadline) => {
+    if (deadline.type == "Milestone") {
+      const milestoneSubmissions = adviser.projects.map(async (project) => {
+        const submission = await findFirstSubmission({
+          where: { deadlineId: deadline.id, fromProjectId: project.id },
+        });
+        return {
+          fromProject: project,
+          submission: submission ? submission : undefined,
+        };
+      });
+      return {
+        deadline: deadline,
+        submissions: await Promise.all(milestoneSubmissions),
+      };
+    } else if (deadline.type == "Evaluation") {
+      const evaluationSubmissions = relations.map(async (relation) => {
+        const submission = await findFirstSubmission({
+          where: {
+            deadlineId: deadline.id,
+            fromProjectId: relation.fromProjectId,
+            toProjectId: relation.toProjectId,
+          },
+        });
+        return {
+          fromProject: relation.fromProject,
+          toProject: relation.toProject,
+          submission: submission ? submission : undefined,
+        };
+      });
+      return {
+        deadline: deadline,
+        submissions: await Promise.all(evaluationSubmissions),
+      };
+    } else if (deadline.type == "Feedback") {
+      const feedbackSubmissions = adviser.projects.map(async (project) => {
+        const submission = await findFirstSubmission({
+          where: {
+            deadlineId: deadline.id,
+            fromProjectId: project.id,
+            toUserId: adviser.userId,
+          },
+        });
+        return {
+          fromProject: project,
+          submission: submission ? submission : undefined,
+        };
+      });
+      return {
+        deadline: deadline,
+        submissions: await Promise.all(feedbackSubmissions),
+      };
     }
-    const submissions = await findManySubmissions({
-      where: {
-        deadlineId: evaluation.id,
-        fromProjectId: { in: projectIds },
-        isDraft: false,
-      },
-      include: { toProject: true },
-    });
-    return {
-      deadline: evaluation,
-      submissions: submissions,
-    };
   });
 
-  return await Promise.all(projectEvaluationSubmissions);
-}
-
-export async function getProjectFeedbackSubmissionsByAdviser(
-  adviser: Adviser & { projects: Project[] },
-  projectIds: number[]
-) {
-  const { cohortYear } = adviser;
-
-  const feedbacks = await findManyDeadlines({
-    where: { cohortYear: cohortYear, type: "Feedback" },
-  });
-
-  const projectFeedbackSubmissions = feedbacks.map(async (feedback) => {
-    const submissions = await findManySubmissions({
-      where: {
-        deadlineId: feedback.id,
-        fromProjectId: { in: projectIds },
-        isDraft: false,
-      },
-      include: { toProject: true, toUser: true },
-    });
-    return {
-      deadline: feedback,
-      submissions: submissions,
-    };
-  });
-
-  return await Promise.all(projectFeedbackSubmissions);
+  return await Promise.all(pProjectSubmissions);
 }
