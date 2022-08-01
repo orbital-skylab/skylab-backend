@@ -15,6 +15,17 @@ export async function findFirstSubmission(
   return firstSubmission;
 }
 
+export async function findFirstNonDraftSubmission({
+  where,
+  ...query
+}: Prisma.SubmissionFindFirstArgs) {
+  const firstSubmission = await prisma.submission.findFirst({
+    where: { ...where, isDraft: false },
+    ...query,
+  });
+  return firstSubmission;
+}
+
 export async function findManySubmissions(
   query: Prisma.SubmissionFindManyArgs
 ) {

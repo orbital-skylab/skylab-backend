@@ -3,7 +3,10 @@ import { SkylabError } from "src/errors/SkylabError";
 import { findUniqueAdviserWithProjectData } from "src/models/advisers.db";
 import { findManyDeadlines } from "src/models/deadline.db";
 import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
-import { findFirstSubmission } from "src/models/submissions.db";
+import {
+  findFirstNonDraftSubmission,
+  findFirstSubmission,
+} from "src/models/submissions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export async function getDeadlinesByAdviserId(adviserId: number) {
@@ -48,7 +51,7 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
             },
           });
 
-          const pProjectSubmission = findFirstSubmission({
+          const pProjectSubmission = findFirstNonDraftSubmission({
             where: {
               id: evaluatingMilestoneId,
               fromProjectId: project.id,
@@ -78,7 +81,7 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
       return await Promise.all(
         projects.map(async (project) => {
           const { id: toProjectId } = project;
-          const submission = await findFirstSubmission({
+          const submission = await findFirstNonDraftSubmission({
             where: {
               deadlineId: deadline.id,
               fromUserId: adviser.userId,
@@ -124,7 +127,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
   const pProjectSubmissions = cohortDeadlines.map(async (deadline) => {
     if (deadline.type == "Milestone") {
       const milestoneSubmissions = adviser.projects.map(async (project) => {
-        const submission = await findFirstSubmission({
+        const submission = await findFirstNonDraftSubmission({
           where: { deadlineId: deadline.id, fromProjectId: project.id },
         });
         return {
@@ -138,7 +141,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
       };
     } else if (deadline.type == "Evaluation") {
       const evaluationSubmissions = relations.map(async (relation) => {
-        const submission = await findFirstSubmission({
+        const submission = await findFirstNonDraftSubmission({
           where: {
             deadlineId: deadline.id,
             fromProjectId: relation.fromProjectId,
@@ -157,7 +160,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
       };
     } else if (deadline.type == "Feedback") {
       const feedbackSubmissions = adviser.projects.map(async (project) => {
-        const submission = await findFirstSubmission({
+        const submission = await findFirstNonDraftSubmission({
           where: {
             deadlineId: deadline.id,
             fromProjectId: project.id,

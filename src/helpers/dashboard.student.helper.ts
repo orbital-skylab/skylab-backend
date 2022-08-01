@@ -6,7 +6,10 @@ import {
   findUniqueStudentWithProjectWithAdviserData,
   findUniqueStudentWithProjectWithAdviserUserData,
 } from "src/models/students.db";
-import { findFirstSubmission } from "src/models/submissions.db";
+import {
+  findFirstSubmission,
+  findFirstNonDraftSubmission,
+} from "src/models/submissions.db";
 import { findUniqueUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
@@ -147,7 +150,7 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
   const pProjectSubmissions = [...cohortEvaluations, ...cohortFeedbacks].map(
     async (deadline) => {
       const pPeerSubmissions = relations.map(async (relation) => {
-        const submission = await findFirstSubmission({
+        const submission = await findFirstNonDraftSubmission({
           where: {
             deadlineId: deadline.id,
             fromProjectId: relation.fromProjectId,
@@ -169,7 +172,7 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
         };
       }
 
-      const pAdviserSubmission = findFirstSubmission({
+      const pAdviserSubmission = findFirstNonDraftSubmission({
         where: {
           deadlineId: deadline.id,
           fromUserId: adviserUser.id,
