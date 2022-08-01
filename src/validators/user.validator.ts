@@ -41,7 +41,17 @@ export const GetUsersLeanValidator = [
       UserRolesEnum.Adviser,
       UserRolesEnum.Mentor,
       UserRolesEnum.Student,
-    ]),
+    ])
+    .optional(),
+  query("excludeRole")
+    .toLowerCase()
+    .isIn([
+      UserRolesEnum.Administrator,
+      UserRolesEnum.Adviser,
+      UserRolesEnum.Mentor,
+      UserRolesEnum.Student,
+    ])
+    .optional(),
   CohortQueryValidator,
 ];
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { SkylabError } from "src/errors/SkylabError";
@@ -60,55 +61,68 @@ export async function findUniqueUserWithRoleData(
   };
 }
 
-export async function findManyLeanUsers(cohortYear: number, role: string) {
-  const users = await prisma.user.findMany({
-    where: {
-      mentor:
-        role == UserRolesEnum.Mentor
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      student:
-        role == UserRolesEnum.Student
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      adviser:
-        role == UserRolesEnum.Adviser
-          ? { some: { cohortYear: cohortYear } }
-          : undefined,
-      administrator:
-        role == UserRolesEnum.Administrator
-          ? { some: { endDate: { gte: new Date() } } }
-          : undefined,
-    },
-    select: {
-      student:
-        role == UserRolesEnum.Student
-          ? { where: { cohortYear: cohortYear }, select: { id: true } }
-          : false,
-      mentor:
-        role == UserRolesEnum.Mentor
-          ? { where: { cohortYear: cohortYear }, select: { id: true } }
-          : false,
-      adviser:
-        role == UserRolesEnum.Adviser
-          ? { where: { cohortYear: cohortYear }, select: { id: true } }
-          : false,
-      administrator:
-        role == UserRolesEnum.Administrator ? { select: { id: true } } : false,
-      name: true,
-    },
-  });
+export async function getLeanUsersWithFilter(
+  query: any & {
+    cohortYear: number;
+    role?: UserRolesEnum;
+    excludeRole?: UserRolesEnum;
+  }
+) {
+  const { role, excludeRole } = query;
+  const cohortYear = Number(query.cohortYear);
+  if (!role && !excludeRole) {
+    throw new SkylabError(
+      "Either role or excludeRole has to be present in the request query",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
 
-  return users.map((user) => {
-    const { student, administrator, adviser, mentor, name } = user;
-    return {
-      name: name,
-      student: student ? student[0] : undefined,
-      administrator: administrator ? administrator[0] : undefined,
-      adviser: adviser ? adviser[0] : undefined,
-      mentor: mentor ? mentor[0] : undefined,
-    };
-  });
+  if (role) {
+    const users = await prisma.user.findMany({
+      where: {
+        [role]:
+          role == UserRolesEnum.Administrator
+            ? { some: { endDate: { gte: new Date() } } }
+            : { some: { cohortYear: cohortYear } },
+      },
+      select: {
+        student:
+          role == UserRolesEnum.Student
+            ? { where: { cohortYear: cohortYear }, select: { id: true } }
+            : false,
+        mentor:
+          role == UserRolesEnum.Mentor
+            ? { where: { cohortYear: cohortYear }, select: { id: true } }
+            : false,
+        adviser:
+          role == UserRolesEnum.Adviser
+            ? { where: { cohortYear: cohortYear }, select: { id: true } }
+            : false,
+        administrator:
+          role == UserRolesEnum.Administrator
+            ? { select: { id: true } }
+            : false,
+        name: true,
+      },
+    });
+
+    return users.map((user) => {
+      const { student, administrator, adviser, mentor, name } = user;
+      return {
+        name: name,
+        student: student ? student[0] : undefined,
+        administrator: administrator ? administrator[0] : undefined,
+        adviser: adviser ? adviser[0] : undefined,
+        mentor: mentor ? mentor[0] : undefined,
+      };
+    });
+  } else if (excludeRole) {
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true },
+      where: { NOT: { [excludeRole]: { some: { cohortYear: cohortYear } } } },
+    });
+    return users;
+  }
 }
 
 export async function findManyUsers(query: Prisma.UserFindManyArgs) {

@@ -12,10 +12,10 @@ import { addStudentRoleToUser } from "src/helpers/students.helper";
 import {
   deleteOneUserById,
   editOneUserById,
-  getLeanUsersWithFilter,
   getManyUsersWithFilter,
   getOneUserById,
 } from "src/helpers/users.helper";
+import { getLeanUsersWithFilter } from "src/models/users.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,

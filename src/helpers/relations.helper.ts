@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { EvaluationRelation } from "@prisma/client";
-import { parse } from "path";
-import { findUniqueAdviserWithUserData } from "src/models/advisers.db";
+
 import {
   createManyRelations,
   createOneRelation,
