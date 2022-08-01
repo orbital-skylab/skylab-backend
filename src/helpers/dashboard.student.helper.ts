@@ -1,17 +1,17 @@
 import { DeadlineType } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
+import { findManyRelationsWithFromProjectData } from "src/models/relations.db";
 import {
-  findManyRelations,
-  findManyRelationsWithFromProjectData,
-} from "src/models/relations.db";
-import { findUniqueStudentWithProjectWithAdviserData } from "src/models/students.db";
+  findUniqueStudentWithProjectWithAdviserData,
+  findUniqueStudentWithProjectWithAdviserUserData,
+} from "src/models/students.db";
 import { findFirstSubmission } from "src/models/submissions.db";
 import { findUniqueUser } from "src/models/users.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export async function getDeadlinesByStudentId(studentId: number) {
-  const student = await findUniqueStudentWithProjectWithAdviserData({
+  const student = await findUniqueStudentWithProjectWithAdviserUserData({
     where: { id: studentId },
   });
 
@@ -83,12 +83,13 @@ export async function getDeadlinesByStudentId(studentId: number) {
         where: {
           deadlineId: deadline.id,
           fromProjectId: project.id,
-          toUserId: adviser.id,
+          toUserId: adviser.userId,
         },
       });
       return {
         ...deadlineAttribute,
         submission: submission ? submission : undefined,
+        toUser: adviser.user,
       };
     }
   });

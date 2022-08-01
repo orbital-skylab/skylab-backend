@@ -8,6 +8,8 @@ import {
   Student,
   User,
 } from "@prisma/client";
+import { SkylabError } from "src/errors/SkylabError";
+import { findUniqueAdviserWithUserData } from "src/models/advisers.db";
 import {
   createOneProject,
   deleteOneProject,
@@ -17,6 +19,7 @@ import {
   findUniqueProjectWithUserData,
   updateOneProject,
 } from "src/models/projects.db";
+import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 
 export function parseGetProjectInput(
@@ -210,9 +213,16 @@ export async function getProjectIDsByAdviserID(adviserId: number) {
   });
 }
 
-export async function getAdviserByProjectID(projectId: number) {
-  return await findUniqueProject({
-    where: { id: projectId },
-    select: { adviser: true },
+export async function getAdviserUserByProjectID(projectId: number) {
+  const project = await findUniqueProject({ where: { id: projectId } });
+  if (!project.adviserId) {
+    throw new SkylabError(
+      "This project is not assigned an adviser",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+  const adviser = await findUniqueAdviserWithUserData({
+    where: { id: project.adviserId },
   });
+  return adviser;
 }

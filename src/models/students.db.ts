@@ -74,6 +74,23 @@ export async function findUniqueStudentWithProjectWithAdviserData({
   return uniqueStudent;
 }
 
+export async function findUniqueStudentWithProjectWithAdviserUserData({
+  include,
+  ...query
+}: Prisma.StudentFindUniqueArgs) {
+  const uniqueStudent = await prisma.student.findUnique({
+    ...query,
+    include: {
+      ...include,
+      project: { include: { adviser: { include: { user: true } } } },
+    },
+  });
+  if (!uniqueStudent) {
+    throw new SkylabError("Student was not found", HttpStatusCode.BAD_REQUEST);
+  }
+  return uniqueStudent;
+}
+
 export async function findManyStudentsWithUserData({
   include,
   ...query
