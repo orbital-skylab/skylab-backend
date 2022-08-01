@@ -218,6 +218,6 @@ export const isValidNusnetId = (nusnetId: string | null) => {
     return false;
   }
 
-  const nusnetIdPattern = /^(A)[0-9]{7}[A-Z]$/;
+  const nusnetIdPattern = /^(e|E)[0-9]{7}$/;
   return nusnetIdPattern.test(nusnetId);
 };
