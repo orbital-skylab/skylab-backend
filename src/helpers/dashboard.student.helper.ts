@@ -47,6 +47,10 @@ export async function getDeadlinesByStudentId(studentId: number) {
     orderBy: { dueBy: "asc" },
   });
 
+  const relations = await findManyRelationsWithFromProjectData({
+    where: { fromProjectId: project.id },
+  });
+
   const pDeadlinesOfStudent = deadlines.map(async (deadline) => {
     const deadlineAttribute = { deadline: deadline };
     if (deadline.type == "Milestone") {
@@ -59,9 +63,6 @@ export async function getDeadlinesByStudentId(studentId: number) {
         submission: submission ? submission : undefined,
       };
     } else if (deadline.type == "Evaluation") {
-      const relations = await findManyRelations({
-        where: { fromProjectId: project.id },
-      });
       const pEvaluationDeadlines = relations.map(async (relation) => {
         const submission = await findFirstSubmission({
           where: {
@@ -73,6 +74,7 @@ export async function getDeadlinesByStudentId(studentId: number) {
         return {
           ...deadlineAttribute,
           submission: submission ? submission : undefined,
+          fromProject: relation.fromProject,
         };
       });
       return await Promise.all(pEvaluationDeadlines);

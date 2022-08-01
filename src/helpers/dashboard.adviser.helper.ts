@@ -1,7 +1,7 @@
-import { Adviser, DeadlineType, Project } from "@prisma/client";
+import { DeadlineType } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { findUniqueAdviserWithProjectData } from "src/models/advisers.db";
-import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
+import { findManyDeadlines } from "src/models/deadline.db";
 import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
 import { findFirstSubmission } from "src/models/submissions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
