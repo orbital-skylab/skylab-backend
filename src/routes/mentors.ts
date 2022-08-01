@@ -63,6 +63,7 @@ router.post(
   "/batch",
   BatchCreateMentorValidator,
   async (req: Request, res: Response) => {
+    console.log("Called");
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       return throwValidationError(res, errors);
@@ -72,7 +73,7 @@ router.post(
         req.body,
         false
       );
-      return apiResponseWrapper(res, { errors: createMentorErrors });
+      return apiResponseWrapper(res, { message: createMentorErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }

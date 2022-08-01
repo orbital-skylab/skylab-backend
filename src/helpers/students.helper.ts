@@ -10,8 +10,13 @@ import {
 } from "src/models/students.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
-import { removePasswordFromUser } from "./users.helper";
-import { prisma } from "../client";
+import {
+  isValidEmail,
+  isValidMatriculationNumber,
+  isValidNusnetId,
+  removePasswordFromUser,
+} from "./users.helper";
+import { prismaMinimal as prisma } from "../client";
 
 export function parseGetStudentInput(student: Student & { user: User }) {
   const { user, id, ...data } = student;
@@ -65,12 +70,18 @@ export async function getOneStudentByNusnetId(nusnetId: string) {
 
 export async function createUserWithStudentRole(body: any, isDev?: boolean) {
   const { student, user } = body;
-  if (isDev && !user.password) {
+
+  if (!isValidEmail(user.email)) {
+    throw new SkylabError("Email is invalid", HttpStatusCode.BAD_REQUEST);
+  }
+  if (!isValidMatriculationNumber(student.matricNo)) {
     throw new SkylabError(
-      "Parameters missing from request",
-      HttpStatusCode.BAD_REQUEST,
-      body
+      "Matriculation Number is invalid",
+      HttpStatusCode.BAD_REQUEST
     );
+  }
+  if (!isValidNusnetId(student.nusnetId)) {
+    throw new SkylabError("NUSNET ID is invalid", HttpStatusCode.BAD_REQUEST);
   }
 
   user.password =
@@ -113,20 +124,6 @@ export async function createManyUsersWithStudentRole(
   for (const project of projects) {
     const { students, ...projectData } = project;
     for (const student of students) {
-      if (projectData.cohortYear !== student.student.cohortYear) {
-        throw new SkylabError(
-          "Project cohort and student cohort does not match",
-          HttpStatusCode.BAD_REQUEST
-        );
-      }
-
-      if (isDev && !student.user.password) {
-        throw new SkylabError(
-          "All accounts should have a password input",
-          HttpStatusCode.BAD_REQUEST
-        );
-      }
-
       student.user.password =
         isDev && student.user.password
           ? await hashPassword(student.user.password)
@@ -140,6 +137,22 @@ export async function createManyUsersWithStudentRole(
     accounts.map(async (account) => {
       const { project, student: _student } = account;
       const { user, student } = _student;
+      if (!isValidEmail(user.email)) {
+        throw new SkylabError("Email is invalid", HttpStatusCode.BAD_REQUEST);
+      }
+      if (!isValidMatriculationNumber(student.matricNo)) {
+        throw new SkylabError(
+          "Matriculation Number is invalid",
+          HttpStatusCode.BAD_REQUEST
+        );
+      }
+      if (!isValidNusnetId(student.nusnetId)) {
+        throw new SkylabError(
+          "NUSNET ID is invalid",
+          HttpStatusCode.BAD_REQUEST
+        );
+      }
+
       const { cohortYear, ...studentData } = student;
       const [createdUser, createdStudent] = await prisma.$transaction([
         prisma.user.create({ data: user }),
@@ -170,18 +183,14 @@ export async function createManyUsersWithStudentRole(
       };
     })
   );
-
   return createAccountAttempts
     .map((attempt, index) => {
       if (attempt.status === "rejected") {
-        return {
-          rowNumber: index + 1,
-          message: attempt.reason?.message,
-          meta: attempt.reason?.meta,
-        };
+        return `- Row ${index + 1}: ${attempt.reason.message}`;
       }
     })
-    .filter((error) => error);
+    .filter((error) => error)
+    .join("\n");
 }
 
 export async function addStudentRoleToUser(userId: string, body: any) {

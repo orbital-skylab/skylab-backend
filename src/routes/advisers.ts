@@ -73,7 +73,7 @@ router
           req.body,
           false
         );
-        return apiResponseWrapper(res, { errors: createAdviserErrors });
+        return apiResponseWrapper(res, { message: createAdviserErrors });
       } catch (e) {
         routeErrorHandler(res, e);
       }

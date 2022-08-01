@@ -74,7 +74,7 @@ router
           req.body,
           false
         );
-        return apiResponseWrapper(res, { errors: createStudentErrors });
+        return apiResponseWrapper(res, { message: createStudentErrors });
       } catch (e) {
         routeErrorHandler(res, e);
       }

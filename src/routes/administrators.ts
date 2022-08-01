@@ -75,7 +75,7 @@ router.post(
       const createAdminErrors = await createManyUsersWithAdministratorRole(
         req.body
       );
-      return apiResponseWrapper(res, { errors: createAdminErrors });
+      return apiResponseWrapper(res, { message: createAdminErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }
