@@ -12,8 +12,8 @@ import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
 import { getCurrentCohort } from "./cohorts.helper";
 import { getOneStudentByNusnetId } from "./students.helper";
-import { removePasswordFromUser } from "./users.helper";
-import { prisma } from "../client";
+import { isValidEmail, removePasswordFromUser } from "./users.helper";
+import { prismaMinimal as prisma } from "../client";
 
 export function parseGetAdviserInput(
   adviser: Prisma.AdviserGetPayload<{ include: { user: true } }>
@@ -121,13 +121,6 @@ export async function createManyUsersWithAdviserRole(
         adviser: Prisma.AdviserCreateInput & { cohortYear: number };
       }[]
     ).map(async (account) => {
-      if (isDev && !account.user.password) {
-        throw new SkylabError(
-          "All accounts should have a password input",
-          HttpStatusCode.BAD_REQUEST
-        );
-      }
-
       const { user, adviser } = account;
       return {
         user: {
@@ -142,32 +135,44 @@ export async function createManyUsersWithAdviserRole(
     })
   );
 
-  const createdAccounts = [];
-  for (const account of accountsWithHashedPasswords) {
-    const { user, adviser } = account;
-    const { cohortYear, ...adviserData } = adviser;
-    const [createdUser, createdAdviser] = await prisma.$transaction([
-      prisma.user.create({
-        data: { ...user },
-      }),
-      prisma.adviser.create({
-        data: {
-          ...adviserData,
-          user: { connect: { email: user.email } },
-          cohort: { connect: { academicYear: cohortYear } },
-        },
-      }),
-    ]);
+  const createAccountAttempts = await Promise.allSettled(
+    accountsWithHashedPasswords.map(async (account) => {
+      const { user, adviser } = account;
+      if (!isValidEmail(user.email)) {
+        throw new SkylabError("Email is invalid", HttpStatusCode.BAD_REQUEST);
+      }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...createdUserWithoutPassword } = createdUser;
-    createdAccounts.push({
-      ...createdUserWithoutPassword,
-      adviser: createdAdviser,
-    });
-  }
+      const { cohortYear, ...adviserData } = adviser;
+      const [createdUser, createdAdviser] = await prisma.$transaction([
+        prisma.user.create({
+          data: { ...user },
+        }),
+        prisma.adviser.create({
+          data: {
+            ...adviserData,
+            user: { connect: { email: user.email } },
+            cohort: { connect: { academicYear: cohortYear } },
+          },
+        }),
+      ]);
 
-  return createdAccounts;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...createdUserWithoutPassword } = createdUser;
+      return {
+        ...createdUserWithoutPassword,
+        adviser: createdAdviser,
+      };
+    })
+  );
+
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return `- Row ${index + 1}: ${attempt.reason.message}`;
+      }
+    })
+    .filter((error) => error)
+    .join("\n");
 }
 
 export async function addAdviserRoleToUser(userId: number, body: any) {

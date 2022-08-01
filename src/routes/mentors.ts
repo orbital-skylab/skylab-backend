@@ -63,16 +63,17 @@ router.post(
   "/batch",
   BatchCreateMentorValidator,
   async (req: Request, res: Response) => {
+    console.log("Called");
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       return throwValidationError(res, errors);
     }
     try {
-      const createdMentors = await createManyUsersWithMentorRole(
+      const createMentorErrors = await createManyUsersWithMentorRole(
         req.body,
         false
       );
-      return apiResponseWrapper(res, { mentors: createdMentors });
+      return apiResponseWrapper(res, { message: createMentorErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }

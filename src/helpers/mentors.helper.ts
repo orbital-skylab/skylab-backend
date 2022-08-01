@@ -10,8 +10,8 @@ import {
 } from "src/models/mentors.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
-import { removePasswordFromUser } from "./users.helper";
-import { prisma } from "../client";
+import { isValidEmail, removePasswordFromUser } from "./users.helper";
+import { prismaMinimal as prisma } from "../client";
 
 export function parseGetMentorInput(
   mentor: Prisma.MentorGetPayload<{ include: { user: true } }>
@@ -117,13 +117,6 @@ export async function createManyUsersWithMentorRole(
         mentor: Prisma.MentorCreateInput & { cohortYear: number };
       }[]
     ).map(async (account) => {
-      if (isDev && !account.user.password) {
-        throw new SkylabError(
-          "All accounts should have a password input",
-          HttpStatusCode.BAD_REQUEST
-        );
-      }
-
       const { user, mentor } = account;
       return {
         user: {
@@ -138,32 +131,44 @@ export async function createManyUsersWithMentorRole(
     })
   );
 
-  const createdAccounts = [];
-  for (const account of accountsWithHashedPasswords) {
-    const { user, mentor } = account;
-    const { cohortYear, ...mentorData } = mentor;
-    const [createdUser, createdMentor] = await prisma.$transaction([
-      prisma.user.create({
-        data: { ...user },
-      }),
-      prisma.mentor.create({
-        data: {
-          ...mentorData,
-          user: { connect: { email: user.email } },
-          cohort: { connect: { academicYear: cohortYear } },
-        },
-      }),
-    ]);
+  const createAccountAttempts = await Promise.allSettled(
+    accountsWithHashedPasswords.map(async (account) => {
+      const { user, mentor } = account;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...createdUserWithoutPassword } = createdUser;
-    createdAccounts.push({
-      ...createdUserWithoutPassword,
-      mentor: createdMentor,
-    });
-  }
+      if (!isValidEmail(user.email)) {
+        throw new SkylabError("Email is invalid", HttpStatusCode.BAD_REQUEST);
+      }
 
-  return createdAccounts;
+      const { cohortYear, ...mentorData } = mentor;
+      const [createdUser, createdMentor] = await prisma.$transaction([
+        prisma.user.create({
+          data: { ...user },
+        }),
+        prisma.mentor.create({
+          data: {
+            ...mentorData,
+            user: { connect: { email: user.email } },
+            cohort: { connect: { academicYear: cohortYear } },
+          },
+        }),
+      ]);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...createdUserWithoutPassword } = createdUser;
+      return {
+        ...createdUserWithoutPassword,
+        mentor: createdMentor,
+      };
+    })
+  );
+
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return `- Row ${index + 1}: ${attempt.reason.message}`;
+      }
+    })
+    .filter((error) => error)
+    .join("\n");
 }
 
 export async function addMentorRoleToUser(userId: string, body: any) {

@@ -72,10 +72,10 @@ router.post(
       return throwValidationError(res, errors);
     }
     try {
-      const createdAdmins = await createManyUsersWithAdministratorRole(
+      const createAdminErrors = await createManyUsersWithAdministratorRole(
         req.body
       );
-      return apiResponseWrapper(res, { administrators: createdAdmins });
+      return apiResponseWrapper(res, { message: createAdminErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }
