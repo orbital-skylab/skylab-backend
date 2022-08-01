@@ -1,7 +1,7 @@
 import { SkylabError } from "src/errors/SkylabError";
 import { findManyDeadlines } from "src/models/deadline.db";
 import { findUniqueMentorWithProjectData } from "src/models/mentors.db";
-import { findManySubmissions } from "src/models/submissions.db";
+import { findFirstSubmission } from "src/models/submissions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
 export async function getProjectMilestonesByMentorId(mentorId: number) {
@@ -18,26 +18,24 @@ export async function getProjectMilestonesByMentorId(mentorId: number) {
 
   const { cohortYear, projects } = mentor;
 
-  const projectIds = projects.map(({ id }) => id);
-
   const milestones = await findManyDeadlines({
     where: { cohortYear: cohortYear, type: "Milestone" },
   });
 
-  const projectMilestoneSubmissions = milestones.map(async (milestone) => {
-    const submissions = await findManySubmissions({
-      where: {
-        deadlineId: milestone.id,
-        isDraft: false,
-        fromProjectId: { in: projectIds },
-      },
+  const menteeSubmissions = milestones.map(async (milestone) => {
+    const pDeadlineSubmissions = projects.map(async (project) => {
+      const submission = await findFirstSubmission({
+        where: { fromProjectId: project.id, deadlineId: milestone.id },
+      });
+      return {
+        fromProject: project,
+        submission: submission ? submission : undefined,
+      };
     });
-
     return {
       deadline: milestone,
-      submissions: submissions,
+      submissions: await Promise.all(pDeadlineSubmissions),
     };
   });
-
-  return await Promise.all(projectMilestoneSubmissions);
+  return await Promise.all(menteeSubmissions);
 }
