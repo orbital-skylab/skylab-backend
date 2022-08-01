@@ -2,7 +2,6 @@ import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
-  findManyLeanUsers,
   findManyUsers,
   findUniqueUserWithRoleData,
   updateUniqueUser,
@@ -22,17 +21,6 @@ export function removePasswordFromUser(user: User) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...userWithoutPassword } = user;
   return userWithoutPassword;
-}
-
-export async function getLeanUsersWithFilter(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query: any & {
-    cohortYear: number;
-    role: string;
-  }
-) {
-  const { cohortYear, role } = query;
-  return await findManyLeanUsers(Number(cohortYear), role);
 }
 
 export async function getUsersFilterRoleInputParser(

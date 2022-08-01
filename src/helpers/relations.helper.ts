@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { EvaluationRelation } from "@prisma/client";
+
 import {
   createManyRelations,
   createOneRelation,
@@ -9,8 +10,9 @@ import {
   findUniqueRelation,
   updateOneRelation,
 } from "src/models/relations.db";
+import { parseGetAdviserInput } from "./advisers.helper";
 import {
-  getAdviserByProjectID,
+  getAdviserUserByProjectID,
   getProjectIDsByAdviserID,
 } from "./projects.helper";
 
@@ -65,7 +67,9 @@ export async function getManyRelationsWithFilter(query: any) {
     relations.map(async (relation: EvaluationRelation) => {
       return {
         ...relation,
-        adviser: await getAdviserByProjectID(relation.fromProjectId),
+        adviser: parseGetAdviserInput(
+          await getAdviserUserByProjectID(relation.fromProjectId)
+        ),
       };
     })
   );
