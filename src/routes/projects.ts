@@ -9,6 +9,8 @@ import {
   getOneProjectById,
   getProjectsViaRoleIds,
 } from "src/helpers/projects.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
+import authorizeAdviserOfProject from "src/middleware/authorizeAdviserOfProject";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -26,7 +28,7 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .post("/", async (req: Request, res: Response) => {
+  .post("/", authorizeAdmin, async (req: Request, res: Response) => {
     try {
       const createdProject = await createProject(req.body);
       return apiResponseWrapper(res, { project: createdProject });
@@ -110,19 +112,23 @@ router
       routeErrorHandler(res, e);
     }
   })
-  .put("/:projectId", async (req: Request, res: Response) => {
-    const { projectId } = req.params;
+  .put(
+    "/:projectId",
+    authorizeAdviserOfProject,
+    async (req: Request, res: Response) => {
+      const { projectId } = req.params;
 
-    try {
-      const updatedProject = await editProjectDataByProjectID(
-        Number(projectId),
-        req.body
-      );
-      return apiResponseWrapper(res, { project: updatedProject });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+      try {
+        const updatedProject = await editProjectDataByProjectID(
+          Number(projectId),
+          req.body
+        );
+        return apiResponseWrapper(res, { project: updatedProject });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
+  )
   .delete("/:projectId", async (req: Request, res: Response) => {
     const { projectId } = req.params;
 

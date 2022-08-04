@@ -3,6 +3,7 @@ import {
   getDeadlinesByStudentId,
   getPeerEvaluationFeedbackByStudentID,
 } from "src/helpers/dashboard.student.helper";
+import authorizeSignedIn from "src/middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -10,18 +11,23 @@ import {
 
 const router = Router();
 
-router.get("/:studentId/deadlines", async (req: Request, res: Response) => {
-  const { studentId } = req.params;
-  try {
-    const deadlines = await getDeadlinesByStudentId(Number(studentId));
-    return apiResponseWrapper(res, { deadlines: deadlines });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+router.get(
+  "/:studentId/deadlines",
+  authorizeSignedIn,
+  async (req: Request, res: Response) => {
+    const { studentId } = req.params;
+    try {
+      const deadlines = await getDeadlinesByStudentId(Number(studentId));
+      return apiResponseWrapper(res, { deadlines: deadlines });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.get(
   "/:studentId/evaluations-feedbacks",
+  authorizeSignedIn,
   async (req: Request, res: Response) => {
     const { studentId } = req.params;
     try {
