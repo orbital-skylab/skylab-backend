@@ -16,6 +16,7 @@ import {
 } from "@prisma/client";
 import { UserRolesEnum } from "src/validators/user.validator";
 import { getOneCohort } from "src/models/cohorts.db";
+import { findFirstStudentWithoutError } from "src/models/students.db";
 
 export function removePasswordFromUser(user: User) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -184,4 +185,61 @@ export async function deleteOneUserById(id: number) {
       throw e;
     }
   }
+}
+
+export async function addRoleToUsers(
+  role: string,
+  cohortYear: number,
+  userIds: number[]
+) {
+  const pAddedRoles = userIds.map(async (userId) => {
+    if (role == UserRolesEnum.Student) {
+      const student = await updateUniqueUser({
+        where: { id: userId },
+        data: { student: { create: { cohortYear: cohortYear } } },
+      });
+      return student;
+    } else if (role == UserRolesEnum.Adviser) {
+      const student = await findFirstStudentWithoutError({
+        where: { userId: userId },
+      });
+      const adviser = await updateUniqueUser({
+        where: { id: userId },
+        data: {
+          adviser: {
+            create: {
+              cohortYear: cohortYear,
+              nusnetId: student ? student.nusnetId : undefined,
+              matricNo: student ? student.matricNo : undefined,
+            },
+          },
+        },
+      });
+      return adviser;
+    } else if (role == UserRolesEnum.Administrator) {
+      const admin = await updateUniqueUser({
+        where: { id: userId },
+        data: {
+          administrator: {
+            create: {
+              startDate: new Date(),
+              endDate: new Date(
+                new Date().setFullYear(new Date().getFullYear() + 1),
+                new Date().getMonth(),
+                new Date().getDay()
+              ),
+            },
+          },
+        },
+      });
+      return admin;
+    } else {
+      const mentor = await updateUniqueUser({
+        where: { id: userId },
+        data: { mentor: { create: { cohortYear: cohortYear } } },
+      });
+      return mentor;
+    }
+  });
+  return await Promise.all(pAddedRoles);
 }

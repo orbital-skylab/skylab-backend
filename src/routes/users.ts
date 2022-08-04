@@ -10,6 +10,7 @@ import { addMentorRoleToUser } from "src/helpers/mentors.helper";
 import { addStudentRoleToUser } from "src/helpers/students.helper";
 
 import {
+  addRoleToUsers,
   deleteOneUserById,
   editOneUserById,
   getManyUsersWithFilter,
@@ -31,6 +32,7 @@ import {
   GetUsersLeanValidator,
   GetUsersValidator,
   UpdateUserByIDValidator,
+  UserRolesEnum,
 } from "src/validators/user.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
 
@@ -75,114 +77,56 @@ router.post("/attach-adviser/batch", async (req: Request, res: Response) => {
   }
 });
 
-router
-  .put(
-    "/:userId/student",
-    AddStudentRoleToUserValidator,
-    async (req: Request, res: Response) => {
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
+router.put("/:variable", async (req: Request, res: Response) => {
+  const { variable } = req.params;
 
-      const { userId } = req.params;
-
-      try {
-        const createdStudentRole = await addStudentRoleToUser(userId, req.body);
-        return apiResponseWrapper(res, { student: createdStudentRole });
-      } catch (e) {
-        routeErrorHandler(res, e);
-      }
+  try {
+    if (variable == "Students") {
+      return apiResponseWrapper(res, {
+        data: await addRoleToUsers(
+          UserRolesEnum.Student,
+          req.body.cohortYear,
+          req.body.userIds
+        ),
+      });
+    } else if (variable == "Mentors") {
+      return apiResponseWrapper(res, {
+        data: await addRoleToUsers(
+          UserRolesEnum.Mentor,
+          req.body.cohortYear,
+          req.body.userIds
+        ),
+      });
+    } else if (variable == "Administrators") {
+      return apiResponseWrapper(res, {
+        data: await addRoleToUsers(
+          UserRolesEnum.Administrator,
+          req.body.cohortYear,
+          req.body.userIds
+        ),
+      });
+    } else if (variable == "Advisers") {
+      return apiResponseWrapper(res, {
+        data: await addRoleToUsers(
+          UserRolesEnum.Adviser,
+          req.body.cohortYear,
+          req.body.userIds
+        ),
+      });
+    } else {
+      // userId
+      const updatedUser = await editOneUserById(
+        Number(variable),
+        req.body.user
+      );
+      return apiResponseWrapper(res, { user: updatedUser });
     }
-  )
-  .put(
-    "/:userId/mentor",
-    AddMentorRoleToUserValidator,
-    async (req: Request, res: Response) => {
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
-
-      const { userId } = req.params;
-      try {
-        const createdMentorRole = await addMentorRoleToUser(userId, req.body);
-        return apiResponseWrapper(res, { mentor: createdMentorRole });
-      } catch (e) {
-        routeErrorHandler(res, e);
-      }
-    }
-  )
-  .put(
-    "/:userId/adviser",
-    AddAdviserRoleToUserValidator,
-    async (req: Request, res: Response) => {
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
-      const { userId } = req.params;
-      try {
-        const createdAdviserRole = await addAdviserRoleToUser(
-          Number(userId),
-          req.body
-        );
-        return apiResponseWrapper(res, { adviser: createdAdviserRole });
-      } catch (e) {
-        routeErrorHandler(res, e);
-      }
-    }
-  )
-  .put(
-    "/:userId/administrator",
-    AddAdministratorRoleToUserValidator,
-    async (req: Request, res: Response) => {
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
-      const { userId } = req.params;
-      try {
-        const createAdminRole = await addAdministratorRoleToUser(
-          userId,
-          req.body
-        );
-        return apiResponseWrapper(res, { administrator: createAdminRole });
-      } catch (e) {
-        routeErrorHandler(res, e);
-      }
-    }
-  )
-  .all("/:userId/:role", (_: Request, res: Response) => {
-    return routeErrorHandler(
-      res,
-      new SkylabError(
-        "Invalid method to access endpoint",
-        HttpStatusCode.BAD_REQUEST
-      )
-    );
-  });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 router
-  .put(
-    "/:userId",
-    UpdateUserByIDValidator,
-    async (req: Request, res: Response) => {
-      const { userId } = req.params;
-
-      const errors = validationResult(req).formatWith(errorFormatter);
-      if (!errors.isEmpty()) {
-        return throwValidationError(res, errors);
-      }
-
-      try {
-        const editedUser = await editOneUserById(Number(userId), req.body.user);
-        return apiResponseWrapper(res, { user: editedUser });
-      } catch (e) {
-        return routeErrorHandler(res, e);
-      }
-    }
-  )
   .delete(
     "/:userId",
     DeleteUserByIDValidator,
