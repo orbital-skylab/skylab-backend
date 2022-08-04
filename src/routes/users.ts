@@ -1,14 +1,6 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { SkylabError } from "src/errors/SkylabError";
-import { addAdministratorRoleToUser } from "src/helpers/administrators.helper";
-import {
-  addAdviserRoleToManyUsers,
-  addAdviserRoleToUser,
-} from "src/helpers/advisers.helper";
-import { addMentorRoleToUser } from "src/helpers/mentors.helper";
-import { addStudentRoleToUser } from "src/helpers/students.helper";
-
+import { addAdviserRoleToManyUsers } from "src/helpers/advisers.helper";
 import {
   addRoleToUsers,
   deleteOneUserById,
@@ -21,17 +13,11 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import {
-  AddAdministratorRoleToUserValidator,
-  AddAdviserRoleToUserValidator,
-  AddMentorRoleToUserValidator,
-  AddStudentRoleToUserValidator,
   DeleteUserByIDValidator,
   GetUserByIDValidator,
   GetUsersLeanValidator,
   GetUsersValidator,
-  UpdateUserByIDValidator,
   UserRolesEnum,
 } from "src/validators/user.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
