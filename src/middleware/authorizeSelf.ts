@@ -2,7 +2,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { getOneUserById } from "src/helpers/users.helper";
+import { findUniqueUserWithRoleData } from "src/models/users.db";
 
 const authorizeSelf = async (
   req: Request,
@@ -22,7 +22,9 @@ const authorizeSelf = async (
       process.env.JWT_SECRET ?? "jwt_secret"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any;
-    const userData = await getOneUserById(Number(jwtData.id));
+    const userData = await findUniqueUserWithRoleData({
+      where: { id: Number(jwtData.id) },
+    });
 
     // allow admins
     if (userData.administrator) return next();
