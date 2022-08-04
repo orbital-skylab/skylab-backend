@@ -11,6 +11,12 @@ import {
   getManyRelationsWithAdviserID,
   getManyRelationsWithFilter,
 } from "src/helpers/relations.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
+import authorizeAdviserOfGroup from "src/middleware/authorizeAdviserOfGroup";
+import authorizeAdviserOfProject from "src/middleware/authorizeAdviserOfProject";
+import authorizeAdviserOfRelation from "src/middleware/authorizeAdviserOfRelation";
+import authorizeAdviserOfTwoProjects from "src/middleware/authorizeAdviserOfTwoProjects";
+import authorizeSignedIn from "src/middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -29,53 +35,68 @@ import { errorFormatter, throwValidationError } from "src/validators/validator";
 const router = Router();
 
 router
-  .post("/", CreateRelationValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+  .post(
+    "/",
+    authorizeAdviserOfTwoProjects,
+    CreateRelationValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdRelation = await createRelation(req.body);
+        return apiResponseWrapper(res, { relation: createdRelation });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
+  )
+  .get(
+    "/",
+    authorizeSignedIn,
+    GetRelationsValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const relations = await getManyRelationsWithFilter(req.query);
+        return apiResponseWrapper(res, {
+          fromProject: req.query.from
+            ? await getOneProjectById(Number(req.query.from))
+            : undefined,
+          toProject: req.query.to
+            ? await getOneProjectById(Number(req.query.to))
+            : undefined,
+          relations: relations,
+        });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
+    }
+  );
+
+router.post(
+  "/group",
+  authorizeAdviserOfGroup,
+  async (req: Request, res: Response) => {
     try {
-      const createdRelation = await createRelation(req.body);
-      return apiResponseWrapper(res, { relation: createdRelation });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  })
-  .get("/", GetRelationsValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
-    }
-    try {
-      const relations = await getManyRelationsWithFilter(req.query);
+      const createRelationsRequest = await createRelationsByGroup(req.body);
       return apiResponseWrapper(res, {
-        fromProject: req.query.from
-          ? await getOneProjectById(Number(req.query.from))
-          : undefined,
-        toProject: req.query.to
-          ? await getOneProjectById(Number(req.query.to))
-          : undefined,
-        relations: relations,
+        message: `${createRelationsRequest.count} was created successfully`,
       });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
-  });
-
-router.post("/group", async (req: Request, res: Response) => {
-  try {
-    const createRelationsRequest = await createRelationsByGroup(req.body);
-    return apiResponseWrapper(res, {
-      message: `${createRelationsRequest.count} was created successfully`,
-    });
-  } catch (e) {
-    return routeErrorHandler(res, e);
   }
-});
+);
 
 router
   .get(
     "/adviser/:adviserId",
+    authorizeSignedIn,
     GetRelationsWithAdviserIDValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
@@ -95,6 +116,7 @@ router
   )
   .delete(
     "/adviser/:adviserId",
+    authorizeAdmin,
     DeleteRelationsWithAdviserIDValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
@@ -115,6 +137,7 @@ router
 
 router.delete(
   "/project/:projectId",
+  authorizeAdviserOfProject,
   DeleteRelationsWithProjectIDValidator,
   async (req: Request, res: Response) => {
     const errors = validationResult(req).formatWith(errorFormatter);
@@ -136,6 +159,7 @@ router.delete(
 router
   .delete(
     "/:relationId",
+    authorizeAdviserOfRelation,
     DeleteRelationByRelationIDValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);

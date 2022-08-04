@@ -4,6 +4,8 @@ import {
   getSubmissionBySubmissionId,
   updateOneSubmissionBySubmissionId,
 } from "src/helpers/submissions.helper";
+import authorizeSignedIn from "src/middleware/authorizeSignedIn";
+import authorizeSubmitter from "src/middleware/authorizeSubmitter";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -11,7 +13,7 @@ import {
 
 const router = Router();
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", authorizeSignedIn, async (req: Request, res: Response) => {
   try {
     const createdSubmission = await createOneSubmission(req.body);
     return apiResponseWrapper(res, { submission: createdSubmission });
@@ -21,28 +23,36 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 router
-  .get("/:submissionId", async (req: Request, res: Response) => {
-    const { submissionId } = req.params;
-    try {
-      const submission = await getSubmissionBySubmissionId(
-        Number(submissionId)
-      );
-      return apiResponseWrapper(res, { submission: submission });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  .get(
+    "/:submissionId",
+    authorizeSignedIn,
+    async (req: Request, res: Response) => {
+      const { submissionId } = req.params;
+      try {
+        const submission = await getSubmissionBySubmissionId(
+          Number(submissionId)
+        );
+        return apiResponseWrapper(res, { submission: submission });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
-  .put("/:submissionId", async (req: Request, res: Response) => {
-    const { submissionId } = req.params;
-    try {
-      const updatedSubmission = await updateOneSubmissionBySubmissionId(
-        Number(submissionId),
-        req.body
-      );
-      return apiResponseWrapper(res, { submission: updatedSubmission });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  )
+  .put(
+    "/:submissionId",
+    authorizeSubmitter,
+    async (req: Request, res: Response) => {
+      const { submissionId } = req.params;
+      try {
+        const updatedSubmission = await updateOneSubmissionBySubmissionId(
+          Number(submissionId),
+          req.body
+        );
+        return apiResponseWrapper(res, { submission: updatedSubmission });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  });
+  );
 
 export default router;

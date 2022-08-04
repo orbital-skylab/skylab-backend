@@ -10,6 +10,7 @@ import {
   getOneDeadlineById,
   replaceSectionsById,
 } from "src/helpers/deadline.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -24,30 +25,40 @@ import { errorFormatter, throwValidationError } from "src/validators/validator";
 const router = Router();
 
 router
-  .get("/", GetDeadlinesValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+  .get(
+    "/",
+    authorizeAdmin,
+    GetDeadlinesValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const deadlines = await getManyDeadlinesWithFilter(req.query);
+        return apiResponseWrapper(res, { deadlines: deadlines });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-    try {
-      const deadlines = await getManyDeadlinesWithFilter(req.query);
-      return apiResponseWrapper(res, { deadlines: deadlines });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  )
+  .post(
+    "/",
+    authorizeAdmin,
+    CreateDeadlineValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdDeadline = await createDeadline(req.body);
+        return apiResponseWrapper(res, { deadline: createdDeadline });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
-  .post("/", CreateDeadlineValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
-    }
-    try {
-      const createdDeadline = await createDeadline(req.body);
-      return apiResponseWrapper(res, { deadline: createdDeadline });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  })
+  )
   .all("/", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
@@ -59,32 +70,40 @@ router
   });
 
 router
-  .get("/:deadlineId/questions", async (req: Request, res: Response) => {
-    const { deadlineId } = req.params;
-    try {
-      const deadlineWithQuestions = await getAllQuestionsById(
-        Number(deadlineId)
-      );
-      return apiResponseWrapper(res, deadlineWithQuestions);
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  .get(
+    "/:deadlineId/questions",
+    authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { deadlineId } = req.params;
+      try {
+        const deadlineWithQuestions = await getAllQuestionsById(
+          Number(deadlineId)
+        );
+        return apiResponseWrapper(res, deadlineWithQuestions);
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
-  .put("/:deadlineId/questions", async (req: Request, res: Response) => {
-    const { deadlineId } = req.params;
-    try {
-      const updatedDeadline = await replaceSectionsById(
-        Number(deadlineId),
-        req.body.sections
-      );
-      return apiResponseWrapper(res, { deadline: updatedDeadline });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  )
+  .put(
+    "/:deadlineId/questions",
+    authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { deadlineId } = req.params;
+      try {
+        const updatedDeadline = await replaceSectionsById(
+          Number(deadlineId),
+          req.body.sections
+        );
+        return apiResponseWrapper(res, { deadline: updatedDeadline });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  });
+  );
 
 router
-  .get("/:deadlineId", async (req: Request, res: Response) => {
+  .get("/:deadlineId", authorizeAdmin, async (req: Request, res: Response) => {
     const { deadlineId } = req.params;
     try {
       const deadlineWithId = await getOneDeadlineById(Number(deadlineId));
@@ -93,7 +112,7 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .put("/:deadlineId", async (req: Request, res: Response) => {
+  .put("/:deadlineId", authorizeAdmin, async (req: Request, res: Response) => {
     const { deadlineId } = req.params;
     try {
       const updatedDeadline = await editDeadlineByDeadlineId(
@@ -105,17 +124,21 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .delete("/:deadlineId", async (req: Request, res: Response) => {
-    const { deadlineId } = req.params;
-    try {
-      const deletedDeadline = await deleteOneDeadlineByDeadlineId(
-        Number(deadlineId)
-      );
-      return apiResponseWrapper(res, { deadline: deletedDeadline });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  .delete(
+    "/:deadlineId",
+    authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { deadlineId } = req.params;
+      try {
+        const deletedDeadline = await deleteOneDeadlineByDeadlineId(
+          Number(deadlineId)
+        );
+        return apiResponseWrapper(res, { deadline: deletedDeadline });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
+  )
   .all("/:deadlineId", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,

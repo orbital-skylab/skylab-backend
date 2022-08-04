@@ -5,6 +5,7 @@ import {
   editCohortByYear,
   getCurrentCohort,
 } from "src/helpers/cohorts.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 import { createCohort, getManyCohorts } from "src/models/cohorts.db";
 import {
   apiResponseWrapper,
@@ -25,7 +26,7 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .post("/", async (req: Request, res: Response) => {
+  .post("/", authorizeAdmin, async (req: Request, res: Response) => {
     if (!req.body.cohort) {
       throw new SkylabError(
         "Parameters missing from request",
@@ -51,7 +52,7 @@ router
   });
 
 router
-  .put("/:cohortYear", async (req: Request, res: Response) => {
+  .put("/:cohortYear", authorizeAdmin, async (req: Request, res: Response) => {
     const { cohortYear } = req.params;
 
     if (!req.body.cohort) {
@@ -71,16 +72,20 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .delete("/:cohortYear", async (req: Request, res: Response) => {
-    const { cohortYear } = req.params;
+  .delete(
+    "/:cohortYear",
+    authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { cohortYear } = req.params;
 
-    try {
-      const deletedCohort = await deleteCohortByYear(Number(cohortYear));
-      return apiResponseWrapper(res, { cohort: deletedCohort });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+      try {
+        const deletedCohort = await deleteCohortByYear(Number(cohortYear));
+        return apiResponseWrapper(res, { cohort: deletedCohort });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  });
+  );
 
 router
   .get("/current", async (_: Request, res: Response) => {

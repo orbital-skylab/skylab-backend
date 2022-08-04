@@ -9,6 +9,7 @@ import {
   getManyStudentsWithFilter,
   getOneStudentById,
 } from "src/helpers/students.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -38,18 +39,23 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .post("/", CreateStudentValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+  .post(
+    "/",
+    authorizeAdmin,
+    CreateStudentValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdStudent = await createUserWithStudentRole(req.body);
+        return apiResponseWrapper(res, { student: createdStudent });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
-    try {
-      const createdStudent = await createUserWithStudentRole(req.body);
-      return apiResponseWrapper(res, { student: createdStudent });
-    } catch (e) {
-      routeErrorHandler(res, e);
-    }
-  })
+  )
   .all("/", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
@@ -63,6 +69,7 @@ router
 router
   .post(
     "/batch",
+    authorizeAdmin,
     BatchCreateStudentValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
@@ -110,6 +117,7 @@ router
   )
   .put(
     "/:studentId",
+    authorizeAdmin,
     UpdateStudentByIDValidator,
     async (req: Request, res: Response) => {
       const { studentId } = req.params;
@@ -129,17 +137,21 @@ router
       }
     }
   )
-  .delete("/:studentId", async (req: Request, res: Response) => {
-    const { studentId } = req.params;
-    try {
-      const deletedStudent = await deleteOneStudentByStudentId(
-        Number(studentId)
-      );
-      return apiResponseWrapper(res, { student: deletedStudent });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  .delete(
+    "/:studentId",
+    authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { studentId } = req.params;
+      try {
+        const deletedStudent = await deleteOneStudentByStudentId(
+          Number(studentId)
+        );
+        return apiResponseWrapper(res, { student: deletedStudent });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
+  )
   .all("/:studentId", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
