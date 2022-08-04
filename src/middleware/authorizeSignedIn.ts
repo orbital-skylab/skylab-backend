@@ -2,7 +2,11 @@ import { SkylabError } from "src/errors/SkylabError";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 
-const authorize = async (req: Request, res: Response, next: NextFunction) => {
+const authorizeSignedIn = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const token = req?.cookies?.token;
     if (!token || typeof token !== "string") {
@@ -20,4 +24,4 @@ const authorize = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export default authorize;
+export default authorizeSignedIn;

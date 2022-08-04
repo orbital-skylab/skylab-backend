@@ -9,6 +9,7 @@ import {
   getOneAdministratorById,
   updateAdministratorDataByAdminID,
 } from "src/helpers/administrators.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -25,20 +26,26 @@ import { errorFormatter, throwValidationError } from "src/validators/validator";
 const router = Router();
 
 router
-  .get("/", GetAdministratorsValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+  .get(
+    "/",
+    authorizeAdmin,
+    GetAdministratorsValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const administrators = await getManyAdministratorsWithFilter(req.query);
+        return apiResponseWrapper(res, { administrators: administrators });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-    try {
-      const administrators = await getManyAdministratorsWithFilter(req.query);
-      return apiResponseWrapper(res, { administrators: administrators });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  })
+  )
   .post(
     "/",
+    authorizeAdmin,
     CreateAdministratorValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
@@ -65,6 +72,7 @@ router
 
 router.post(
   "/batch",
+  authorizeAdmin,
   BatchCreateAdministratorValidator,
   async (req: Request, res: Response) => {
     const errors = validationResult(req).formatWith(errorFormatter);
@@ -72,10 +80,10 @@ router.post(
       return throwValidationError(res, errors);
     }
     try {
-      const createdAdmins = await createManyUsersWithAdministratorRole(
+      const createAdminErrors = await createManyUsersWithAdministratorRole(
         req.body
       );
-      return apiResponseWrapper(res, { administrators: createdAdmins });
+      return apiResponseWrapper(res, { message: createAdminErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }
@@ -85,6 +93,7 @@ router.post(
 router
   .get(
     "/:adminId",
+    authorizeAdmin,
     GetAdministratorByIDValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
@@ -100,7 +109,7 @@ router
       }
     }
   )
-  .put("/:adminId", async (req: Request, res: Response) => {
+  .put("/:adminId", authorizeAdmin, async (req: Request, res: Response) => {
     const { adminId } = req.params;
     try {
       const updateAdmin = await updateAdministratorDataByAdminID(
@@ -112,7 +121,7 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .delete("/:adminId", async (req: Request, res: Response) => {
+  .delete("/:adminId", authorizeAdmin, async (req: Request, res: Response) => {
     const { adminId } = req.params;
     try {
       const deletedAdmin = await deleteOneAdministratorByAdminId(

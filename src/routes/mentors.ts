@@ -9,6 +9,7 @@ import {
   getManyMentorsWithFilter,
   getOneMentorById,
 } from "src/helpers/mentors.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -25,30 +26,40 @@ import { errorFormatter, throwValidationError } from "src/validators/validator";
 const router = Router();
 
 router
-  .get("/", GetMentorsValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+  .get(
+    "/",
+    authorizeAdmin,
+    GetMentorsValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const mentors = await getManyMentorsWithFilter(req.query);
+        return apiResponseWrapper(res, { mentors: mentors });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-    try {
-      const mentors = await getManyMentorsWithFilter(req.query);
-      return apiResponseWrapper(res, { mentors: mentors });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  )
+  .post(
+    "/",
+    authorizeAdmin,
+    CreateMentorValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdMentor = await createUserWithMentorRole(req.body);
+        return apiResponseWrapper(res, { mentor: createdMentor });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
-  .post("/", CreateMentorValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
-    }
-    try {
-      const createdMentor = await createUserWithMentorRole(req.body);
-      return apiResponseWrapper(res, { mentor: createdMentor });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  })
+  )
   .all("/", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
@@ -61,18 +72,20 @@ router
 
 router.post(
   "/batch",
+  authorizeAdmin,
   BatchCreateMentorValidator,
   async (req: Request, res: Response) => {
+    console.log("Called");
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       return throwValidationError(res, errors);
     }
     try {
-      const createdMentors = await createManyUsersWithMentorRole(
+      const createMentorErrors = await createManyUsersWithMentorRole(
         req.body,
         false
       );
-      return apiResponseWrapper(res, { mentors: createdMentors });
+      return apiResponseWrapper(res, { message: createMentorErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }
@@ -97,7 +110,7 @@ router
       }
     }
   )
-  .put("/:mentorId", async (req: Request, res: Response) => {
+  .put("/:mentorId", authorizeAdmin, async (req: Request, res: Response) => {
     const { mentorId } = req.params;
     try {
       const updatedMentor = await editMentorDataByMentorID(
@@ -109,7 +122,7 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .delete("/:mentorId", async (req: Request, res: Response) => {
+  .delete("/:mentorId", authorizeAdmin, async (req: Request, res: Response) => {
     const { mentorId } = req.params;
     try {
       const deletedMentor = await deleteOneMentorByMentorID(Number(mentorId));

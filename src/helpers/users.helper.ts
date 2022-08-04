@@ -243,3 +243,26 @@ export async function addRoleToUsers(
   });
   return await Promise.all(pAddedRoles);
 }
+export const isValidEmail = (email: string) => {
+  const emailPattern =
+    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return emailPattern.test(email);
+};
+
+export const isValidMatriculationNumber = (matricNo: string | null) => {
+  if (matricNo == null) {
+    return false;
+  }
+
+  const matricNoPattern = /^(A)[0-9]{7}[A-Z]$/;
+  return matricNoPattern.test(matricNo);
+};
+
+export const isValidNusnetId = (nusnetId: string | null) => {
+  if (nusnetId == null) {
+    return false;
+  }
+
+  const nusnetIdPattern = /^(e|E)[0-9]{7}$/;
+  return nusnetIdPattern.test(nusnetId);
+};

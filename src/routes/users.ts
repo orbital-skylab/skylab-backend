@@ -8,6 +8,9 @@ import {
   getManyUsersWithFilter,
   getOneUserById,
 } from "src/helpers/users.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
+import authorizeSelf from "src/middleware/authorizeSelf";
+import authorizeSignedIn from "src/middleware/authorizeSignedIn";
 import { getLeanUsersWithFilter } from "src/models/users.db";
 import {
   apiResponseWrapper,
@@ -24,21 +27,27 @@ import { errorFormatter, throwValidationError } from "src/validators/validator";
 
 const router = Router();
 
-router.get("/", GetUsersValidator, async (req: Request, res: Response) => {
-  const errors = validationResult(req).formatWith(errorFormatter);
-  if (!errors.isEmpty()) {
-    return throwValidationError(res, errors);
+router.get(
+  "/",
+  authorizeAdmin,
+  GetUsersValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const users = await getManyUsersWithFilter(req.query);
+      return apiResponseWrapper(res, { users: users });
+    } catch (e) {
+      routeErrorHandler(res, e);
+    }
   }
-  try {
-    const users = await getManyUsersWithFilter(req.query);
-    return apiResponseWrapper(res, { users: users });
-  } catch (e) {
-    routeErrorHandler(res, e);
-  }
-});
+);
 
 router.get(
   "/lean",
+  authorizeAdmin,
   GetUsersLeanValidator,
   async (req: Request, res: Response) => {
     const errors = validationResult(req).formatWith(errorFormatter);
@@ -54,16 +63,20 @@ router.get(
   }
 );
 
-router.post("/attach-adviser/batch", async (req: Request, res: Response) => {
-  try {
-    const advisers = await addAdviserRoleToManyUsers(req.body);
-    return apiResponseWrapper(res, { advisers: advisers });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+router.post(
+  "/attach-adviser/batch",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const advisers = await addAdviserRoleToManyUsers(req.body);
+      return apiResponseWrapper(res, { advisers: advisers });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
-router.put("/:variable", async (req: Request, res: Response) => {
+router.put("/:variable", authorizeSelf, async (req: Request, res: Response) => {
   const { variable } = req.params;
 
   try {
@@ -115,6 +128,7 @@ router.put("/:variable", async (req: Request, res: Response) => {
 router
   .delete(
     "/:userId",
+    authorizeAdmin,
     DeleteUserByIDValidator,
     async (req: Request, res: Response) => {
       const { userId } = req.params;
@@ -134,6 +148,7 @@ router
   )
   .get(
     "/:userId",
+    authorizeSignedIn,
     GetUserByIDValidator,
     async (req: Request, res: Response) => {
       const { userId } = req.params;

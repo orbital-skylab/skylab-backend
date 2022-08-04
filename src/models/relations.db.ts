@@ -43,6 +43,16 @@ export async function findUniqueRelation(
   return await prisma.evaluationRelation.findUnique(query);
 }
 
+export async function findUniqueRelationWithFromProjectData({
+  include,
+  ...query
+}: Prisma.EvaluationRelationFindUniqueArgs) {
+  return await prisma.evaluationRelation.findUnique({
+    ...query,
+    include: { ...include, fromProject: true },
+  });
+}
+
 export async function findManyRelations(
   query: Prisma.EvaluationRelationFindManyArgs
 ) {

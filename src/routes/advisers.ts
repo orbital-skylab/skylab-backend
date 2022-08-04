@@ -9,6 +9,7 @@ import {
   getManyAdvisersWithFilter,
   getOneAdviserById,
 } from "src/helpers/advisers.helper";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -25,30 +26,40 @@ import { errorFormatter, throwValidationError } from "src/validators/validator";
 const router = Router();
 
 router
-  .get("/", GetAdvisersValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
+  .get(
+    "/",
+    authorizeAdmin,
+    GetAdvisersValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const advisers = await getManyAdvisersWithFilter(req.query);
+        return apiResponseWrapper(res, { advisers: advisers });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-    try {
-      const advisers = await getManyAdvisersWithFilter(req.query);
-      return apiResponseWrapper(res, { advisers: advisers });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  )
+  .post(
+    "/",
+    authorizeAdmin,
+    CreateAdviserValidator,
+    async (req: Request, res: Response) => {
+      const errors = validationResult(req).formatWith(errorFormatter);
+      if (!errors.isEmpty()) {
+        return throwValidationError(res, errors);
+      }
+      try {
+        const createdAdviser = await createUserWithAdviserRole(req.body);
+        return apiResponseWrapper(res, { adviser: createdAdviser });
+      } catch (e) {
+        routeErrorHandler(res, e);
+      }
     }
-  })
-  .post("/", CreateAdviserValidator, async (req: Request, res: Response) => {
-    const errors = validationResult(req).formatWith(errorFormatter);
-    if (!errors.isEmpty()) {
-      return throwValidationError(res, errors);
-    }
-    try {
-      const createdAdviser = await createUserWithAdviserRole(req.body);
-      return apiResponseWrapper(res, { adviser: createdAdviser });
-    } catch (e) {
-      routeErrorHandler(res, e);
-    }
-  })
+  )
   .all("/", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,
@@ -62,6 +73,7 @@ router
 router
   .post(
     "/batch",
+    authorizeAdmin,
     BatchCreateAdviserValidator,
     async (req: Request, res: Response) => {
       const errors = validationResult(req).formatWith(errorFormatter);
@@ -69,11 +81,11 @@ router
         return throwValidationError(res, errors);
       }
       try {
-        const createdAdvisers = await createManyUsersWithAdviserRole(
+        const createAdviserErrors = await createManyUsersWithAdviserRole(
           req.body,
           false
         );
-        return apiResponseWrapper(res, { advisers: createdAdvisers });
+        return apiResponseWrapper(res, { message: createAdviserErrors });
       } catch (e) {
         routeErrorHandler(res, e);
       }
@@ -107,7 +119,7 @@ router
       }
     }
   )
-  .put("/:adviserId", async (req: Request, res: Response) => {
+  .put("/:adviserId", authorizeAdmin, async (req: Request, res: Response) => {
     const { adviserId } = req.params;
     try {
       const updatedAdviser = await editAdviserDataByAdviserID(
@@ -119,17 +131,21 @@ router
       return routeErrorHandler(res, e);
     }
   })
-  .delete(":/adviserId", async (req: Request, res: Response) => {
-    const { adviserId } = req.params;
-    try {
-      const deletedAdviser = await deleteOneAdviserByAdviserId(
-        Number(adviserId)
-      );
-      return apiResponseWrapper(res, { adviser: deletedAdviser });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  .delete(
+    ":/adviserId",
+    authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { adviserId } = req.params;
+      try {
+        const deletedAdviser = await deleteOneAdviserByAdviserId(
+          Number(adviserId)
+        );
+        return apiResponseWrapper(res, { adviser: deletedAdviser });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
+  )
   .all("/:adviserId", (_: Request, res: Response) => {
     return routeErrorHandler(
       res,

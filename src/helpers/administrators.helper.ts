@@ -10,8 +10,8 @@ import {
 } from "src/models/administrators.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { hashPassword, generateRandomPassword } from "./authentication.helper";
-import { removePasswordFromUser } from "./users.helper";
-import { prisma } from "../client";
+import { isValidEmail, removePasswordFromUser } from "./users.helper";
+import { prismaMinimal as prisma } from "../client";
 
 export async function parseGetAdministratorInput(
   administrator: Prisma.AdministratorGetPayload<{ include: { user: true } }>
@@ -99,13 +99,6 @@ export async function createManyUsersWithAdministratorRole(
         administrator: Prisma.AdministratorCreateInput;
       }[]
     ).map(async (account) => {
-      if (isDev && !account.user.password) {
-        throw new SkylabError(
-          "All accounts should have a password input",
-          HttpStatusCode.BAD_REQUEST
-        );
-      }
-
       const { user, administrator } = account;
       return {
         user: {
@@ -119,25 +112,38 @@ export async function createManyUsersWithAdministratorRole(
       };
     })
   );
-  const createdAccounts = [];
-  for (const account of accountsWithHashedPasswords) {
-    const { user, administrator } = account;
-    const [createdUser, createdAdministrator] = await prisma.$transaction([
-      prisma.user.create({ data: user }),
-      prisma.administrator.create({
-        data: {
-          ...administrator,
-          user: { connect: { email: user.email } },
-        },
-      }),
-    ]);
-    createdAccounts.push({
-      user: removePasswordFromUser(createdUser),
-      administrator: createdAdministrator,
-    });
-  }
 
-  return createdAccounts;
+  const createAccountAttempts = await Promise.allSettled(
+    accountsWithHashedPasswords.map(async (account) => {
+      const { user, administrator } = account;
+      if (!isValidEmail(user.email)) {
+        throw new SkylabError("Email is invalid", HttpStatusCode.BAD_REQUEST);
+      }
+
+      const [createdUser, createdAdministrator] = await prisma.$transaction([
+        prisma.user.create({ data: user }),
+        prisma.administrator.create({
+          data: {
+            ...administrator,
+            user: { connect: { email: user.email } },
+          },
+        }),
+      ]);
+      return {
+        user: removePasswordFromUser(createdUser),
+        administrator: createdAdministrator,
+      };
+    })
+  );
+
+  return createAccountAttempts
+    .map((attempt, index) => {
+      if (attempt.status === "rejected") {
+        return `- Row ${index + 1}: ${attempt.reason.message}`;
+      }
+    })
+    .filter((error) => error)
+    .join("\n");
 }
 
 export async function addAdministratorRoleToUser(userId: string, body: any) {

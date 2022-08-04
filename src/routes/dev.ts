@@ -28,11 +28,11 @@ const router = Router();
 
 router.post("/create-student/batch", async (req: Request, res: Response) => {
   try {
-    const createdStudents = await createManyUsersWithStudentRole(
+    const createStudentErrors = await createManyUsersWithStudentRole(
       req.body,
       true
     );
-    return apiResponseWrapper(res, createdStudents);
+    return apiResponseWrapper(res, { message: createStudentErrors });
   } catch (e) {
     routeErrorHandler(res, e);
   }
@@ -59,8 +59,11 @@ router.post("/:userId/student", async (req: Request, res: Response) => {
 
 router.post("/create-mentor/batch", async (req: Request, res: Response) => {
   try {
-    const createdMentors = await createManyUsersWithMentorRole(req.body, true);
-    return apiResponseWrapper(res, createdMentors);
+    const createMentorErrors = await createManyUsersWithMentorRole(
+      req.body,
+      true
+    );
+    return apiResponseWrapper(res, { message: createMentorErrors });
   } catch (e) {
     routeErrorHandler(res, e);
   }
@@ -87,11 +90,11 @@ router.post("/:userId/mentor", async (req: Request, res: Response) => {
 
 router.post("/create-adviser/batch", async (req: Request, res: Response) => {
   try {
-    const createdAdvisers = await createManyUsersWithAdviserRole(
+    const createAdviserErrors = await createManyUsersWithAdviserRole(
       req.body,
       true
     );
-    return apiResponseWrapper(res, createdAdvisers);
+    return apiResponseWrapper(res, { message: createAdviserErrors });
   } catch (e) {
     routeErrorHandler(res, e);
   }
@@ -123,11 +126,9 @@ router.post(
   "/create-administrator/batch",
   async (req: Request, res: Response) => {
     try {
-      const createdAdministrator = await createManyUsersWithAdministratorRole(
-        req.body,
-        true
-      );
-      return apiResponseWrapper(res, createdAdministrator);
+      const createAdministratorErrors =
+        await createManyUsersWithAdministratorRole(req.body, true);
+      return apiResponseWrapper(res, { message: createAdministratorErrors });
     } catch (e) {
       routeErrorHandler(res, e);
     }
