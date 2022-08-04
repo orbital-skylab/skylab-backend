@@ -1,7 +1,10 @@
 import { DeadlineType } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "src/models/deadline.db";
-import { findManyRelationsWithFromProjectData } from "src/models/relations.db";
+import {
+  findManyRelationsWithFromProjectData,
+  findManyRelationsWithFromToProjectData,
+} from "src/models/relations.db";
 import {
   findUniqueStudentWithProjectWithAdviserData,
   findUniqueStudentWithProjectWithAdviserUserData,
@@ -50,7 +53,7 @@ export async function getDeadlinesByStudentId(studentId: number) {
     orderBy: { dueBy: "asc" },
   });
 
-  const relations = await findManyRelationsWithFromProjectData({
+  const relations = await findManyRelationsWithFromToProjectData({
     where: { fromProjectId: project.id },
   });
 
@@ -78,6 +81,7 @@ export async function getDeadlinesByStudentId(studentId: number) {
           ...deadlineAttribute,
           submission: submission ? submission : undefined,
           fromProject: relation.fromProject,
+          toProject: relation.toProject,
         };
       });
       return await Promise.all(pEvaluationDeadlines);

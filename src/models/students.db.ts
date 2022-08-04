@@ -19,6 +19,26 @@ export async function findFirstStudentWithUserData({
   return firstStudent;
 }
 
+export async function findFirstStudentWithoutError(
+  query: Prisma.StudentFindFirstArgs
+) {
+  const firstStudent = await prisma.student.findFirst({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  return firstStudent;
+}
+
+export async function findUniqueStudentWithoutError(
+  query: Prisma.StudentFindUniqueArgs
+) {
+  const uniqueStudent = await prisma.student.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+  return uniqueStudent;
+}
+
 export async function findUniqueStudent(query: Prisma.StudentFindUniqueArgs) {
   const uniqueStudent = await prisma.student.findUnique({
     ...query,
