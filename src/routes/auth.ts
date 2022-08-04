@@ -7,7 +7,7 @@ import {
   userLogin,
 } from "src/helpers/authentication.helper";
 import { getOneUserById } from "src/helpers/users.helper";
-import authorize from "src/middleware/jwtAuth";
+import authorizeSignedIn from "src/middleware/authorizeSignedIn";
 import {
   findUniqueUser,
   findUniqueUserWithRoleData,
@@ -58,17 +58,25 @@ router.post("/sign-in", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/sign-out", authorize, async (_: Request, res: Response) => {
-  try {
-    res
-      .clearCookie("token", { sameSite: "none", secure: true, httpOnly: true })
-      .sendStatus(HttpStatusCode.OK);
-  } catch (e) {
-    return routeErrorHandler(res, e);
+router.get(
+  "/sign-out",
+  authorizeSignedIn,
+  async (_: Request, res: Response) => {
+    try {
+      res
+        .clearCookie("token", {
+          sameSite: "none",
+          secure: true,
+          httpOnly: true,
+        })
+        .sendStatus(HttpStatusCode.OK);
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
-router.get("/info", authorize, async (req: Request, res: Response) => {
+router.get("/info", authorizeSignedIn, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
     const jwtData = jwt.verify(
