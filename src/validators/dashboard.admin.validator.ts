@@ -1,20 +1,17 @@
 import { query } from "express-validator";
-import { getOneDeadlineById } from "src/helpers/deadline.helper";
+import { SubmissionStatusEnum } from "src/helpers/dashboard.admin.helper";
 import { CohortQueryValidator } from "./validator";
 
-export const getSubmissionsByDeadlineIdValidator = [
+export const GetSubmissionsByDeadlineIDValidator = [
   CohortQueryValidator,
-  query("deadlineId")
-    .isNumeric()
-    .custom(async (value: number) => {
-      try {
-        const exists = await getOneDeadlineById(Number(value));
-        if (!exists || exists.type != "Milestone") {
-          return Promise.reject("There is no such milestone to evaluate");
-        }
-      } catch (e) {
-        return Promise.reject("There is no such milestone to evaluate");
-      }
-    }),
-  ,
+  query("deadlineId").isNumeric().toInt(),
+  query("submissionStatus")
+    .isIn([
+      SubmissionStatusEnum.SUBMITTED,
+      SubmissionStatusEnum.SUBMITTED_LATE,
+      SubmissionStatusEnum.UNSUBMITTED,
+    ])
+    .optional(),
+  query("page").isNumeric().toInt().optional(),
+  query("limit").isNumeric().toInt().optional(),
 ];

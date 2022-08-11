@@ -5,7 +5,7 @@ import { findManyProjectsWithUserData } from "src/models/projects.db";
 import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
 import { findFirstNonDraftSubmission } from "src/models/submissions.db";
 
-enum SubmissionStatusEnum {
+export enum SubmissionStatusEnum {
   UNSUBMITTED = "Unsubmitted",
   SUBMITTED = "Submitted",
   SUBMITTED_LATE = "Submitted_Late",
@@ -21,11 +21,8 @@ export async function getSubmissionsByDeadlineId(
     limit?: number;
   }
 ) {
-  const { submissionStatus, search } = query;
-  const cohortYear = Number(query.cohortYear);
-  const page = Number(query.page);
-  const limit = Number(query.limit);
-  const deadlineId = Number(query.deadlineId);
+  const { submissionStatus, search, cohortYear, page, limit, deadlineId } =
+    query;
 
   const deadline = await findUniqueDeadline({ where: { id: deadlineId } });
   const projects = await findManyProjectsWithUserData({
