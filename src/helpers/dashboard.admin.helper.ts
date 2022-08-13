@@ -96,9 +96,8 @@ export async function getSubmissionsByDeadlineId(
     return results;
   } else {
     const filteredResult = results.filter((result) => {
-      const typeOfSubmission = typeof result.submission;
       if (submissionStatus == SubmissionStatusEnum.UNSUBMITTED) {
-        return typeOfSubmission == undefined;
+        return !result.submission;
       } else if (submissionStatus == SubmissionStatusEnum.SUBMITTED_LATE) {
         return (
           result.submission && result.submission.updatedAt > deadline.dueBy
