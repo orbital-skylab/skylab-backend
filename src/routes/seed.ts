@@ -32,8 +32,8 @@ router.post("/cohorts", async (_: Request, res: Response) => {
 });
 router.post("/students", async (_: Request, res: Response) => {
   try {
-    await seedStudents();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    const response = await seedStudents();
+    return apiResponseWrapper(res, { response });
   } catch (e) {
     return routeErrorHandler(res, e);
   }

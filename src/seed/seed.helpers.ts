@@ -37,8 +37,8 @@ export const generateFakeRoleData = (role: UserRolesEnum) => {
       : {}),
     ...([UserRolesEnum.Student, UserRolesEnum.Adviser].includes(role)
       ? {
-          matricNo: faker.random.alphaNumeric(7),
-          nusnetId: faker.random.alphaNumeric(7),
+          matricNo: faker.helpers.replaceSymbols("A0######?"),
+          nusnetId: faker.helpers.replaceSymbols("e#######"),
         }
       : {}),
   };

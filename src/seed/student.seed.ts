@@ -15,7 +15,8 @@ export const seedStudents = async () => {
   const batch: Batch = { count: 100, projects: [] };
   for (let i = 0; i < batch.count; i++) {
     const project = {
-      name: faker.company.companyName(),
+      name: `${faker.word.adjective()} ${faker.word.noun()}`,
+      teamName: `Team ${faker.word.adjective()} ${faker.word.noun()}`,
       achievement: faker.helpers.arrayElement(Object.values(AchievementLevel)),
       cohortYear: COHORT_YEAR,
       proposalPdf: faker.internet.url(),
@@ -33,5 +34,5 @@ export const seedStudents = async () => {
     batch.projects.push(project);
   }
 
-  await createManyUsersWithStudentRole(batch, true);
+  return createManyUsersWithStudentRole(batch, true);
 };

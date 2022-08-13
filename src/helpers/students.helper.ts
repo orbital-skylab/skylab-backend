@@ -133,8 +133,11 @@ export async function createManyUsersWithStudentRole(
     }
   }
 
-  const createAccountAttempts = await Promise.allSettled(
-    accounts.map(async (account) => {
+  const createAccountErrors: { rowNumber: number; message: string }[] = [];
+
+  let rowNumber = 1;
+  for (const account of accounts) {
+    try {
       const { project, student: _student } = account;
       const { user, student } = _student;
       if (!isValidEmail(user.email)) {
@@ -154,7 +157,7 @@ export async function createManyUsersWithStudentRole(
       }
 
       const { cohortYear, ...studentData } = student;
-      const [createdUser, createdStudent] = await prisma.$transaction([
+      await prisma.$transaction([
         prisma.user.create({ data: user }),
         prisma.student.create({
           data: {
@@ -164,9 +167,9 @@ export async function createManyUsersWithStudentRole(
             project: {
               connectOrCreate: {
                 where: {
-                  name_cohortYear: {
-                    name: project.name,
-                    cohortYear: cohortYear,
+                  teamName_cohortYear: {
+                    teamName: project.teamName,
+                    cohortYear: Number(cohortYear),
                   },
                 },
                 create: project,
@@ -175,21 +178,14 @@ export async function createManyUsersWithStudentRole(
           },
         }),
       ]);
+    } catch (e) {
+      createAccountErrors.push({ rowNumber, message: e.message || e });
+    }
+    rowNumber++;
+  }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      return {
-        user: removePasswordFromUser(createdUser),
-        student: createdStudent,
-      };
-    })
-  );
-  return createAccountAttempts
-    .map((attempt, index) => {
-      if (attempt.status === "rejected") {
-        return `- Row ${index + 1}: ${attempt.reason.message}`;
-      }
-    })
-    .filter((error) => error)
+  return createAccountErrors
+    .map((error) => `- Row ${error.rowNumber}: ${error.message}`)
     .join("\n");
 }
 
