@@ -88,6 +88,7 @@ model Administrator {
 model Project {
   id          Int                  @id @default(autoincrement())
   name        String
+  teamName    String
   adviserId   Int?
   mentorId    Int?
   achievement AchievementLevel
@@ -99,14 +100,13 @@ model Project {
   proposalPdf String?
   posterUrl   String?
   videoUrl    String?
-  teamName    String?
   hasDropped  Boolean              @default(false)
   submitted   Submission[]         @relation(name: "from_project")
   received    Submission[]         @relation(name: "to_project")
   evaluator   EvaluationRelation[] @relation(name: "evaluator")
   evaluatee   EvaluationRelation[] @relation(name: "evaluatee")
 
-  @@unique([name, cohortYear])
+  @@unique([teamName, cohortYear])
 }
 
 model Deadline {
