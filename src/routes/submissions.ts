@@ -1,6 +1,8 @@
 import { Request, Response, Router } from "express";
 import {
   createOneSubmission,
+  getAnonymousAnswersViaAdviserID,
+  getAnonymousAnswersViaStudentID,
   getSubmissionBySubmissionId,
   updateOneSubmissionBySubmissionId,
 } from "src/helpers/submissions.helper";
@@ -21,6 +23,36 @@ router.post("/", authorizeSignedIn, async (req: Request, res: Response) => {
     return routeErrorHandler(res, e);
   }
 });
+
+router.get(
+  "/student/:studentId/anonymous-questions",
+  authorizeSignedIn,
+  async (req: Request, res: Response) => {
+    const { studentId } = req.params;
+    try {
+      return apiResponseWrapper(res, {
+        deadlines: await getAnonymousAnswersViaStudentID(Number(studentId)),
+      });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.get(
+  "/adviser/:adviserId/anonymous-questions",
+  authorizeSignedIn,
+  async (req: Request, res: Response) => {
+    const { adviserId } = req.params;
+    try {
+      return apiResponseWrapper(res, {
+        deadlines: await getAnonymousAnswersViaAdviserID(Number(adviserId)),
+      });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 router
   .get(
