@@ -104,6 +104,29 @@ export async function findManyDeadlinesWithQuestionsData({
   return deadlines;
 }
 
+export async function findManyDeadlinesWithAnonymousQuestionsData({
+  include,
+  ...query
+}: Prisma.DeadlineFindManyArgs) {
+  const deadlines = await prisma.deadline.findMany({
+    ...query,
+    include: {
+      ...include,
+      evaluating: true,
+      sections: {
+        include: {
+          questions: {
+            where: { isAnonymous: true },
+            include: { options: { orderBy: { order: "asc" } } },
+            orderBy: { questionNumber: "asc" },
+          },
+        },
+      },
+    },
+  });
+  return deadlines;
+}
+
 export async function updateOneDeadline(query: Prisma.DeadlineUpdateArgs) {
   const updatedDeadline = await prisma.deadline.update(query);
   return updatedDeadline;

@@ -13,7 +13,7 @@ const router = Router();
 
 router.get(
   "/team-submissions",
-  // authorizeAdmin,
+  authorizeAdmin,
   GetSubmissionsByDeadlineIDValidator,
   async (req: Request, res: Response) => {
     const errors = validationResult(req).formatWith(errorFormatter);
