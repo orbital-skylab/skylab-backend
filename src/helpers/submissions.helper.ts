@@ -6,13 +6,11 @@ import {
   getAnonymousAnswers,
 } from "src/models/answers.db";
 import {
-  findManyDeadlines,
   findManyDeadlinesWithAnonymousQuestionsData,
   findUniqueDeadlineWithQuestionsData,
 } from "src/models/deadline.db";
 import {
   createUniqueSubmission,
-  findManySubmissions,
   findUniqueSubmission,
   updateUniqueSubmission,
 } from "src/models/submissions.db";
