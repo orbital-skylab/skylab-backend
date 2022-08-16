@@ -3,7 +3,7 @@ import { SkylabError } from "src/errors/SkylabError";
 import {
   createUniqueAnswer,
   deleteManyAnswers,
-  getAnonymousAnswers,
+  findManyAnswers,
 } from "src/models/answers.db";
 import {
   findManyDeadlinesWithAnonymousQuestionsData,
@@ -11,6 +11,7 @@ import {
 } from "src/models/deadline.db";
 import {
   createUniqueSubmission,
+  findManySubmissions,
   findUniqueSubmission,
   updateUniqueSubmission,
 } from "src/models/submissions.db";
@@ -143,71 +144,82 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
     where: { cohortYear: cohortYear },
   });
 
-  const anonymousAnswersArray = await Promise.all(
-    deadlines
-      .map(async (deadline) => {
-        const anonymousQuestionIds = deadline.sections
-          .map(({ questions }) => questions.map(({ id }) => id).flat())
-          .flat();
+  const pDeadlinesWithSubmissionData = deadlines.map(
+    async ({ sections, ...deadline }) => {
+      const submissions = await findManySubmissions({
+        where: {
+          deadlineId: deadline.id,
+          isDraft: false,
+          toUserId: adviser.userId,
+        },
+      });
 
-        const answers = await getAnonymousAnswers(
-          { deadlineId: deadline.id, toUserId: adviser.userId },
-          anonymousQuestionIds
-        );
+      const answers = await Promise.all(
+        submissions.map(async (submission) => {
+          const answers = await findManyAnswers({
+            where: {
+              submissionId: submission.id,
+              question: { isAnonymous: true },
+            },
+          });
+          return answers;
+        })
+      );
 
-        return {
-          deadline: deadline,
-          submissions: {
-            sections: deadline.sections,
-            answers: answers,
-          },
-        };
-      })
-      .flat()
+      return {
+        deadline: deadline,
+        sections: sections,
+        answers: answers,
+      };
+    }
   );
-
-  const anonymousAnswers = anonymousAnswersArray.flat();
-  return anonymousAnswers;
+  return await Promise.all(pDeadlinesWithSubmissionData);
 }
+
 export async function getAnonymousAnswersViaStudentID(studentId: number) {
   const student = await getOneStudentById(studentId);
 
   if (!student.projectId) {
     throw new SkylabError(
-      "Student is not part of a project",
+      "Student is not part of project",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  const { projectId, cohortYear } = student;
+  const { cohortYear, projectId } = student;
 
   const deadlines = await findManyDeadlinesWithAnonymousQuestionsData({
     where: { cohortYear: cohortYear },
   });
 
-  const anonymousAnswersArray = await Promise.all(
-    deadlines
-      .map(async (deadline) => {
-        const anonymousQuestionIds = deadline.sections
-          .map(({ questions }) => questions.map(({ id }) => id).flat())
-          .flat();
+  const pDeadlinesWithSubmissionData = deadlines.map(
+    async ({ sections, ...deadline }) => {
+      const submissions = await findManySubmissions({
+        where: {
+          deadlineId: deadline.id,
+          isDraft: false,
+          toProjectId: projectId,
+        },
+      });
 
-        const answers = await getAnonymousAnswers(
-          { deadlineId: deadline.id, toProjectId: projectId },
-          anonymousQuestionIds
-        );
+      const answers = await Promise.all(
+        submissions.map(async (submission) => {
+          const answers = await findManyAnswers({
+            where: {
+              submissionId: submission.id,
+              question: { isAnonymous: true },
+            },
+          });
+          return answers;
+        })
+      );
 
-        return {
-          deadline: deadline,
-          submissions: {
-            sections: deadline.sections,
-            answers: answers,
-          },
-        };
-      })
-      .flat()
+      return {
+        deadline: deadline,
+        sections: sections,
+        answers: answers,
+      };
+    }
   );
-
-  const anonymousAnswers = anonymousAnswersArray.flat();
-  return anonymousAnswers;
+  return await Promise.all(pDeadlinesWithSubmissionData);
 }

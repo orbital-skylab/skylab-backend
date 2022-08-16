@@ -11,25 +11,7 @@ export async function deleteManyAnswers(query: Prisma.AnswerDeleteManyArgs) {
   return deleteAnswers;
 }
 
-export async function getAnonymousAnswers(
-  query: {
-    deadlineId: number;
-    toUserId?: number;
-    toProjectId?: number;
-  },
-  anonymousQuestionIds: number[]
-) {
-  const { deadlineId, toUserId, toProjectId } = query;
-  const answers = await prisma.answer.findMany({
-    where: {
-      submission: {
-        isDraft: false,
-        deadlineId: deadlineId,
-        toUserId: toUserId,
-        toProjectId: toProjectId,
-      },
-      questionId: { in: anonymousQuestionIds },
-    },
-  });
+export async function findManyAnswers(query: Prisma.AnswerFindManyArgs) {
+  const answers = await prisma.answer.findMany(query);
   return answers;
 }
