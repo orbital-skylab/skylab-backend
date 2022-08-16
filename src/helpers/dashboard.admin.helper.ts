@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Project, Submission, User } from "@prisma/client";
+import {
+  Adviser,
+  Mentor,
+  Project,
+  Student,
+  Submission,
+  User,
+} from "@prisma/client";
 import { findUniqueDeadline } from "src/models/deadline.db";
 import { findManyProjectsWithUserData } from "src/models/projects.db";
 import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
@@ -9,6 +16,77 @@ export enum SubmissionStatusEnum {
   UNSUBMITTED = "Unsubmitted",
   SUBMITTED = "Submitted",
   SUBMITTED_LATE = "Submitted_Late",
+}
+
+export function flattenProjectUsers(
+  project: Project & {
+    students: (Student & {
+      user: User;
+    })[];
+    mentor:
+      | (Mentor & {
+          user: User;
+        })
+      | null;
+    adviser:
+      | (Adviser & {
+          user: User;
+        })
+      | null;
+  }
+) {
+  const { students, adviser, mentor, ...projectData } = project;
+  const flattenedStudents = students.map((student) => {
+    const { user, ...studentData } = student;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...userData } = user;
+    return {
+      ...userData,
+      ...studentData,
+    };
+  });
+
+  let tempMentorAdviser;
+
+  if (adviser) {
+    const { user: adviserUser, ...adviserData } = adviser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...adviserUserData } = adviserUser;
+    tempMentorAdviser = {
+      adviser: {
+        ...adviserData,
+        ...adviserUserData,
+      },
+    };
+  } else {
+    tempMentorAdviser = {
+      adviser: null,
+    };
+  }
+
+  if (mentor) {
+    const { user: mentorUser, ...mentorData } = mentor;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...mentorUserData } = mentorUser;
+    tempMentorAdviser = {
+      ...tempMentorAdviser,
+      mentor: {
+        ...mentorUserData,
+        ...mentorData,
+      },
+    };
+  } else {
+    tempMentorAdviser = {
+      ...tempMentorAdviser,
+      mentor: null,
+    };
+  }
+
+  return {
+    ...tempMentorAdviser,
+    ...projectData,
+    students: flattenedStudents,
+  };
 }
 
 export async function getSubmissionsByDeadlineId(
@@ -70,7 +148,7 @@ export async function getSubmissionsByDeadlineId(
         },
       });
       return {
-        fromProject: project,
+        fromProject: flattenProjectUsers(project),
         toUser: project.adviser?.user,
         submission: submission ? submission : undefined,
       };
@@ -85,7 +163,7 @@ export async function getSubmissionsByDeadlineId(
         },
       });
       return {
-        fromProject: project,
+        fromProject: flattenProjectUsers(project),
         submission: submission ? submission : undefined,
       };
     });
@@ -106,6 +184,12 @@ export async function getSubmissionsByDeadlineId(
         return result.submission;
       }
     });
-    return filteredResult;
+    return filteredResult.map((result) => {
+      const { submission, ...resultData } = result;
+      return {
+        ...resultData,
+        submissionId: submission ? submission.id : undefined,
+      };
+    });
   }
 }
