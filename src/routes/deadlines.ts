@@ -103,15 +103,19 @@ router
   );
 
 router
-  .get("/:deadlineId", authorizeAdmin, async (req: Request, res: Response) => {
-    const { deadlineId } = req.params;
-    try {
-      const deadlineWithId = await getOneDeadlineById(Number(deadlineId));
-      return apiResponseWrapper(res, { deadline: deadlineWithId });
-    } catch (e) {
-      return routeErrorHandler(res, e);
+  .get(
+    "/:deadlineId",
+    // authorizeAdmin,
+    async (req: Request, res: Response) => {
+      const { deadlineId } = req.params;
+      try {
+        const deadlineWithId = await getOneDeadlineById(Number(deadlineId));
+        return apiResponseWrapper(res, { deadline: deadlineWithId });
+      } catch (e) {
+        return routeErrorHandler(res, e);
+      }
     }
-  })
+  )
   .put("/:deadlineId", authorizeAdmin, async (req: Request, res: Response) => {
     const { deadlineId } = req.params;
     try {

@@ -137,12 +137,13 @@ export async function getSubmissionsByDeadlineId(
       return {
         fromProject: relation.fromProject,
         toProject: relation.toProject,
-        submissionId: submission ? submission.id : undefined,
+        submission: submission ? submission : undefined,
       };
     });
     results = await Promise.all(pSubmissions);
   } else if (deadline.type == "Feedback") {
     const pSubmissions = projects.map(async (project) => {
+      console.log(project.id);
       const submission = await findFirstNonDraftSubmission({
         where: {
           deadlineId: deadlineId,
@@ -165,9 +166,10 @@ export async function getSubmissionsByDeadlineId(
           fromProjectId: project.id,
         },
       });
+
       return {
         fromProject: flattenProjectUsers(project),
-        submissionId: submission ? submission.id : undefined,
+        submission: submission ? submission : undefined,
       };
     });
     results = await Promise.all(pSubmissions);
@@ -177,9 +179,8 @@ export async function getSubmissionsByDeadlineId(
     return results;
   } else {
     const filteredResult = results.filter((result) => {
-      const typeOfSubmission = typeof result.submission;
       if (submissionStatus == SubmissionStatusEnum.UNSUBMITTED) {
-        return typeOfSubmission == undefined;
+        return !result.submission;
       } else if (submissionStatus == SubmissionStatusEnum.SUBMITTED_LATE) {
         return (
           result.submission && result.submission.updatedAt > deadline.dueBy
@@ -188,6 +189,13 @@ export async function getSubmissionsByDeadlineId(
         return result.submission;
       }
     });
-    return filteredResult;
+    return filteredResult.map((result) => {
+      const { submission, ...resultData } = result;
+      return {
+        id: submission ? submission.id : undefined,
+        updatedAt: submission ? submission.updatedAt : undefined,
+        ...resultData,
+      };
+    });
   }
 }
