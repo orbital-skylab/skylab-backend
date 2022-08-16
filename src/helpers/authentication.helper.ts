@@ -29,11 +29,10 @@ export async function userLogin(email: string, passwordInput: string) {
       token: null,
     };
   } else {
+    const userData = removePasswordFromUser(user);
     return {
-      token: jwt.sign(
-        removePasswordFromUser(user),
-        process.env.JWT_SECRET ?? "jwt_secret"
-      ),
+      userData,
+      token: jwt.sign(userData, process.env.JWT_SECRET ?? "jwt_secret"),
     };
   }
 }
