@@ -137,7 +137,7 @@ export async function getSubmissionsByDeadlineId(
       return {
         fromProject: relation.fromProject,
         toProject: relation.toProject,
-        submission: submission ? submission : undefined,
+        submissionId: submission ? submission.id : undefined,
       };
     });
     results = await Promise.all(pSubmissions);
@@ -167,7 +167,7 @@ export async function getSubmissionsByDeadlineId(
       });
       return {
         fromProject: flattenProjectUsers(project),
-        submission: submission ? submission : undefined,
+        submissionId: submission ? submission.id : undefined,
       };
     });
     results = await Promise.all(pSubmissions);
@@ -188,12 +188,6 @@ export async function getSubmissionsByDeadlineId(
         return result.submission;
       }
     });
-    return filteredResult.map((result) => {
-      const { submission, ...resultData } = result;
-      return {
-        ...resultData,
-        submissionId: submission ? submission.id : undefined,
-      };
-    });
+    return filteredResult;
   }
 }
