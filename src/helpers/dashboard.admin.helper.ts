@@ -39,7 +39,7 @@ export function flattenProjectUsers(
   const flattenedStudents = students.map((student) => {
     const { user, ...studentData } = student;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, ...userData } = user;
+    const { id, password, ...userData } = user;
     return {
       ...userData,
       ...studentData,
