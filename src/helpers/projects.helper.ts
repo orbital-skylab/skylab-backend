@@ -151,19 +151,7 @@ export async function createProject(body: any) {
   return await createOneProject(createProjectArgs);
 }
 
-interface IEditProjectData {
-  name?: string;
-  achievement?: AchievementLevel;
-  proposalPdf?: string;
-  students?: number[];
-  adviser?: number;
-  mentor?: number;
-}
-
-export async function editProjectDataByProjectID(
-  projectId: number,
-  body: any & IEditProjectData
-) {
+export async function editProjectDataByProjectID(projectId: number, body: any) {
   const { students, adviser, mentor, ...projectUpdates } = body;
   return await updateOneProject({
     where: { id: projectId },
