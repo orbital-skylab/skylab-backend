@@ -8,11 +8,7 @@ import {
 } from "src/helpers/authentication.helper";
 import { getOneUserById } from "src/helpers/users.helper";
 import authorizeSignedIn from "src/middleware/authorizeSignedIn";
-import {
-  findUniqueUser,
-  findUniqueUserWithRoleData,
-  updateUniqueUser,
-} from "src/models/users.db";
+import { findUniqueUser, updateUniqueUser } from "src/models/users.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -32,7 +28,7 @@ router.post("/sign-in", async (req: Request, res: Response) => {
       );
     }
 
-    const { token } = await userLogin(email, password);
+    const { userData, token } = await userLogin(email, password);
 
     if (!token) {
       throw new SkylabError(
@@ -41,9 +37,6 @@ router.post("/sign-in", async (req: Request, res: Response) => {
       );
     }
 
-    const userData = await findUniqueUserWithRoleData({
-      where: { email: email },
-    });
     return res
       .cookie("token", token, {
         maxAge: 10 * 60 * 60 * 24 * 1000,

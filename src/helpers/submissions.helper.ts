@@ -1,13 +1,23 @@
 import { Answer } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
-import { createUniqueAnswer, deleteManyAnswers } from "src/models/answers.db";
-import { findUniqueDeadlineWithQuestionsData } from "src/models/deadline.db";
+import {
+  createUniqueAnswer,
+  deleteManyAnswers,
+  findManyAnswers,
+} from "src/models/answers.db";
+import {
+  findManyDeadlinesWithAnonymousQuestionsData,
+  findUniqueDeadlineWithQuestionsData,
+} from "src/models/deadline.db";
 import {
   createUniqueSubmission,
+  findManySubmissions,
   findUniqueSubmission,
   updateUniqueSubmission,
 } from "src/models/submissions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { getOneAdviserById } from "./advisers.helper";
+import { getOneStudentById } from "./students.helper";
 
 export async function getSubmissionBySubmissionId(submissionId: number) {
   const submission = await findUniqueSubmission({
@@ -124,4 +134,92 @@ export async function updateOneSubmissionBySubmissionId(
   }
 
   return await findUniqueSubmission({ where: { id: submissionId } });
+}
+
+export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
+  const adviser = await getOneAdviserById(adviserId);
+  const { cohortYear } = adviser;
+
+  const deadlines = await findManyDeadlinesWithAnonymousQuestionsData({
+    where: { cohortYear: cohortYear },
+  });
+
+  const pDeadlinesWithSubmissionData = deadlines.map(
+    async ({ sections, ...deadline }) => {
+      const submissions = await findManySubmissions({
+        where: {
+          deadlineId: deadline.id,
+          isDraft: false,
+          toUserId: adviser.userId,
+        },
+      });
+
+      const answers = await Promise.all(
+        submissions.map(async (submission) => {
+          const answers = await findManyAnswers({
+            where: {
+              submissionId: submission.id,
+              question: { isAnonymous: true },
+            },
+          });
+          return answers;
+        })
+      );
+
+      return {
+        deadline: deadline,
+        sections: sections,
+        answers: answers,
+      };
+    }
+  );
+  return await Promise.all(pDeadlinesWithSubmissionData);
+}
+
+export async function getAnonymousAnswersViaStudentID(studentId: number) {
+  const student = await getOneStudentById(studentId);
+
+  if (!student.projectId) {
+    throw new SkylabError(
+      "Student is not part of project",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const { cohortYear, projectId } = student;
+
+  const deadlines = await findManyDeadlinesWithAnonymousQuestionsData({
+    where: { cohortYear: cohortYear },
+  });
+
+  const pDeadlinesWithSubmissionData = deadlines.map(
+    async ({ sections, ...deadline }) => {
+      const submissions = await findManySubmissions({
+        where: {
+          deadlineId: deadline.id,
+          isDraft: false,
+          toProjectId: projectId,
+        },
+      });
+
+      const answers = await Promise.all(
+        submissions.map(async (submission) => {
+          const answers = await findManyAnswers({
+            where: {
+              submissionId: submission.id,
+              question: { isAnonymous: true },
+            },
+          });
+          return answers;
+        })
+      );
+
+      return {
+        deadline: deadline,
+        sections: sections,
+        answers: answers,
+      };
+    }
+  );
+  return await Promise.all(pDeadlinesWithSubmissionData);
 }

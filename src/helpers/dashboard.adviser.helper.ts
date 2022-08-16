@@ -53,9 +53,8 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
 
           const pProjectSubmission = findFirstNonDraftSubmission({
             where: {
-              id: evaluatingMilestoneId,
+              deadlineId: evaluatingMilestoneId,
               fromProjectId: project.id,
-              isDraft: false,
             },
             select: { id: true },
           });
