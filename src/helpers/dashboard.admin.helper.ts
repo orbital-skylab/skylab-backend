@@ -51,7 +51,7 @@ export function flattenProjectUsers(
   if (adviser) {
     const { user: adviserUser, ...adviserData } = adviser;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, ...adviserUserData } = adviserUser;
+    const { id, password, ...adviserUserData } = adviserUser;
     tempMentorAdviser = {
       adviser: {
         ...adviserData,
@@ -67,7 +67,7 @@ export function flattenProjectUsers(
   if (mentor) {
     const { user: mentorUser, ...mentorData } = mentor;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, ...mentorUserData } = mentorUser;
+    const { id, password, ...mentorUserData } = mentorUser;
     tempMentorAdviser = {
       ...tempMentorAdviser,
       mentor: {
