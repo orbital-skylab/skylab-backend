@@ -10,7 +10,7 @@ const router = Router();
 
 router.get(
   "/team-submissions",
-  // authorizeAdmin,
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     try {
       const submissions = await getSubmissionsByDeadlineId(req.query);
