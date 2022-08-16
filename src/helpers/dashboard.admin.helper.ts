@@ -140,6 +140,7 @@ export async function getSubmissionsByDeadlineId(
     results = await Promise.all(pSubmissions);
   } else if (deadline.type == "Feedback") {
     const pSubmissions = projects.map(async (project) => {
+      console.log(project.id);
       const submission = await findFirstNonDraftSubmission({
         where: {
           deadlineId: deadlineId,
@@ -162,6 +163,7 @@ export async function getSubmissionsByDeadlineId(
           fromProjectId: project.id,
         },
       });
+
       return {
         fromProject: flattenProjectUsers(project),
         submission: submission ? submission : undefined,
@@ -187,8 +189,9 @@ export async function getSubmissionsByDeadlineId(
     return filteredResult.map((result) => {
       const { submission, ...resultData } = result;
       return {
+        id: submission ? submission.id : undefined,
+        updatedAt: submission ? submission.updatedAt : undefined,
         ...resultData,
-        submissionId: submission ? submission.id : undefined,
       };
     });
   }
