@@ -57,7 +57,7 @@ router.get(
 router
   .get(
     "/:submissionId",
-    authorizeSignedIn,
+    // authorizeSignedIn,
     async (req: Request, res: Response) => {
       const { submissionId } = req.params;
       try {
