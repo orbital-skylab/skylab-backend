@@ -29,7 +29,7 @@ export async function getProjectMilestonesByMentorId(mentorId: number) {
       });
       return {
         fromProject: project,
-        submission: submission ? submission : undefined,
+        ...submission,
       };
     });
     return {
