@@ -13,7 +13,7 @@ const router = Router();
 
 router.get(
   "/:adviserId/deadlines",
-  // authorizeSignedIn,
+  authorizeSignedIn,
   async (req: Request, res: Response) => {
     const { adviserId } = req.params;
     try {

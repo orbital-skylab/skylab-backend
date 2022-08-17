@@ -131,7 +131,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
         });
         return {
           fromProject: project,
-          submission: submission ? submission : undefined,
+          ...submission,
         };
       });
       return {
@@ -150,7 +150,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
         return {
           fromProject: relation.fromProject,
           toProject: relation.toProject,
-          submission: submission ? submission : undefined,
+          ...submission,
         };
       });
       return {
@@ -168,7 +168,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
         });
         return {
           fromProject: project,
-          submission: submission ? submission : undefined,
+          ...submission,
         };
       });
       return {
