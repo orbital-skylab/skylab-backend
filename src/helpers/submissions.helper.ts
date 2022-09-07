@@ -17,6 +17,7 @@ import {
 } from "src/models/submissions.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { getOneAdviserById } from "./advisers.helper";
+import { parseQuestionsInput } from "./deadline.helper";
 import { getOneStudentById } from "./students.helper";
 
 export async function getSubmissionBySubmissionId(submissionId: number) {
@@ -48,7 +49,13 @@ export async function getSubmissionBySubmissionId(submissionId: number) {
   return {
     ...submission,
     deadline: deadlineData,
-    sections: sections,
+    sections: sections.map((section) => {
+      const { questions, ...sectionData } = section;
+      return {
+        ...sectionData,
+        questions: parseQuestionsInput(questions),
+      };
+    }),
   };
 }
 
