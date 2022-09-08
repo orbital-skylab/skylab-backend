@@ -17,7 +17,7 @@ const router = Router();
 router.post("/", async (_: Request, res: Response) => {
   try {
     await seedAll();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    return apiResponseWrapper(res, { response: "Done" });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -25,7 +25,7 @@ router.post("/", async (_: Request, res: Response) => {
 router.post("/cohorts", async (_: Request, res: Response) => {
   try {
     await seedCohorts();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    return apiResponseWrapper(res, { response: "Done" });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -41,7 +41,7 @@ router.post("/students", async (_: Request, res: Response) => {
 router.post("/mentors", async (_: Request, res: Response) => {
   try {
     await seedMentors();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    return apiResponseWrapper(res, { response: "Done" });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -49,15 +49,15 @@ router.post("/mentors", async (_: Request, res: Response) => {
 router.post("/advisers", async (_: Request, res: Response) => {
   try {
     await seedAdvisers();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    return apiResponseWrapper(res, { response: "Done" });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
 });
 router.post("/admins", async (_: Request, res: Response) => {
   try {
-    await seedAdmins();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    const response = await seedAdmins();
+    return apiResponseWrapper(res, { response });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -65,7 +65,7 @@ router.post("/admins", async (_: Request, res: Response) => {
 router.post("/deadlines", async (_: Request, res: Response) => {
   try {
     await seedDeadlines();
-    return apiResponseWrapper(res, { response: "Donezo" });
+    return apiResponseWrapper(res, { response: "Done" });
   } catch (e) {
     return routeErrorHandler(res, e);
   }

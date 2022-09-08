@@ -22,5 +22,5 @@ export const seedAdmins = async () => {
     user: { email: "admin@skylab.com", password: PASSWORD },
     administrator: generateFakeRoleData(UserRolesEnum.Administrator),
   });
-  await createManyUsersWithAdministratorRole(batch, true);
+  return createManyUsersWithAdministratorRole(batch, true);
 };
