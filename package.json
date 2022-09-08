@@ -1,6 +1,7 @@
 {
   "name": "skylab-backend",
   "version": "0.0.0",
+  "main": "index.js",
   "scripts": {
     "build": "tsc",
     "test": "NODE_ENV=test jest --runInBand --verbose --detectOpenHandles --coverage --forceExit",
@@ -8,8 +9,8 @@
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
     "format": "npx prettier --config .prettierrc.js --write \"src/**/*.ts\"",
     "lint": "eslint . --ext .ts",
-    "start": "nodemon",
-    "dev": "nodemon src/index.ts",
+    "start": "export NODE_ENV=production || set NODE_ENV=production&&node dist/index.js",
+    "dev": "export NODE_ENV=development || set NODE_ENV=development&&nodemon src/index.ts",
     "heroku-postbuild": "npx prisma generate"
   },
   "_moduleAliases": {
