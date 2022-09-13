@@ -19,8 +19,12 @@ export const seedAdmins = async () => {
     batch.accounts.push(account);
   }
   batch.accounts.push({
-    user: { email: "admin@skylab.com", password: PASSWORD },
+    user: {
+      email: "admin@skylab.com",
+      name: "Skylab Admin",
+      password: PASSWORD,
+    },
     administrator: generateFakeRoleData(UserRolesEnum.Administrator),
   });
-  await createManyUsersWithAdministratorRole(batch, true);
+  return createManyUsersWithAdministratorRole(batch, true);
 };
