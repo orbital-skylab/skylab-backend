@@ -120,7 +120,7 @@ export async function createManyUsersWithStudentRole(
     );
   }
 
-  const accounts = [];
+  const accounts: any[] = [];
   for (const project of projects) {
     const { students, ...projectData } = project;
     for (const student of students) {
