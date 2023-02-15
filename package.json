@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
+    "dev:test": "npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run dev",
     "test": "NODE_ENV=test jest --runInBand --verbose --detectOpenHandles --coverage --forceExit",
     "test:badges": "jest-coverage-badges",
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
@@ -12,6 +13,9 @@
     "start": "export NODE_ENV=production || set NODE_ENV=production&&node dist/index.js",
     "dev": "export NODE_ENV=development || set NODE_ENV=development&&nodemon src/index.ts",
     "heroku-postbuild": "npx prisma generate"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "_moduleAliases": {
     "@services": "dist/services",
@@ -80,7 +84,7 @@
     "pg": "^8.7.3",
     "pg-hstore": "^2.3.4",
     "sib-api-v3-typescript": "^2.2.2",
-    "ts-node": "^10.7.0",
+    "ts-node": "^10.9.1",
     "tsconfig-paths": "^3.13.0",
     "typescript": "^4.6.4"
   },
