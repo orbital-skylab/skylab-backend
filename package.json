@@ -11,7 +11,11 @@
     "lint": "eslint . --ext .ts",
     "start": "export NODE_ENV=production || set NODE_ENV=production&&node dist/index.js",
     "dev": "export NODE_ENV=development || set NODE_ENV=development&&nodemon src/index.ts",
-    "heroku-postbuild": "npx prisma generate"
+    "heroku-postbuild": "npx prisma generate",
+    "cy-test": "prisma migrate deploy && prisma db seed && export NODE_ENV=test || set NODE_ENV=test && nodemon src/index.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "_moduleAliases": {
     "@services": "dist/services",
