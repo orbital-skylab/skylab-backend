@@ -39,6 +39,10 @@ export const CohortQueryValidator = query("cohortYear")
     }
   });
 
+export const TargetAudienceRoleValidator = query("targetAudienceRole")
+  .isIn(["Student", "Mentor", "Adviser", "All"])
+  .optional();
+
 export const PageQueryValidator = query("page")
   .isNumeric()
   .withMessage("Page number must be numeric")
