@@ -10,33 +10,37 @@ datasource db {
 }
 
 model User {
-  id              Int             @id @default(autoincrement())
-  name            String          @db.VarChar(255)
-  email           String          @unique @db.VarChar(255)
-  profilePicUrl   String?
-  githubUrl       String?
-  linkedinUrl     String?
-  personalSiteUrl String?
-  selfIntro       String?
-  password        String          @db.VarChar(255) //Hashed
-  administrator   Administrator[]
-  adviser         Adviser[]
-  mentor          Mentor[]
-  student         Student[]
-  submitterId     Int?
-  submitted       Submission[]    @relation("from_user")
-  received        Submission[]    @relation("to_user")
+  id                   Int                   @id @default(autoincrement())
+  name                 String                @db.VarChar(255)
+  email                String                @unique @db.VarChar(255)
+  profilePicUrl        String?
+  githubUrl            String?
+  linkedinUrl          String?
+  personalSiteUrl      String?
+  selfIntro            String?
+  password             String                @db.VarChar(255) //Hashed
+  administrator        Administrator[]
+  adviser              Adviser[]
+  mentor               Mentor[]
+  student              Student[]
+  submitterId          Int?
+  submitted            Submission[]          @relation("from_user")
+  received             Submission[]          @relation("to_user")
+  announcements        Announcement[]
+  announcementComments AnnouncementComment[]
+  announcementReadLogs AnnouncementReadLog[]
 }
 
 model Cohort {
-  startDate    DateTime
-  endDate      DateTime
-  academicYear Int        @id
-  advisers     Adviser[]
-  mentors      Mentor[]
-  projects     Project[]
-  students     Student[]
-  deadlines    Deadline[]
+  startDate     DateTime
+  endDate       DateTime
+  academicYear  Int            @id
+  advisers      Adviser[]
+  mentors       Mentor[]
+  projects      Project[]
+  students      Student[]
+  deadlines     Deadline[]
+  announcements Announcement[]
 }
 
 model Student {
@@ -188,8 +192,8 @@ model Submission {
   toProjectId   Int?
   deadlineId    Int
 
-  @@unique([deadlineId, fromProjectId, toProjectId, toUserId]) // Milestone/Evaluation/Feedback
-  @@unique([deadlineId, fromUserId, toProjectId]) // Adviser Evaluation
+  @@unique([deadlineId, fromProjectId, toProjectId, toUserId])
+  @@unique([deadlineId, fromUserId, toProjectId])
 }
 
 model Answer {
@@ -200,6 +204,52 @@ model Answer {
   submissionId Int
 
   @@id([submissionId, questionId, answer])
+}
+
+model Announcement {
+  id                   Int                   @id @default(autoincrement())
+  title                String
+  content              String
+  targetAudienceRole   TargetAudienceRole
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  author               User                  @relation(fields: [authorId], references: [id])
+  authorId             Int
+  cohort               Cohort                @relation(fields: [cohortYear], references: [academicYear])
+  cohortYear           Int
+  announcementComments AnnouncementComment[]
+  announcementReadLogs AnnouncementReadLog[]
+}
+
+model AnnouncementComment {
+  id              Int                   @id @default(autoincrement())
+  content         String
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  parentComment   AnnouncementComment?  @relation("NestedComments", fields: [parentCommentId], references: [id])
+  parentCommentId Int?
+  childComments   AnnouncementComment[] @relation("NestedComments")
+  author          User                  @relation(fields: [authorId], references: [id])
+  authorId        Int
+  announcement    Announcement          @relation(fields: [announcementId], references: [id])
+  announcementId  Int
+}
+
+model AnnouncementReadLog {
+  id             Int          @id @default(autoincrement())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id])
+  userId         Int
+  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  announcementId Int
+}
+
+enum TargetAudienceRole {
+  Student
+  Adviser
+  Mentor
+  All
 }
 
 enum DeadlineType {
