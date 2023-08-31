@@ -13,6 +13,7 @@ import administratorRouter from "./administrators";
 import relationRouter from "./relations";
 import dashboardRouter from "./dashboard";
 import submissionRouter from "./submissions";
+import announcementsRouter from "./announcements";
 
 // Export the base-router
 const baseRouter = Router();
@@ -31,6 +32,7 @@ baseRouter.use("/administrators", administratorRouter);
 baseRouter.use("/relations", relationRouter);
 baseRouter.use("/dashboard", dashboardRouter);
 baseRouter.use("/submissions", submissionRouter);
+baseRouter.use("/announcements", announcementsRouter);
 
 // Export default.
 export default baseRouter;

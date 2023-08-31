@@ -35,46 +35,44 @@ export const getManyAnnouncements = async (
 };
 
 /**
- * @function createCohort Create a new cohort
- * @param cohort Information of the cohort to be created
- * @returns Cohort object created in the database
+ * @function createOneAnnouncement Create a new announcement
+ * @param cohort Information of the announcement to be created
+ * @returns Announcement object created in the database
  */
-export const createCohort = async (cohort: Prisma.CohortCreateInput) => {
+export const createOneAnnouncement = async (
+  query: Prisma.AnnouncementCreateArgs
+) => {
   try {
-    const newCohort = await prisma.cohort.create({ data: cohort });
-    return newCohort;
+    const newAnnouncement = await prisma.announcement.create(query);
+    return newAnnouncement;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
-    }
-
-    if (e.code === "P2002") {
-      throw new SkylabError("Cohort is not unique", HttpStatusCode.BAD_REQUEST);
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
 
-export const editCohort = async (query: Prisma.CohortUpdateArgs) => {
-  try {
-    return await prisma.cohort.update(query);
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
+// export const editCohort = async (query: Prisma.CohortUpdateArgs) => {
+//   try {
+//     return await prisma.cohort.update(query);
+//   } catch (e) {
+//     if (!(e instanceof PrismaClientKnownRequestError)) {
+//       throw e;
+//     }
 
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-};
+//     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+//   }
+// };
 
-export const deleteCohort = async (query: Prisma.CohortDeleteArgs) => {
-  try {
-    return await prisma.cohort.delete(query);
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-};
+// export const deleteCohort = async (query: Prisma.CohortDeleteArgs) => {
+//   try {
+//     return await prisma.cohort.delete(query);
+//   } catch (e) {
+//     if (!(e instanceof PrismaClientKnownRequestError)) {
+//       throw e;
+//     }
+//     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+//   }
+// };
