@@ -39,3 +39,13 @@ export const CreateAnnouncementValidator = [
     .isNumeric()
     .withMessage("Announcement authorId missing in request body"),
 ];
+
+export const CreateAnnouncementCommentValidator = [
+  CheckBodyObjectExistsValidator("comment"),
+  body("comment.content")
+    .isString()
+    .withMessage("Comment content missing in request body"),
+  body("comment.authorId")
+    .isNumeric()
+    .withMessage("Comment authorId missing in request body"),
+];

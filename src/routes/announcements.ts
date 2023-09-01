@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   createAnnouncement,
+  createAnnouncementComment,
   getAnnouncementWithCommentThreads,
   getManyAnnouncementsWithFilter,
 } from "src/helpers/announcements.helper";
@@ -13,6 +14,7 @@ import {
   routeErrorHandler,
 } from "src/utils/ApiResponseWrapper";
 import {
+  CreateAnnouncementCommentValidator,
   CreateAnnouncementValidator,
   GetAnnouncementsValidator,
 } from "src/validators/announcement.validator";
@@ -66,6 +68,28 @@ router.post(
     try {
       const createdAnnouncement = await createAnnouncement(req.body);
       return apiResponseWrapper(res, { announcement: createdAnnouncement });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post(
+  "/:announcementId/comments",
+  authorizeRoleForAnnouncement,
+  CreateAnnouncementCommentValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    const { announcementId } = req.params;
+    try {
+      const createdAnnouncementComment = await createAnnouncementComment({
+        body: req.body,
+        announcementId: Number(announcementId),
+      });
+      return apiResponseWrapper(res, { comment: createdAnnouncementComment });
     } catch (e) {
       return routeErrorHandler(res, e);
     }

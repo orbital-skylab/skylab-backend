@@ -84,7 +84,7 @@ export const getManyAnnouncements = async (
 
 /**
  * @function createOneAnnouncement Create a new announcement
- * @param cohort Information of the announcement to be created
+ * @param query information of the announcement to be created
  * @returns Announcement object created in the database
  */
 export const createOneAnnouncement = async (
@@ -93,6 +93,28 @@ export const createOneAnnouncement = async (
   try {
     const newAnnouncement = await prisma.announcement.create(query);
     return newAnnouncement;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+  }
+};
+
+/**
+ * @function createOneAnnouncementComment Create a new announcement comment
+ * @param query Information of the comment to be created
+ * @returns AnnouncementComment object created in the database
+ */
+export const createOneAnnouncementComment = async (
+  query: Prisma.AnnouncementCommentCreateArgs
+) => {
+  try {
+    const newAnnouncementComment = await prisma.announcementComment.create(
+      query
+    );
+    return newAnnouncementComment;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;

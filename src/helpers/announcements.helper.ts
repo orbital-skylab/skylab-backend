@@ -6,6 +6,7 @@ import {
 import { SkylabError } from "src/errors/SkylabError";
 import {
   createOneAnnouncement,
+  createOneAnnouncementComment,
   getManyAnnouncements,
   getOneAnnouncementWithComments,
 } from "src/models/announcements.db";
@@ -151,4 +152,54 @@ export async function createAnnouncement(body: {
   // TODO: Send email to target audience
 
   return createdAnnouncement;
+}
+
+export async function createAnnouncementComment({
+  body,
+  announcementId,
+}: {
+  body: {
+    comment: {
+      content: string;
+      authorId: number;
+      parentCommentId?: number;
+    };
+  };
+  announcementId: number;
+}) {
+  const { content, authorId, parentCommentId } = body.comment;
+
+  const createdComment = await createOneAnnouncementComment({
+    data: {
+      content,
+      author: {
+        connect: {
+          id: authorId,
+        },
+      },
+      announcement: {
+        connect: {
+          id: announcementId,
+        },
+      },
+      ...(parentCommentId
+        ? {
+            parentComment: {
+              connect: {
+                id: parentCommentId,
+              },
+            },
+          }
+        : {}),
+    },
+  });
+
+  if (!createdComment) {
+    throw new SkylabError(
+      "Error occurred while creating comment",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return createdComment;
 }
