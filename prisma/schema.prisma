@@ -243,6 +243,7 @@ model AnnouncementReadLog {
   userId         Int
   announcement   Announcement @relation(fields: [announcementId], references: [id])
   announcementId Int
+  @@unique([userId, announcementId])
 }
 
 enum TargetAudienceRole {
