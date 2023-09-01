@@ -2,9 +2,11 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   createAnnouncement,
+  getAnnouncementWithCommentThreads,
   getManyAnnouncementsWithFilter,
 } from "src/helpers/announcements.helper";
 import authorizeAdmin from "src/middleware/authorizeAdmin";
+import authorizeRoleForAnnouncement from "src/middleware/authorizeRoleForAnnouncement";
 import authorizeTargetAudienceRole from "src/middleware/authorizeTargetAudienceRole";
 import {
   apiResponseWrapper,
@@ -32,6 +34,22 @@ router.get(
       return apiResponseWrapper(res, { announcements });
     } catch (e) {
       routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.get(
+  "/:announcementId",
+  authorizeRoleForAnnouncement,
+  async (req: Request, res: Response) => {
+    const { announcementId } = req.params;
+    try {
+      const announcement = await getAnnouncementWithCommentThreads({
+        announcementId: Number(announcementId),
+      });
+      return apiResponseWrapper(res, { announcement });
+    } catch (e) {
+      return routeErrorHandler(res, e);
     }
   }
 );
