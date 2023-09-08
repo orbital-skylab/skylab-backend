@@ -5,10 +5,15 @@ import {
 } from "@prisma/client";
 import { SkylabError } from "src/errors/SkylabError";
 import {
+  countComments,
   createOneAnnouncement,
   createOneAnnouncementComment,
+  deleteAnnouncementComment,
   getManyAnnouncements,
+  getOneAnnouncementComment,
   getOneAnnouncementWithComments,
+  updateAnnouncement,
+  updateAnnouncementComment,
 } from "src/models/announcements.db";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 
@@ -75,14 +80,17 @@ function organizeCommentsIntoThreads(
   return sortedCommentThreads;
 }
 
-export async function getManyAnnouncementsWithFilter(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getManyAnnouncementsWithFilter({
+  query,
+  userId,
+}: {
   query: any & {
     cohortYear: number;
     search?: string;
     targetAudienceRole?: string;
-  }
-) {
+  };
+  userId: number;
+}) {
   const { cohortYear, search, targetAudienceRole } = query;
   /* Create Filter Object */
   const announcementQuery: Prisma.AnnouncementFindManyArgs = {
@@ -106,6 +114,16 @@ export async function getManyAnnouncementsWithFilter(
       createdAt: "desc",
     },
     include: {
+      announcementReadLogs: {
+        where: {
+          userId,
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
       author: true,
       _count: {
         select: {
@@ -149,9 +167,45 @@ export async function createAnnouncement(body: {
     );
   }
 
-  // TODO: Send email to target audience
+  if (shouldSendEmail) {
+    // TODO: Send email to target audience
+  }
 
   return createdAnnouncement;
+}
+
+export async function editAnnouncement({
+  body,
+  announcementId,
+}: {
+  body: {
+    announcement: {
+      title?: string;
+      content?: string;
+      targetAudienceRole?: TargetAudienceRole;
+    };
+  };
+  announcementId: number;
+}) {
+  const { announcement } = body;
+
+  const updatedAnnouncement = await updateAnnouncement({
+    where: {
+      id: announcementId,
+    },
+    data: {
+      ...announcement,
+    },
+  });
+
+  if (!updatedAnnouncement) {
+    throw new SkylabError(
+      "Error occurred while updating announcement",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return updateAnnouncement;
 }
 
 export async function createAnnouncementComment({
@@ -202,4 +256,90 @@ export async function createAnnouncementComment({
   }
 
   return createdComment;
+}
+
+export async function editAnnouncementComment({
+  body,
+  commentId,
+}: {
+  body: {
+    comment: {
+      content?: string;
+    };
+  };
+  commentId: number;
+}) {
+  const { comment } = body;
+
+  const updatedAnnouncementComment = await updateAnnouncementComment({
+    where: {
+      id: commentId,
+    },
+    data: {
+      ...comment,
+      deletedAt: null,
+    },
+  });
+
+  if (!updatedAnnouncementComment) {
+    throw new SkylabError(
+      "Error occurred while updating comment",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return updateAnnouncement;
+}
+
+/**
+ * If the comment has replies, the comment will be soft deleted and replaced with a placeholder comment.
+ */
+export async function deleteOrSoftDeleteAnnouncementComment({
+  commentId,
+}: {
+  commentId: number;
+}) {
+  const hasReplies =
+    (await countComments({
+      where: {
+        parentCommentId: commentId,
+      },
+    })) > 0;
+
+  // Soft delete
+  if (hasReplies) {
+    const updatedAnnouncementComment = await updateAnnouncementComment({
+      where: {
+        id: commentId,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    if (!updatedAnnouncementComment) {
+      throw new SkylabError(
+        "Error occurred while soft deleting comment",
+        HttpStatusCode.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    return updateAnnouncementComment;
+  }
+
+  // Hard-delete
+  const deletedAnnouncementComment = await deleteAnnouncementComment({
+    where: {
+      id: commentId,
+    },
+  });
+
+  if (!deletedAnnouncementComment) {
+    throw new SkylabError(
+      "Error occurred while deleting comment",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return deletedAnnouncementComment;
 }

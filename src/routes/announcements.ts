@@ -3,13 +3,15 @@ import { validationResult } from "express-validator";
 import {
   createAnnouncement,
   createAnnouncementComment,
+  deleteOrSoftDeleteAnnouncementComment,
+  editAnnouncement,
+  editAnnouncementComment,
   getAnnouncementWithCommentThreads,
   getManyAnnouncementsWithFilter,
 } from "src/helpers/announcements.helper";
 import authorizeAdmin from "src/middleware/authorizeAdmin";
 import authorizeRoleForAnnouncement from "src/middleware/authorizeRoleForAnnouncement";
 import authorizeTargetAudienceRole from "src/middleware/authorizeTargetAudienceRole";
-import { upsertOneAnnouncementReadLog } from "src/models/announcementReadLogs.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -20,8 +22,17 @@ import {
   GetAnnouncementsValidator,
 } from "src/validators/announcement.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
-import jwt from "jsonwebtoken";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import {
+  createAnnouncementReadLog,
+  getAnnouncementReadPercentage,
+} from "src/helpers/announcementReadLogs.helper";
+import { extractJwtData } from "src/helpers/authentication.helper";
+import {
+  deleteAnnouncement,
+  deleteAnnouncementComment,
+  updateAnnouncementComment,
+} from "src/models/announcements.db";
+import authorizeAuthorOfComment from "src/middleware/authorizeAuthorOfComment";
 
 const router = Router();
 
@@ -35,7 +46,11 @@ router.get(
       return throwValidationError(res, errors);
     }
     try {
-      const announcements = await getManyAnnouncementsWithFilter(req.query);
+      const { id: userId } = extractJwtData(req, res);
+      const announcements = await getManyAnnouncementsWithFilter({
+        query: req.query,
+        userId: Number(userId),
+      });
       return apiResponseWrapper(res, { announcements });
     } catch (e) {
       routeErrorHandler(res, e);
@@ -49,42 +64,13 @@ router.get(
   async (req: Request, res: Response) => {
     const { announcementId } = req.params;
     try {
-      const token = req?.cookies?.token;
-      if (!token || typeof token !== "string") {
-        return res
-          .status(HttpStatusCode.UNAUTHORIZED)
-          .send("Authentication failed");
-      }
+      const { id: userId } = extractJwtData(req, res);
 
-      const jwtData = jwt.verify(
-        token,
-        process.env.JWT_SECRET ?? "jwt_secret"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ) as any;
-      const userId = jwtData.id;
-      await upsertOneAnnouncementReadLog({
-        where: {
-          userId_announcementId: {
-            userId: Number(userId),
-            announcementId: Number(announcementId),
-          },
-        },
-        update: {
-          updatedAt: new Date(),
-        },
-        create: {
-          user: {
-            connect: {
-              id: Number(userId),
-            },
-          },
-          announcement: {
-            connect: {
-              id: Number(announcementId),
-            },
-          },
-        },
+      await createAnnouncementReadLog({
+        userId: Number(userId),
+        announcementId: Number(announcementId),
       });
+
       const announcement = await getAnnouncementWithCommentThreads({
         announcementId: Number(announcementId),
       });
@@ -113,6 +99,38 @@ router.post(
   }
 );
 
+router.put(
+  "/:announcementId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { announcementId } = req.params;
+    try {
+      const editedAnnouncement = await editAnnouncement({
+        body: req.body,
+        announcementId: Number(announcementId),
+      });
+      return apiResponseWrapper(res, { announcement: editedAnnouncement });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.delete("/:announcementId", authorizeAdmin, async (req, res) => {
+  const { announcementId } = req.params;
+  try {
+    const deletedAnnouncement = await deleteAnnouncement({
+      where: { id: Number(announcementId) },
+    });
+    return apiResponseWrapper(res, { announcement: deletedAnnouncement });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+/**
+ * Comments
+ */
 router.post(
   "/:announcementId/comments",
   authorizeRoleForAnnouncement,
@@ -129,6 +147,81 @@ router.post(
         announcementId: Number(announcementId),
       });
       return apiResponseWrapper(res, { comment: createdAnnouncementComment });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.put(
+  "/:announcementId/comments/:commentId",
+  authorizeAuthorOfComment,
+  async (req, res) => {
+    const { commentId } = req.params;
+    try {
+      const editedAnnouncementComment = await editAnnouncementComment({
+        body: req.body,
+        commentId: Number(commentId),
+      });
+      return apiResponseWrapper(res, { comment: editedAnnouncementComment });
+    } catch (error) {
+      return routeErrorHandler(res, error);
+    }
+  }
+);
+
+router.delete(
+  "/:announcementId/comments/:commentId",
+  authorizeAuthorOfComment,
+  async (req, res) => {
+    const { commentId } = req.params;
+    try {
+      const deletedAnnouncementComment =
+        await deleteOrSoftDeleteAnnouncementComment({
+          commentId: Number(commentId),
+        });
+      return apiResponseWrapper(res, { comment: deletedAnnouncementComment });
+    } catch (error) {
+      return routeErrorHandler(res, error);
+    }
+  }
+);
+
+/**
+ * Read log
+ */
+router.get(
+  "/:announcementId/read-percentage",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { announcementId } = req.params;
+    try {
+      const readPercentage = await getAnnouncementReadPercentage({
+        announcementId: Number(announcementId),
+      });
+      return apiResponseWrapper(res, {
+        readPercentage,
+      });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post(
+  "/:announcementId/read",
+  authorizeRoleForAnnouncement,
+  async (req: Request, res: Response) => {
+    const { announcementId } = req.params;
+    try {
+      const { id: userId } = extractJwtData(req, res);
+      const createdAnnouncementReadLog = await createAnnouncementReadLog({
+        userId: Number(userId),
+        announcementId: Number(announcementId),
+      });
+      return apiResponseWrapper(res, {
+        announcementReadLog: createdAnnouncementReadLog,
+      });
     } catch (e) {
       return routeErrorHandler(res, e);
     }

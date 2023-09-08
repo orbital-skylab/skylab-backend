@@ -132,3 +132,16 @@ export async function deleteUniqueMentor(query: Prisma.MentorDeleteArgs) {
     }
   }
 }
+
+export async function countMentors(query: Prisma.MentorCountArgs) {
+  try {
+    const count = await prisma.mentor.count(query);
+    return count;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+  }
+}

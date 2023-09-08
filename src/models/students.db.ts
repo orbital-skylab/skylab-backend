@@ -185,3 +185,15 @@ export async function deleteUniqueStudent(query: Prisma.StudentDeleteArgs) {
     }
   }
 }
+
+export async function countStudents(query: Prisma.StudentCountArgs) {
+  try {
+    return await prisma.student.count(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}

@@ -6,6 +6,7 @@ import { findUniqueUserWithRoleData } from "src/models/users.db";
 import { SUBJECT, SENDER, GET_HTML_CONTENT } from "src/utils/Emails";
 import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
+import { Request, Response } from "express";
 
 const PASSWORD_HASH_SALT_ROUNDS = 10;
 const RANDOM_PASSWORD_LENGTH = 16;
@@ -73,4 +74,21 @@ export async function sendPasswordResetEmail(
   } catch (e) {
     console.error(e);
   }
+}
+
+export function extractJwtData(req: Request, res: Response) {
+  const token = req?.cookies?.token;
+  if (!token || typeof token !== "string") {
+    return res
+      .status(HttpStatusCode.UNAUTHORIZED)
+      .send("Authentication failed");
+  }
+
+  const jwtData = jwt.verify(
+    token,
+    process.env.JWT_SECRET ?? "jwt_secret"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as any;
+
+  return jwtData;
 }

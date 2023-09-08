@@ -102,6 +102,33 @@ export const createOneAnnouncement = async (
   }
 };
 
+export const updateAnnouncement = async (
+  query: Prisma.AnnouncementUpdateArgs
+) => {
+  try {
+    return await prisma.announcement.update(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};
+
+export const deleteAnnouncement = async (
+  query: Prisma.AnnouncementDeleteArgs
+) => {
+  try {
+    return await prisma.announcement.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};
+
 /**
  * @function createOneAnnouncementComment Create a new announcement comment
  * @param query Information of the comment to be created
@@ -124,17 +151,34 @@ export const createOneAnnouncementComment = async (
   }
 };
 
-// export const editCohort = async (query: Prisma.CohortUpdateArgs) => {
-//   try {
-//     return await prisma.cohort.update(query);
-//   } catch (e) {
-//     if (!(e instanceof PrismaClientKnownRequestError)) {
-//       throw e;
-//     }
+export const getOneAnnouncementComment = async (
+  query: Prisma.AnnouncementCommentFindUniqueArgs
+) => {
+  return await prisma.announcementComment.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+};
 
-//     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-//   }
-// };
+export const updateAnnouncementComment = async (
+  query: Prisma.AnnouncementCommentUpdateArgs
+) => {
+  return await prisma.announcementComment.update({ ...query });
+};
+
+export const deleteAnnouncementComment = async (
+  query: Prisma.AnnouncementCommentDeleteArgs
+) => {
+  return await prisma.announcementComment.delete({
+    ...query,
+  });
+};
+
+export const countComments = async (
+  query: Prisma.AnnouncementCommentCountArgs
+) => {
+  return await prisma.announcementComment.count(query);
+};
 
 // export const deleteCohort = async (query: Prisma.CohortDeleteArgs) => {
 //   try {

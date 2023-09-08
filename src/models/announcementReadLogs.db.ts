@@ -20,3 +20,20 @@ export async function upsertOneAnnouncementReadLog(
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 }
+
+export async function countAnnouncementReadLogs(
+  query: Prisma.AnnouncementReadLogCountArgs
+) {
+  try {
+    const count = await prisma.announcementReadLog.count({
+      ...query,
+    });
+    return count;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+  }
+}

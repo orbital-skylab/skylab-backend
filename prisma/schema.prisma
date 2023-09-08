@@ -226,12 +226,13 @@ model AnnouncementComment {
   content         String
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+  deletedAt       DateTime?
   parentComment   AnnouncementComment?  @relation("NestedComments", fields: [parentCommentId], references: [id])
   parentCommentId Int?
   childComments   AnnouncementComment[] @relation("NestedComments")
   author          User                  @relation(fields: [authorId], references: [id])
   authorId        Int
-  announcement    Announcement          @relation(fields: [announcementId], references: [id])
+  announcement    Announcement          @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   announcementId  Int
 }
 
@@ -239,9 +240,9 @@ model AnnouncementReadLog {
   id             Int          @id @default(autoincrement())
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  user           User         @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         Int
-  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   announcementId Int
   @@unique([userId, announcementId])
 }
