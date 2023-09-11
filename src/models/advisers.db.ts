@@ -134,3 +134,15 @@ export async function deleteUniqueAdviser(query: Prisma.AdviserDeleteArgs) {
     }
   }
 }
+
+export async function countAdvisers(query: Prisma.AdviserCountArgs) {
+  try {
+    return await prisma.adviser.count(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    } else {
+      throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
+    }
+  }
+}
