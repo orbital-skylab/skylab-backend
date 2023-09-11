@@ -27,11 +27,7 @@ import {
   getAnnouncementReadPercentage,
 } from "src/helpers/announcementReadLogs.helper";
 import { extractJwtData } from "src/helpers/authentication.helper";
-import {
-  deleteAnnouncement,
-  deleteAnnouncementComment,
-  updateAnnouncementComment,
-} from "src/models/announcements.db";
+import { deleteAnnouncement } from "src/models/announcements.db";
 import authorizeAuthorOfComment from "src/middleware/authorizeAuthorOfComment";
 
 const router = Router();

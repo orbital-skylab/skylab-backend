@@ -10,7 +10,6 @@ import {
   createOneAnnouncementComment,
   deleteAnnouncementComment,
   getManyAnnouncements,
-  getOneAnnouncementComment,
   getOneAnnouncementWithComments,
   updateAnnouncement,
   updateAnnouncementComment,
