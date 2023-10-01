@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Question, DeadlineType, Option } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import {
+  Prisma,
+  Question,
+  DeadlineType,
+  Option,
+  AchievementLevel,
+} from "@prisma/client";
+import { prisma } from "../client";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createOneDeadline,
   deleteOneDeadline,
@@ -8,10 +15,10 @@ import {
   findUniqueDeadline,
   findUniqueDeadlineWithQuestionsData,
   updateOneDeadline,
-} from "src/models/deadline.db";
-import { createOneQuestion } from "src/models/questions.db";
-import { createOneSection, deleteManySections } from "src/models/sections.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/deadline.db";
+import { createOneQuestion } from "../models/questions.db";
+import { createOneSection, deleteManySections } from "../models/sections.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export async function getManyDeadlinesWithFilter(
   query: any & { cohortYear?: number; name?: string }
@@ -42,12 +49,13 @@ export async function createDeadline(body: {
 }) {
   const { deadline: deadlineData } = body;
   const { evaluatingMilestoneId, cohortYear, ...deadline } = deadlineData;
+
   const createdDeadline = await createOneDeadline({
     data: {
       cohort: { connect: { academicYear: cohortYear } },
       ...deadline,
       evaluating:
-        deadline.type === "Evaluation"
+        deadline.type === DeadlineType.Evaluation
           ? {
               connect: { id: evaluatingMilestoneId },
             }
@@ -61,6 +69,103 @@ export async function createDeadline(body: {
       HttpStatusCode.INTERNAL_SERVER_ERROR
     );
   }
+
+  if (deadline.type === DeadlineType.Application) {
+    const teamParticularsSection = await prisma.section.create({
+      data: {
+        sectionNumber: 1,
+        name: "Team Particulars",
+        deadline: {
+          connect: {
+            id: createdDeadline.id,
+          },
+        },
+        questions: {
+          createMany: {
+            data: [
+              {
+                questionNumber: 1,
+                question: "Student 1 Name",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 2,
+                question: "Student 2 Name",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 3,
+                question: "Student 1 Email",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 4,
+                question: "Student 2 Email",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 5,
+                question: "Student 1 Matriculation Number",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 6,
+                question: "Student 2 Matriculation Number",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 7,
+                question: "Student 1 NUSNET ID",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 8,
+                question: "Student 2 NUSNET ID",
+                type: "ShortAnswer",
+                desc: "",
+              },
+              {
+                questionNumber: 9,
+                question: "Team Name",
+                type: "ShortAnswer",
+                desc: "",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await prisma.question.create({
+      data: {
+        questionNumber: 10,
+        question: "Proposed Level of Achievement",
+        type: "Dropdown",
+        desc: "",
+        options: {
+          createMany: {
+            data: Object.values(AchievementLevel).map((achievement, idx) => ({
+              option: achievement,
+              order: idx,
+            })),
+          },
+        },
+        section: {
+          connect: {
+            id: teamParticularsSection.id,
+          },
+        },
+      },
+    });
+  }
+
   return await findUniqueDeadline({ where: { id: createdDeadline.id } });
 }
 
@@ -160,10 +265,9 @@ export async function replaceSectionsById(
 export async function editDeadlineByDeadlineId(
   deadlineId: number,
   body: {
-    deadline: Omit<
-      Prisma.DeadlineUpdateInput,
-      "cohort" | "cohortYear" | "questions"
-    > & { evaluatingMilestoneId?: number };
+    deadline: Omit<Prisma.DeadlineUpdateInput, "cohort" | "questions"> & {
+      evaluatingMilestoneId?: number;
+    };
   }
 ) {
   const { evaluatingMilestoneId, ...deadline } = body.deadline;
@@ -185,4 +289,24 @@ export async function deleteOneDeadlineByDeadlineId(deadlineId: number) {
     where: { id: deadlineId },
   });
   return deletedDeadline;
+}
+
+export async function duplicateDeadlineByDeadlineId(
+  deadlineId: number,
+  cohortYear: number
+) {
+  const deadline = await getOneDeadlineById(deadlineId);
+  if (!deadline) return null;
+  const { name, dueBy, type, desc, evaluatingMilestoneId } = deadline;
+  const duplicatedDeadline = await createDeadline({
+    deadline: {
+      cohortYear,
+      name: `Copy of ${name}`,
+      dueBy,
+      type,
+      desc: desc as string | undefined,
+      evaluatingMilestoneId: evaluatingMilestoneId as number | undefined,
+    },
+  });
+  return duplicatedDeadline;
 }
