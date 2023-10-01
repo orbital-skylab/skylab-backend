@@ -2,14 +2,14 @@ import { SkylabError } from "../errors/SkylabError";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 
-const authorizeSignedIn = async (
+const authorizeNotSignedIn = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const token = req?.cookies?.token;
-    if (!token || typeof token !== "string") {
+    if (token && typeof token === "string") {
       return res
         .status(HttpStatusCode.UNAUTHORIZED)
         .send("Authentication failed");
@@ -24,4 +24,4 @@ const authorizeSignedIn = async (
   }
 };
 
-export default authorizeSignedIn;
+export default authorizeNotSignedIn;

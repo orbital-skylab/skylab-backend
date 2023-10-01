@@ -1,13 +1,13 @@
 import { DeadlineType } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueAdviserWithProjectData } from "src/models/advisers.db";
-import { findManyDeadlines } from "src/models/deadline.db";
-import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
+import { SkylabError } from "../errors/SkylabError";
+import { findUniqueAdviserWithProjectData } from "../models/advisers.db";
+import { findManyDeadlines } from "../models/deadline.db";
+import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
 import {
   findFirstNonDraftSubmission,
   findFirstSubmission,
-} from "src/models/submissions.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/submissions.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export async function getDeadlinesByAdviserId(adviserId: number) {
   const adviser = await findUniqueAdviserWithProjectData({

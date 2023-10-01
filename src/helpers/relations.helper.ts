@@ -9,7 +9,7 @@ import {
   findManyRelations,
   findUniqueRelation,
   updateOneRelation,
-} from "src/models/relations.db";
+} from "../models/relations.db";
 import { parseGetAdviserInput } from "./advisers.helper";
 import {
   getAdviserUserByProjectID,

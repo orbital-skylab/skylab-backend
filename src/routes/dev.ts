@@ -3,26 +3,26 @@ import {
   addAdministratorRoleToUser,
   createManyUsersWithAdministratorRole,
   createUserWithAdministratorRole,
-} from "src/helpers/administrators.helper";
+} from "../helpers/administrators.helper";
 import {
   addAdviserRoleToUser,
   createManyUsersWithAdviserRole,
   createUserWithAdviserRole,
-} from "src/helpers/advisers.helper";
+} from "../helpers/advisers.helper";
 import {
   addMentorRoleToUser,
   createManyUsersWithMentorRole,
   createUserWithMentorRole,
-} from "src/helpers/mentors.helper";
+} from "../helpers/mentors.helper";
 import {
   addStudentRoleToUser,
   createManyUsersWithStudentRole,
   createUserWithStudentRole,
-} from "src/helpers/students.helper";
+} from "../helpers/students.helper";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 
 const router = Router();
 

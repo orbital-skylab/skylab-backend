@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "src/client";
+import { prisma } from "../client";
 
 export async function createUniqueAnswer(query: Prisma.AnswerCreateArgs) {
   const createdAnswer = await prisma.answer.create(query);

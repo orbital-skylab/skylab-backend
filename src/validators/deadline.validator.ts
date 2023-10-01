@@ -1,6 +1,6 @@
 import { DeadlineType } from "@prisma/client";
 import { body, param } from "express-validator";
-import { getOneDeadlineById } from "src/helpers/deadline.helper";
+import { getOneDeadlineById } from "../helpers/deadline.helper";
 import {
   CheckBodyObjectExistsValidator,
   CohortQueryValidator,

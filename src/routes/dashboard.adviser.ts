@@ -2,12 +2,12 @@ import { Request, Response, Router } from "express";
 import {
   getDeadlinesByAdviserId,
   getProjectSubmissionsViaAdviserId,
-} from "src/helpers/dashboard.adviser.helper";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
+} from "../helpers/dashboard.adviser.helper";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 
 const router = Router();
 

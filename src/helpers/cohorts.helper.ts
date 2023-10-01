@@ -4,7 +4,7 @@ import {
   editCohort,
   getFirstCohort,
   getManyCohorts,
-} from "src/models/cohorts.db";
+} from "../models/cohorts.db";
 
 /**
  * @function getLatestCohort Get the most recent cohort

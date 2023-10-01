@@ -1,4 +1,4 @@
-import { getOneCohort } from "src/models/cohorts.db";
+import { getOneCohort } from "../../models/cohorts.db";
 
 export const checkCohortExists = async (cohortYear: number) => {
   try {

@@ -8,7 +8,7 @@ import {
   ValidationError,
 } from "express-validator";
 import { checkCohortExists } from "./helper/cohort.validator.helper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import {
   checkUserExistsWithEmail,
   checkUserExistsWithID,

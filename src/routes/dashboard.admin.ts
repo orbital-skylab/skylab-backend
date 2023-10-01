@@ -1,13 +1,13 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { getSubmissionsByDeadlineId } from "src/helpers/dashboard.admin.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
+import { getSubmissionsByDeadlineId } from "../helpers/dashboard.admin.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { GetSubmissionsByDeadlineIDValidator } from "src/validators/dashboard.admin.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../utils/ApiResponseWrapper";
+import { GetSubmissionsByDeadlineIDValidator } from "../validators/dashboard.admin.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 

@@ -3,7 +3,7 @@ import {
   Prisma,
   TargetAudienceRole,
 } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   countComments,
   createOneAnnouncement,
@@ -13,8 +13,8 @@ import {
   getOneAnnouncementWithComments,
   updateAnnouncement,
   updateAnnouncementComment,
-} from "src/models/announcements.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/announcements.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export async function getAnnouncementWithCommentThreads({
   announcementId,

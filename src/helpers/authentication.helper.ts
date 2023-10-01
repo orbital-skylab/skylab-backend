@@ -1,10 +1,10 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
-import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueUserWithRoleData } from "src/models/users.db";
-import { SUBJECT, SENDER, GET_HTML_CONTENT } from "src/utils/Emails";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { findUniqueUserWithRoleData } from "../models/users.db";
+import { SUBJECT, SENDER, GET_HTML_CONTENT } from "../utils/Emails";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 import { Request, Response } from "express";
 

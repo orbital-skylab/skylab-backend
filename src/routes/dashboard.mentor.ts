@@ -1,10 +1,10 @@
 import { Request, Response, Router } from "express";
-import { getProjectMilestonesByMentorId } from "src/helpers/dashboard.mentor";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
+import { getProjectMilestonesByMentorId } from "../helpers/dashboard.mentor";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 
 const router = Router();
 

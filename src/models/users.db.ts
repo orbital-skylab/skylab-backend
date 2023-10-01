@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
-import { SkylabError } from "src/errors/SkylabError";
-import { getCurrentCohort } from "src/helpers/cohorts.helper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import { UserRolesEnum } from "src/validators/user.validator";
+import { SkylabError } from "../errors/SkylabError";
+import { getCurrentCohort } from "../helpers/cohorts.helper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+import { UserRolesEnum } from "../validators/user.validator";
 import { prisma } from "../client";
 
 export async function findFirstUser(query: Prisma.UserFindFirstArgs) {
