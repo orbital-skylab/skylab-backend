@@ -1,0 +1,28 @@
+name: "Parent Sync"
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  parent-sync:
+    name: "Parent Sync"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+
+      - name: Set Up Git Credentials
+        run: |
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config --global user.name "${GITHUB_ACTOR}"
+
+      - name: Sync Submodule Reference in Parent Repository
+        run: |
+          git submodule update --remote --merge
+          git add skylab-backend
+          git commit -m "chore: update submodule reference"
+          git push
