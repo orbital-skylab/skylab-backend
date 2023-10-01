@@ -1,26 +1,27 @@
 import { Request, Response, Router } from "express";
 import { validationResult } from "express-validator";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createDeadline,
   deleteOneDeadlineByDeadlineId,
+  duplicateDeadlineByDeadlineId,
   editDeadlineByDeadlineId,
   getAllQuestionsById,
   getManyDeadlinesWithFilter,
   getOneDeadlineById,
   replaceSectionsById,
-} from "src/helpers/deadline.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
+} from "../helpers/deadline.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import {
   CreateDeadlineValidator,
   GetDeadlinesValidator,
-} from "src/validators/deadline.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../validators/deadline.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 
@@ -101,6 +102,24 @@ router
       }
     }
   );
+
+router.post(
+  "/:deadlineId/duplicate",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { deadlineId } = req.params;
+    const { deadline } = req.body;
+    try {
+      const duplicatedDeadline = await duplicateDeadlineByDeadlineId(
+        Number(deadlineId),
+        Number(deadline.cohortYear)
+      );
+      return apiResponseWrapper(res, { deadline: duplicatedDeadline });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 router
   .get("/:deadlineId", authorizeAdmin, async (req: Request, res: Response) => {
