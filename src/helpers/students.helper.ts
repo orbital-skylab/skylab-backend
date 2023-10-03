@@ -157,12 +157,16 @@ export async function createManyUsersWithStudentRole(
       }
 
       const { cohortYear, ...studentData } = student;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { cohortYear: _cohortYear, ...projectData } = project;
       await prisma.$transaction([
         prisma.user.create({ data: user }),
         prisma.student.create({
           data: {
             ...studentData,
-            user: { connect: { email: user.email } },
+            user: {
+              connect: { email: user.email },
+            },
             cohort: { connect: { academicYear: cohortYear } },
             project: {
               connectOrCreate: {
@@ -172,7 +176,10 @@ export async function createManyUsersWithStudentRole(
                     cohortYear: Number(cohortYear),
                   },
                 },
-                create: project,
+                create: {
+                  ...projectData,
+                  cohort: { connect: { academicYear: cohortYear } },
+                },
               },
             },
           },
@@ -183,6 +190,8 @@ export async function createManyUsersWithStudentRole(
     }
     rowNumber++;
   }
+
+  console.log("createAccountErrors:", createAccountErrors);
 
   return createAccountErrors
     .map((error) => `- Row ${error.rowNumber}: ${error.message}`)
