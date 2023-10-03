@@ -17,13 +17,15 @@ export const seedAdvisers = async (prisma: PrismaClient) => {
     const userLastName = faker.name.lastName();
 
     let userMatricNo = faker.helpers.replaceSymbols("A0######?");
+    let userNusnetId = faker.helpers.replaceSymbols("e0######");
     while (matricNos.has(userMatricNo)) {
       userMatricNo = faker.helpers.replaceSymbols("A0######?");
     }
-    let userNusnetId = faker.helpers.replaceSymbols("e0######");
     while (nusnetIds.has(userNusnetId)) {
       userNusnetId = faker.helpers.replaceSymbols("e0######");
     }
+    matricNos.add(userMatricNo);
+    nusnetIds.add(userNusnetId);
 
     await prisma.adviser.create({
       data: {

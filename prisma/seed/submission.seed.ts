@@ -17,7 +17,7 @@ export const seedSubmissions = async (prisma: PrismaClient) => {
   }
 
   for (const deadlineType of [DeadlineType.Milestone]) {
-    for (let i = 1; i <= 1; i++) {
+    for (let i = 1; i <= 2; i++) {
       const question = await prisma.question.findFirst({
         where: { question: `dummy question for ${deadlineType} ${i}` },
       });

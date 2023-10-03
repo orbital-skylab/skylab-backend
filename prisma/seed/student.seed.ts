@@ -17,13 +17,15 @@ export const seedStudents = async (prisma: PrismaClient) => {
     const userLastName = faker.name.lastName();
 
     let userMatricNo = faker.helpers.replaceSymbols("A0######?");
+    let userNusnetId = faker.helpers.replaceSymbols("e0######");
     while (matricNos.has(userMatricNo)) {
       userMatricNo = faker.helpers.replaceSymbols("A0######?");
     }
-    let userNusnetId = faker.helpers.replaceSymbols("e0######");
     while (nusnetIds.has(userNusnetId)) {
       userNusnetId = faker.helpers.replaceSymbols("e0######");
     }
+    matricNos.add(userMatricNo);
+    nusnetIds.add(userNusnetId);
 
     await prisma.student.create({
       data: {
@@ -53,11 +55,19 @@ export const seedStudents = async (prisma: PrismaClient) => {
     });
   }
 
+  const teamNames = new Set<string>();
+
   for (let i = 1; i <= 200; i++) {
+    let projectTeamName = `Team ${faker.word.adjective()} ${faker.word.noun()}`;
+    while (teamNames.has(projectTeamName)) {
+      projectTeamName = `Team ${faker.word.adjective()} ${faker.word.noun()}`;
+    }
+    teamNames.add(projectTeamName);
+
     await prisma.project.create({
       data: {
         name: `${faker.word.adjective()} ${faker.word.noun()}`,
-        teamName: `Team ${faker.word.adjective()} ${faker.word.noun()}`,
+        teamName: projectTeamName,
         achievement: faker.helpers.arrayElement(
           Object.values(AchievementLevel)
         ),
