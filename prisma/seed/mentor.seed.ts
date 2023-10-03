@@ -26,11 +26,7 @@ export const seedMentors = async (prisma: PrismaClient) => {
             email:
               i === 1
                 ? "mentor@skylab.com"
-                : faker.internet.email(
-                    userFirstName,
-                    userLastName + `${i}`,
-                    "skylab.com"
-                  ),
+                : faker.internet.email(userFirstName, userLastName + `${i}`),
             profilePicUrl: faker.image.imageUrl(),
             githubUrl: faker.internet.url(),
             linkedinUrl: faker.internet.url(),

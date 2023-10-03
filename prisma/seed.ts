@@ -22,7 +22,11 @@ async function main() {
 }
 
 main()
-  .catch((e) => console.error(e))
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  })
   .finally(async () => {
     await prisma.$disconnect();
     process.exit(0);

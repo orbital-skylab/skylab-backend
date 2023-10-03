@@ -16,15 +16,7 @@ export const seedSubmissions = async (prisma: PrismaClient) => {
     throw new Error("Students not seeded correctly");
   }
 
-  const adviser = await prisma.user.findFirst({ where: { name: "Adviser" } });
-  if (!adviser) {
-    throw new Error("Advisers not seeded correctly");
-  }
-
-  for (const deadlineType of [
-    DeadlineType.Milestone,
-    DeadlineType.Evaluation,
-  ]) {
+  for (const deadlineType of [DeadlineType.Milestone]) {
     for (let i = 1; i <= 1; i++) {
       const question = await prisma.question.findFirst({
         where: { question: `dummy question for ${deadlineType} ${i}` },
@@ -40,28 +32,15 @@ export const seedSubmissions = async (prisma: PrismaClient) => {
           isDraft: false,
           fromUser: {
             connect: {
-              id:
-                deadlineType === DeadlineType.Milestone
-                  ? student.id
-                  : adviser.id,
+              id: student.id,
             },
           },
-          fromProject:
-            deadlineType === DeadlineType.Milestone
-              ? {
-                  connect: {
-                    id: project.id,
-                  },
-                }
-              : undefined,
-          toProject:
-            deadlineType === DeadlineType.Evaluation
-              ? {
-                  connect: {
-                    id: project.id,
-                  },
-                }
-              : undefined,
+          fromProject: {
+            connect: {
+              id: project.id,
+            },
+          },
+
           deadline: {
             connect: {
               name_cohortYear: {
