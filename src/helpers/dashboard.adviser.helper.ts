@@ -44,8 +44,8 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
           const { id: toProjectId } = project;
           const pSubmission = findFirstSubmission({
             where: {
-              id: deadline.id,
-              fromUserId: adviser.id,
+              deadlineId: deadline.id,
+              fromUserId: adviser.userId,
               toProjectId: toProjectId,
             },
           });
