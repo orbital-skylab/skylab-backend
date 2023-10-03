@@ -1,4 +1,4 @@
-import { type PrismaClient } from "@prisma/client";
+import { DeadlineType, type PrismaClient } from "@prisma/client";
 
 export const seedSubmissions = async (prisma: PrismaClient) => {
   const thisYear = new Date().getFullYear();
@@ -11,42 +11,77 @@ export const seedSubmissions = async (prisma: PrismaClient) => {
     throw new Error(`Projects not seeded correctly`);
   }
 
-  for (let i = 1; i <= 1; i++) {
-    const question = await prisma.question.findFirst({
-      where: { question: `dummy question for Milestone ${i}` },
-    });
+  const student = await prisma.user.findFirst({ where: { name: "Student" } });
+  if (!student) {
+    throw new Error("Students not seeded correctly");
+  }
 
-    if (!question) {
-      throw new Error(`Questions not seeded correctly for Milestone ${i}`);
-    }
+  const adviser = await prisma.user.findFirst({ where: { name: "Adviser" } });
+  if (!adviser) {
+    throw new Error("Advisers not seeded correctly");
+  }
 
-    await prisma.submission.create({
-      data: {
-        isDraft: false,
-        fromProject: {
-          connect: {
-            id: project.id,
-          },
-        },
-        deadline: {
-          connect: {
-            name_cohortYear: {
-              name: `Milestone ${i}`,
-              cohortYear: thisYear,
+  for (const deadlineType of [
+    DeadlineType.Milestone,
+    DeadlineType.Evaluation,
+  ]) {
+    for (let i = 1; i <= 1; i++) {
+      const question = await prisma.question.findFirst({
+        where: { question: `dummy question for ${deadlineType} ${i}` },
+      });
+      if (!question) {
+        throw new Error(
+          `Questions not seeded correctly for ${deadlineType} ${i}`
+        );
+      }
+
+      await prisma.submission.create({
+        data: {
+          isDraft: false,
+          fromUser: {
+            connect: {
+              id:
+                deadlineType === DeadlineType.Milestone
+                  ? student.id
+                  : adviser.id,
             },
           },
-        },
-        answers: {
-          create: {
-            question: {
-              connect: {
-                id: question.id,
+          fromProject:
+            deadlineType === DeadlineType.Milestone
+              ? {
+                  connect: {
+                    id: project.id,
+                  },
+                }
+              : undefined,
+          toProject:
+            deadlineType === DeadlineType.Evaluation
+              ? {
+                  connect: {
+                    id: project.id,
+                  },
+                }
+              : undefined,
+          deadline: {
+            connect: {
+              name_cohortYear: {
+                name: `${deadlineType} ${i}`,
+                cohortYear: thisYear,
               },
             },
-            answer: `dummy answer for Milestone ${i}`,
+          },
+          answers: {
+            create: {
+              question: {
+                connect: {
+                  id: question.id,
+                },
+              },
+              answer: `dummy answer for ${deadlineType} ${i}`,
+            },
           },
         },
-      },
-    });
+      });
+    }
   }
 };

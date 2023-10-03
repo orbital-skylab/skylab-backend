@@ -6,61 +6,51 @@ export const seedDeadlines = async (prisma: PrismaClient) => {
   const nextWeek = new Date();
   nextWeek.setDate(today.getDate() + 7);
 
-  for (let i = 1; i <= 3; i++) {
-    await prisma.deadline.create({
-      data: {
-        name: `Milestone ${i}`,
-        type: DeadlineType.Milestone,
-        dueBy: nextWeek,
-        cohort: {
-          connect: {
-            academicYear: thisYear,
+  const milestoneIds: number[] = [];
+  for (const deadlineType of [
+    DeadlineType.Milestone,
+    DeadlineType.Evaluation,
+  ]) {
+    for (let i = 1; i <= 3; i++) {
+      const deadline = await prisma.deadline.create({
+        data: {
+          name: `${deadlineType} ${i}`,
+          type: deadlineType,
+          dueBy: nextWeek,
+          evaluating:
+            deadlineType === DeadlineType.Evaluation
+              ? {
+                  connect: {
+                    id: milestoneIds[i - 1],
+                  },
+                }
+              : undefined,
+          cohort: {
+            connect: {
+              academicYear: thisYear,
+            },
           },
-        },
-        sections: {
-          create: {
-            name: `dummy section for Milestone ${i}`,
-            desc: "",
-            sectionNumber: 1,
-            questions: {
-              create: {
-                question: `dummy question for Milestone ${i}`,
-                type: QuestionType.ShortAnswer,
-                desc: "",
-                questionNumber: 1,
+          sections: {
+            create: {
+              name: `dummy section for ${deadlineType} ${i}`,
+              desc: "",
+              sectionNumber: 1,
+              questions: {
+                create: {
+                  question: `dummy question for ${deadlineType} ${i}`,
+                  type: QuestionType.ShortAnswer,
+                  desc: "",
+                  questionNumber: 1,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    await prisma.deadline.create({
-      data: {
-        name: `Evaluation for Milestone ${i}`,
-        type: DeadlineType.Evaluation,
-        dueBy: nextWeek,
-        cohort: {
-          connect: {
-            academicYear: thisYear,
-          },
-        },
-        sections: {
-          create: {
-            name: `dummy section for Evalation for Milestone ${i}`,
-            desc: "",
-            sectionNumber: 1,
-            questions: {
-              create: {
-                question: `dummy question for Evalation for Milestone ${i}`,
-                type: QuestionType.ShortAnswer,
-                desc: "",
-                questionNumber: 1,
-              },
-            },
-          },
-        },
-      },
-    });
+      if (deadlineType === DeadlineType.Milestone) {
+        milestoneIds.push(deadline.id);
+      }
+    }
   }
 };
