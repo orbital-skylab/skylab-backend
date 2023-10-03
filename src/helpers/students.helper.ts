@@ -107,16 +107,21 @@ export async function createUserWithStudentRole(body: any, isDev?: boolean) {
   };
 }
 
+type BatchAddProject = Omit<Prisma.ProjectCreateInput, "cohort"> & {
+  cohortYear: number;
+};
+type BatchAddStudent = Omit<
+  Prisma.StudentCreateInput,
+  "cohort" | "project" | "user"
+> & { cohortYear: number };
+
 export async function createManyUsersWithStudentRole(
   body: {
     count: number;
     projects: Array<
-      Prisma.ProjectUncheckedCreateInput & {
+      BatchAddProject & {
         students: Array<{
-          student: Omit<
-            Prisma.StudentCreateInput,
-            "cohort" | "project" | "user"
-          > & { cohortYear: number };
+          student: BatchAddStudent;
           user: Omit<Prisma.UserUncheckedCreateInput, "password"> & {
             password?: string;
           };
@@ -136,12 +141,9 @@ export async function createManyUsersWithStudentRole(
   }
 
   const accounts: Array<{
-    project: Prisma.ProjectUncheckedCreateInput;
+    project: BatchAddProject;
     student: {
-      student: Omit<
-        Prisma.StudentCreateInput,
-        "cohort" | "project" | "user"
-      > & { cohortYear: number };
+      student: BatchAddStudent;
       user: Prisma.UserCreateInput;
     };
   }> = [];
@@ -187,6 +189,7 @@ export async function createManyUsersWithStudentRole(
       }
 
       const { cohortYear, ...studentData } = student;
+      const { cohortYear: _cohortYear, ...projectData } = project;
       await prisma.$transaction([
         prisma.user.create({ data: user }),
         prisma.student.create({
@@ -202,7 +205,14 @@ export async function createManyUsersWithStudentRole(
                     cohortYear: cohortYear,
                   },
                 },
-                create: project,
+                create: {
+                  ...projectData,
+                  cohort: {
+                    connect: {
+                      academicYear: _cohortYear,
+                    },
+                  },
+                },
               },
             },
           },
