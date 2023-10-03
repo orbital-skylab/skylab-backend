@@ -30,7 +30,6 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
     },
     orderBy: { dueBy: "asc" },
   });
-
   const pDeadlinesOfAdviser = deadlines.map(async (deadline) => {
     if (deadline.type == "Evaluation") {
       if (!deadline.evaluatingMilestoneId) {
@@ -56,7 +55,6 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
               deadlineId: evaluatingMilestoneId,
               fromProjectId: project.id,
             },
-            select: { id: true },
           });
 
           const [submission, projectSubmission] = await Promise.all([
@@ -66,13 +64,9 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
 
           return {
             deadline: deadline,
-            toProject: {
-              ...project,
-              submissionId: projectSubmission
-                ? projectSubmission.id
-                : undefined,
-            },
-            submission: submission ? submission : undefined,
+            toProject: project,
+            toProjectSubmission: projectSubmission ?? undefined,
+            submission: submission ?? undefined,
           };
         })
       );
