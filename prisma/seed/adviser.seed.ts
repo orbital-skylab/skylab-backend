@@ -56,7 +56,7 @@ export const seedAdvisers = async (prisma: PrismaClient) => {
     });
   }
 
-  for (let i = 1; i <= 100; i++) {
+  for (let i = 1; i <= 200; i++) {
     await prisma.project.update({
       where: {
         id: i,
@@ -64,7 +64,7 @@ export const seedAdvisers = async (prisma: PrismaClient) => {
       data: {
         adviser: {
           connect: {
-            id: i,
+            id: i > 100 ? i - 100 : i,
           },
         },
       },

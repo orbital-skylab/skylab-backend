@@ -12,7 +12,7 @@ export const seedStudents = async (prisma: PrismaClient) => {
   const matricNos = new Set<string>();
   const nusnetIds = new Set<string>();
 
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 400; i++) {
     const userFirstName = faker.name.firstName();
     const userLastName = faker.name.lastName();
 
@@ -53,7 +53,7 @@ export const seedStudents = async (prisma: PrismaClient) => {
     });
   }
 
-  for (let i = 1; i <= 100; i++) {
+  for (let i = 1; i <= 200; i++) {
     await prisma.project.create({
       data: {
         name: `${faker.word.adjective()} ${faker.word.noun()}`,
@@ -73,7 +73,7 @@ export const seedStudents = async (prisma: PrismaClient) => {
             {
               id: i,
             },
-            { id: 201 - i },
+            { id: 401 - i },
           ],
         },
       },
