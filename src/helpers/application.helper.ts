@@ -328,7 +328,6 @@ export async function approveOneApplication(applicationSubmissionId: number) {
     },
   });
 
-  console.log("approved", approvedApplication);
   return approvedApplication;
 }
 

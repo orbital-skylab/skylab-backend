@@ -187,7 +187,7 @@ export async function createManyUsersWithStudentRole(
       }
 
       const { cohortYear, ...studentData } = student;
-      const transactionResult = await prisma.$transaction([
+      await prisma.$transaction([
         prisma.user.create({ data: user }),
         prisma.student.create({
           data: {
@@ -208,7 +208,6 @@ export async function createManyUsersWithStudentRole(
           },
         }),
       ]);
-      console.log(transactionResult);
     } catch (e) {
       createAccountErrors.push({ rowNumber, message: e.message || e });
     }
