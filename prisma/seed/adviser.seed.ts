@@ -9,13 +9,26 @@ export const seedAdvisers = async (prisma: PrismaClient) => {
     parseInt(process.env.SALT_ROUNDS as string)
   );
 
+  const matricNos = new Set<string>();
+  const nusnetIds = new Set<string>();
+
   for (let i = 1; i <= 100; i++) {
     const userFirstName = faker.name.firstName();
     const userLastName = faker.name.lastName();
+
+    let userMatricNo = faker.helpers.replaceSymbols("A0######?");
+    while (matricNos.has(userMatricNo)) {
+      userMatricNo = faker.helpers.replaceSymbols("A0######?");
+    }
+    let userNusnetId = faker.helpers.replaceSymbols("e0######");
+    while (nusnetIds.has(userNusnetId)) {
+      userNusnetId = faker.helpers.replaceSymbols("e0######");
+    }
+
     await prisma.adviser.create({
       data: {
-        matricNo: faker.helpers.replaceSymbols("A0######?"),
-        nusnetId: faker.helpers.replaceSymbols("e#######"),
+        matricNo: userMatricNo,
+        nusnetId: userNusnetId,
         cohort: {
           connect: {
             academicYear: academicYear,
@@ -28,7 +41,11 @@ export const seedAdvisers = async (prisma: PrismaClient) => {
             email:
               i === 1
                 ? "adviser@skylab.com"
-                : faker.internet.email(userFirstName, userLastName),
+                : faker.internet.email(
+                    userFirstName,
+                    userLastName + `${i}`,
+                    "skylab.com"
+                  ),
             profilePicUrl: faker.image.imageUrl(),
             githubUrl: faker.internet.url(),
             linkedinUrl: faker.internet.url(),
