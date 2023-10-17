@@ -1,17 +1,16 @@
 import { faker } from "@faker-js/faker";
 import { type PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import { NUM_MENTORS, NUM_TEAMS } from "./seed.constants";
+import { generateHashedPassword } from "./seed.util";
 
 export const seedMentors = async (prisma: PrismaClient) => {
   const academicYear = new Date().getFullYear();
-  const password = await bcrypt.hash(
-    process.env.ADMIN_PASSWORD as string,
-    parseInt(process.env.SALT_ROUNDS as string)
-  );
+  const password = await generateHashedPassword();
 
-  for (let i = 1; i <= 100; i++) {
+  for (let i = 1; i <= NUM_MENTORS; i++) {
     const userFirstName = faker.name.firstName();
     const userLastName = faker.name.lastName();
+
     await prisma.mentor.create({
       data: {
         cohort: {
@@ -41,7 +40,7 @@ export const seedMentors = async (prisma: PrismaClient) => {
     });
   }
 
-  for (let i = 1; i <= 200; i++) {
+  for (let i = 1; i <= NUM_TEAMS; i++) {
     await prisma.project.update({
       where: {
         id: i,

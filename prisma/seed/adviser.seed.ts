@@ -1,36 +1,30 @@
 import { faker } from "@faker-js/faker";
 import { type PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import {
+  generateNUniqueRandomStrings,
+  generateHashedPassword,
+} from "./seed.util";
+import { NUM_ADVISERS, NUM_TEAMS } from "./seed.constants";
 
 export const seedAdvisers = async (prisma: PrismaClient) => {
   const academicYear = new Date().getFullYear();
-  const password = await bcrypt.hash(
-    process.env.ADMIN_PASSWORD as string,
-    parseInt(process.env.SALT_ROUNDS as string)
+  const password = await generateHashedPassword();
+
+  const userMatricNos = generateNUniqueRandomStrings(NUM_ADVISERS, () =>
+    faker.helpers.replaceSymbols("A0######?")
+  );
+  const userNusnetIds = generateNUniqueRandomStrings(NUM_ADVISERS, () =>
+    faker.helpers.replaceSymbols("e0######")
   );
 
-  const matricNos = new Set<string>();
-  const nusnetIds = new Set<string>();
-
-  for (let i = 1; i <= 100; i++) {
+  for (let i = 1; i <= NUM_ADVISERS; i++) {
     const userFirstName = faker.name.firstName();
     const userLastName = faker.name.lastName();
 
-    let userMatricNo = faker.helpers.replaceSymbols("A0######?");
-    let userNusnetId = faker.helpers.replaceSymbols("e0######");
-    while (matricNos.has(userMatricNo)) {
-      userMatricNo = faker.helpers.replaceSymbols("A0######?");
-    }
-    while (nusnetIds.has(userNusnetId)) {
-      userNusnetId = faker.helpers.replaceSymbols("e0######");
-    }
-    matricNos.add(userMatricNo);
-    nusnetIds.add(userNusnetId);
-
     await prisma.adviser.create({
       data: {
-        matricNo: userMatricNo,
-        nusnetId: userNusnetId,
+        matricNo: userMatricNos[i - 1],
+        nusnetId: userNusnetIds[i - 1],
         cohort: {
           connect: {
             academicYear: academicYear,
@@ -58,7 +52,7 @@ export const seedAdvisers = async (prisma: PrismaClient) => {
     });
   }
 
-  for (let i = 1; i <= 200; i++) {
+  for (let i = 1; i <= NUM_TEAMS; i++) {
     await prisma.project.update({
       where: {
         id: i,
