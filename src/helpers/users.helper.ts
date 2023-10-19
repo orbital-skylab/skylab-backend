@@ -217,17 +217,19 @@ export async function addRoleToUsers(
       });
       return adviser;
     } else if (role == UserRolesEnum.Administrator) {
+      const targetCohort = await getOneCohort({
+        where: { academicYear: cohortYear },
+      });
+      const nextYear = new Date();
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+
       const admin = await updateUniqueUser({
         where: { id: userId },
         data: {
           administrator: {
             create: {
               startDate: new Date(),
-              endDate: new Date(
-                new Date().setFullYear(new Date().getFullYear() + 1),
-                new Date().getMonth(),
-                new Date().getDay()
-              ),
+              endDate: targetCohort?.endDate ?? nextYear,
             },
           },
         },
