@@ -119,7 +119,16 @@ export async function getLeanUsersWithFilter(
   } else if (excludeRole) {
     const users = await prisma.user.findMany({
       select: { id: true, name: true },
-      where: { NOT: { [excludeRole]: { some: { cohortYear: cohortYear } } } },
+      where: {
+        NOT: {
+          [excludeRole]: {
+            some:
+              excludeRole === UserRolesEnum.Administrator
+                ? { endDate: { gte: new Date() } }
+                : { cohortYear: cohortYear },
+          },
+        },
+      },
     });
     return users;
   }
