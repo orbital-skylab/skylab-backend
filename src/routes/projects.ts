@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createProject,
   deleteOneProjectById,
@@ -8,14 +8,14 @@ import {
   getManyProjectsWithFilter,
   getOneProjectById,
   getProjectsViaRoleIds,
-} from "src/helpers/projects.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
-import authorizeAdviserOfProject from "src/middleware/authorizeAdviserOfProject";
+} from "../helpers/projects.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
+import authorizeAdviserOfProject from "../middleware/authorizeAdviserOfProject";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const router = Router();
 

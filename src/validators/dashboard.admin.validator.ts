@@ -1,5 +1,5 @@
 import { query } from "express-validator";
-import { SubmissionStatusEnum } from "src/helpers/dashboard.admin.helper";
+import { SubmissionStatusEnum } from "../helpers/dashboard.admin.helper";
 import { CohortQueryValidator } from "./validator";
 
 export const GetSubmissionsByDeadlineIDValidator = [

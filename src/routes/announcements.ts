@@ -8,27 +8,27 @@ import {
   editAnnouncementComment,
   getAnnouncementWithCommentThreads,
   getManyAnnouncementsWithFilter,
-} from "src/helpers/announcements.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
-import authorizeRoleForAnnouncement from "src/middleware/authorizeRoleForAnnouncement";
-import authorizeTargetAudienceRole from "src/middleware/authorizeTargetAudienceRole";
+} from "../helpers/announcements.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
+import authorizeRoleForAnnouncement from "../middleware/authorizeRoleForAnnouncement";
+import authorizeTargetAudienceRole from "../middleware/authorizeTargetAudienceRole";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 import {
   CreateAnnouncementCommentValidator,
   CreateAnnouncementValidator,
   GetAnnouncementsValidator,
-} from "src/validators/announcement.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../validators/announcement.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 import {
   createAnnouncementReadLog,
   getAnnouncementReadPercentage,
-} from "src/helpers/announcementReadLogs.helper";
-import { extractJwtData } from "src/helpers/authentication.helper";
-import { deleteAnnouncement } from "src/models/announcements.db";
-import authorizeAuthorOfComment from "src/middleware/authorizeAuthorOfComment";
+} from "../helpers/announcementReadLogs.helper";
+import { extractJwtData } from "../helpers/authentication.helper";
+import { deleteAnnouncement } from "../models/announcements.db";
+import authorizeAuthorOfComment from "../middleware/authorizeAuthorOfComment";
 
 const router = Router();
 

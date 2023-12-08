@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "src/client";
+import { prisma } from "../client";
 
 export async function findUniqueSubmission(
   query: Prisma.SubmissionFindUniqueArgs
@@ -45,4 +45,11 @@ export async function updateUniqueSubmission(
 ) {
   const updatedSubmission = await prisma.submission.update(query);
   return updatedSubmission;
+}
+
+export async function deleteUniqueSubmission(
+  query: Prisma.SubmissionDeleteArgs
+) {
+  const deletedSubmission = await prisma.submission.delete(query);
+  return deletedSubmission;
 }

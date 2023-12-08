@@ -12,10 +12,14 @@ COPY tsconfig.json ./
 
 COPY . .
 
-RUN npm install
+RUN npm ci
 
 RUN npx prisma generate
 
+RUN npx prisma migrate deploy
+
+RUN npx prisma db seed
+
 EXPOSE 4000 
 
-CMD ["npm", "run", "cy-test"]
+CMD ["npm", "run", "e2e"]

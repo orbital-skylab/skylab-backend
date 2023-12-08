@@ -1,21 +1,21 @@
 import { Answer } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createUniqueAnswer,
   deleteManyAnswers,
   findManyAnswers,
-} from "src/models/answers.db";
+} from "../models/answers.db";
 import {
   findManyDeadlinesWithAnonymousQuestionsData,
   findUniqueDeadlineWithQuestionsData,
-} from "src/models/deadline.db";
+} from "../models/deadline.db";
 import {
   createUniqueSubmission,
   findManySubmissions,
   findUniqueSubmission,
   updateUniqueSubmission,
-} from "src/models/submissions.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/submissions.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOneAdviserById } from "./advisers.helper";
 import { parseQuestionsInput } from "./deadline.helper";
 import { getOneStudentById } from "./students.helper";

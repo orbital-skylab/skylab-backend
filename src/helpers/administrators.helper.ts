@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma, User } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createOneAdministrator,
   deleteUniqueAdministrator,
   findManyAdministratorsWithUserData,
   findUniqueAdministratorWithUserData,
   updateUniqueAdministrator,
-} from "src/models/administrators.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/administrators.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { hashPassword, generateRandomPassword } from "./authentication.helper";
 import { isValidEmail, removePasswordFromUser } from "./users.helper";
 import { prismaMinimal as prisma } from "../client";

@@ -1,5 +1,5 @@
-import { SkylabError } from "src/errors/SkylabError";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 
 const authorizeSignedIn = async (

@@ -5,13 +5,13 @@ import {
   getAnonymousAnswersViaStudentID,
   getSubmissionBySubmissionId,
   updateOneSubmissionBySubmissionId,
-} from "src/helpers/submissions.helper";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
-import authorizeSubmitter from "src/middleware/authorizeSubmitter";
+} from "../helpers/submissions.helper";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
+import authorizeSubmitter from "../middleware/authorizeSubmitter";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 
 const router = Router();
 

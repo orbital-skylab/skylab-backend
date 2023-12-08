@@ -114,20 +114,21 @@ model Project {
 }
 
 model Deadline {
-  id                    Int          @id @default(autoincrement())
+  id                    Int                  @id @default(autoincrement())
   name                  String
-  cohort                Cohort       @relation(fields: [cohortYear], references: [academicYear])
+  cohort                Cohort               @relation(fields: [cohortYear], references: [academicYear])
   cohortYear            Int
-  createdOn             DateTime     @default(now())
+  createdOn             DateTime             @default(now())
   dueBy                 DateTime
   desc                  String?
   type                  DeadlineType
-  updatedAt             DateTime     @updatedAt
+  updatedAt             DateTime             @updatedAt
   sections              Section[]
-  Submission            Submission[]
-  evaluating            Deadline?    @relation(fields: [evaluatingMilestoneId], references: [id], name: "evaluation")
-  evaluatingMilestoneId Int?         @unique
-  evaluatedBy           Deadline?    @relation(name: "evaluation")
+  submission            Submission[]
+  evaluating            Deadline?            @relation(fields: [evaluatingMilestoneId], references: [id], name: "evaluation")
+  evaluatingMilestoneId Int?                 @unique
+  evaluatedBy           Deadline?            @relation(name: "evaluation")
+  anonymousApplicants   AnonymousApplicant[]
 
   @@unique([name, cohortYear])
 }
@@ -177,23 +178,47 @@ model EvaluationRelation {
 }
 
 model Submission {
-  id            Int      @id @default(autoincrement())
-  deadline      Deadline @relation(fields: [deadlineId], references: [id])
+  id            Int          @id @default(autoincrement())
+  deadline      Deadline     @relation(fields: [deadlineId], references: [id])
   answers       Answer[]
-  isDraft       Boolean  @default(true)
-  updatedAt     DateTime @updatedAt
-  fromUser      User?    @relation(fields: [fromUserId], references: [id], name: "from_user")
-  toUser        User?    @relation(fields: [toUserId], references: [id], name: "to_user")
-  fromProject   Project? @relation(fields: [fromProjectId], references: [id], name: "from_project")
-  toProject     Project? @relation(fields: [toProjectId], references: [id], name: "to_project")
+  isDraft       Boolean      @default(true)
+  updatedAt     DateTime     @updatedAt
+  fromUser      User?        @relation(fields: [fromUserId], references: [id], name: "from_user")
+  toUser        User?        @relation(fields: [toUserId], references: [id], name: "to_user")
+  fromProject   Project?     @relation(fields: [fromProjectId], references: [id], name: "from_project")
+  toProject     Project?     @relation(fields: [toProjectId], references: [id], name: "to_project")
   fromUserId    Int?
   toUserId      Int?
   fromProjectId Int?
   toProjectId   Int?
   deadlineId    Int
+  application   Application?
 
   @@unique([deadlineId, fromProjectId, toProjectId, toUserId])
   @@unique([deadlineId, fromUserId, toProjectId])
+}
+
+model Application {
+  submission   Submission           @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId Int                  @unique
+  teamName     String
+  achievement  AchievementLevel
+  status       ApplicationStatus    @default(Unprocessed)
+  applicants   AnonymousApplicant[]
+}
+
+model AnonymousApplicant {
+  name                    String
+  email                   String
+  matricNo                String
+  nusnetId                String
+  deadline                Deadline    @relation(fields: [deadlineId], references: [id])
+  deadlineId              Int
+  application             Application @relation(fields: [applicationSubmissionId], references: [submissionId], onDelete: Cascade)
+  applicationSubmissionId Int
+
+  @@id([deadlineId, matricNo])
+  @@unique([deadlineId, nusnetId])
 }
 
 model Answer {
@@ -244,6 +269,7 @@ model AnnouncementReadLog {
   userId         Int
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   announcementId Int
+
   @@unique([userId, announcementId])
 }
 
@@ -271,6 +297,7 @@ enum QuestionType {
   Url
   Date
   Time
+  RichTextEditor
 }
 
 enum AchievementLevel {
@@ -278,4 +305,10 @@ enum AchievementLevel {
   Gemini
   Apollo
   Artemis
+}
+
+enum ApplicationStatus {
+  Unprocessed
+  Approved
+  Rejected
 }

@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma, Student, User } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createOneStudent,
   deleteUniqueStudent,
   findManyStudentsWithUserData,
   findUniqueStudentWithUserData,
   updateUniqueStudent,
-} from "src/models/students.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/students.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
 import {
   isValidEmail,
@@ -107,8 +107,28 @@ export async function createUserWithStudentRole(body: any, isDev?: boolean) {
   };
 }
 
+type BatchAddProject = Omit<Prisma.ProjectCreateInput, "cohort"> & {
+  cohortYear: number;
+};
+type BatchAddStudent = Omit<
+  Prisma.StudentCreateInput,
+  "cohort" | "project" | "user"
+> & { cohortYear: number };
+
 export async function createManyUsersWithStudentRole(
-  body: any,
+  body: {
+    count: number;
+    projects: Array<
+      BatchAddProject & {
+        students: Array<{
+          student: BatchAddStudent;
+          user: Omit<Prisma.UserUncheckedCreateInput, "password"> & {
+            password?: string;
+          };
+        }>;
+      }
+    >;
+  },
   isDev?: boolean
 ) {
   const { count, projects } = body;
@@ -120,16 +140,28 @@ export async function createManyUsersWithStudentRole(
     );
   }
 
-  const accounts: any[] = [];
+  const accounts: Array<{
+    project: BatchAddProject;
+    student: {
+      student: BatchAddStudent;
+      user: Prisma.UserCreateInput;
+    };
+  }> = [];
   for (const project of projects) {
     const { students, ...projectData } = project;
     for (const student of students) {
-      student.user.password =
+      const password =
         isDev && student.user.password
           ? await hashPassword(student.user.password)
           : await generateRandomPassword();
 
-      accounts.push({ project: projectData, student });
+      accounts.push({
+        project: projectData,
+        student: {
+          student: student.student,
+          user: { ...student.user, password },
+        },
+      });
     }
   }
 
@@ -173,12 +205,16 @@ export async function createManyUsersWithStudentRole(
                 where: {
                   teamName_cohortYear: {
                     teamName: project.teamName,
-                    cohortYear: Number(cohortYear),
+                    cohortYear: cohortYear,
                   },
                 },
                 create: {
                   ...projectData,
-                  cohort: { connect: { academicYear: cohortYear } },
+                  cohort: {
+                    connect: {
+                      academicYear: _cohortYear,
+                    },
+                  },
                 },
               },
             },
@@ -190,8 +226,6 @@ export async function createManyUsersWithStudentRole(
     }
     rowNumber++;
   }
-
-  console.log("createAccountErrors:", createAccountErrors);
 
   return createAccountErrors
     .map((error) => `- Row ${error.rowNumber}: ${error.message}`)

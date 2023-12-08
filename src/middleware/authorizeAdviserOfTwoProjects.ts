@@ -1,9 +1,9 @@
-import { SkylabError } from "src/errors/SkylabError";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { findUniqueAdviserWithProjectData } from "src/models/advisers.db";
-import { findUniqueUserWithRoleData } from "src/models/users.db";
+import { findUniqueAdviserWithProjectData } from "../models/advisers.db";
+import { findUniqueUserWithRoleData } from "../models/users.db";
 
 const authorizeAdviserOfTwoProjects = async (
   req: Request,

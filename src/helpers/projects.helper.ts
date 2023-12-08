@@ -8,8 +8,8 @@ import {
   Student,
   User,
 } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueAdviserWithUserData } from "src/models/advisers.db";
+import { SkylabError } from "../errors/SkylabError";
+import { findUniqueAdviserWithUserData } from "../models/advisers.db";
 import {
   createOneProject,
   deleteOneProject,
@@ -18,8 +18,8 @@ import {
   findUniqueProject,
   findUniqueProjectWithUserData,
   updateOneProject,
-} from "src/models/projects.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/projects.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 
 export function parseGetProjectInput(

@@ -7,10 +7,10 @@ import {
   Submission,
   User,
 } from "@prisma/client";
-import { findUniqueDeadline } from "src/models/deadline.db";
-import { findManyProjectsWithUserData } from "src/models/projects.db";
-import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
-import { findFirstNonDraftSubmission } from "src/models/submissions.db";
+import { findUniqueDeadline } from "../models/deadline.db";
+import { findManyProjectsWithUserData } from "../models/projects.db";
+import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
+import { findFirstNonDraftSubmission } from "../models/submissions.db";
 
 export enum SubmissionStatusEnum {
   UNSUBMITTED = "Unsubmitted",
@@ -140,7 +140,6 @@ export async function getSubmissionsByDeadlineId(
     results = await Promise.all(pSubmissions);
   } else if (deadline.type == "Feedback") {
     const pSubmissions = projects.map(async (project) => {
-      console.log(project.id);
       const submission = await findFirstNonDraftSubmission({
         where: {
           deadlineId: deadlineId,

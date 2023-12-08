@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma, User } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createOneAdviser,
   deleteUniqueAdviser,
   findManyAdvisersWithUserData,
   findUniqueAdviserWithUserData,
   updateUniqueAdviser,
-} from "src/models/advisers.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/advisers.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { generateRandomPassword, hashPassword } from "./authentication.helper";
 import { getCurrentCohort } from "./cohorts.helper";
 import { getOneStudentByNusnetId } from "./students.helper";

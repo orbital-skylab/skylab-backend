@@ -1,11 +1,11 @@
-import { SkylabError } from "src/errors/SkylabError";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import {
   deleteUniqueUser,
   findManyUsers,
   findUniqueUserWithRoleData,
   updateUniqueUser,
-} from "src/models/users.db";
+} from "../models/users.db";
 import {
   Administrator,
   Adviser,
@@ -14,9 +14,9 @@ import {
   Student,
   User,
 } from "@prisma/client";
-import { UserRolesEnum } from "src/validators/user.validator";
-import { getOneCohort } from "src/models/cohorts.db";
-import { findFirstStudentWithoutError } from "src/models/students.db";
+import { UserRolesEnum } from "../validators/user.validator";
+import { getOneCohort } from "../models/cohorts.db";
+import { findFirstStudentWithoutError } from "../models/students.db";
 
 export function removePasswordFromUser(user: User) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -217,17 +217,19 @@ export async function addRoleToUsers(
       });
       return adviser;
     } else if (role == UserRolesEnum.Administrator) {
+      const targetCohort = await getOneCohort({
+        where: { academicYear: cohortYear },
+      });
+      const nextYear = new Date();
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+
       const admin = await updateUniqueUser({
         where: { id: userId },
         data: {
           administrator: {
             create: {
               startDate: new Date(),
-              endDate: new Date(
-                new Date().setFullYear(new Date().getFullYear() + 1),
-                new Date().getMonth(),
-                new Date().getDay()
-              ),
+              endDate: targetCohort?.endDate ?? nextYear,
             },
           },
         },
@@ -249,17 +251,19 @@ export const isValidEmail = (email: string) => {
   return emailPattern.test(email);
 };
 
-export const isValidMatriculationNumber = (matricNo: string | null) => {
-  if (matricNo == null) {
+export const isValidMatriculationNumber = (
+  matricNo: string | null | undefined
+) => {
+  if (matricNo == null || matricNo == undefined) {
     return false;
   }
 
-  const matricNoPattern = /^(A)[0-9]{7}[A-Z]$/;
+  const matricNoPattern = /^(a|A)[0-9]{7}[A-Za-z]$/;
   return matricNoPattern.test(matricNo);
 };
 
-export const isValidNusnetId = (nusnetId: string | null) => {
-  if (nusnetId == null) {
+export const isValidNusnetId = (nusnetId: string | null | undefined) => {
+  if (nusnetId == null || nusnetId == undefined) {
     return false;
   }
 

@@ -1,4 +1,4 @@
-import { findUniqueUser } from "src/models/users.db";
+import { findUniqueUser } from "../../models/users.db";
 
 export const checkUserExistsWithID = async (userId: number) => {
   try {

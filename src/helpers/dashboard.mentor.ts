@@ -1,8 +1,8 @@
-import { SkylabError } from "src/errors/SkylabError";
-import { findManyDeadlines } from "src/models/deadline.db";
-import { findUniqueMentorWithProjectData } from "src/models/mentors.db";
-import { findFirstNonDraftSubmission } from "src/models/submissions.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { findManyDeadlines } from "../models/deadline.db";
+import { findUniqueMentorWithProjectData } from "../models/mentors.db";
+import { findFirstNonDraftSubmission } from "../models/submissions.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export async function getProjectMilestonesByMentorId(mentorId: number) {
   const mentor = await findUniqueMentorWithProjectData({

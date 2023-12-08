@@ -1,19 +1,19 @@
 import { Router, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   hashPassword,
   sendPasswordResetEmail,
   userLogin,
-} from "src/helpers/authentication.helper";
-import { getOneUserById } from "src/helpers/users.helper";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
-import { findUniqueUser, updateUniqueUser } from "src/models/users.db";
+} from "../helpers/authentication.helper";
+import { getOneUserById } from "../helpers/users.helper";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
+import { findUniqueUser, updateUniqueUser } from "../models/users.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const router = Router();
 

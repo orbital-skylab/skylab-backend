@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createManyUsersWithAdministratorRole,
   createUserWithAdministratorRole,
@@ -8,20 +8,20 @@ import {
   getManyAdministratorsWithFilter,
   getOneAdministratorById,
   updateAdministratorDataByAdminID,
-} from "src/helpers/administrators.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
+} from "../helpers/administrators.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import {
   BatchCreateAdministratorValidator,
   CreateAdministratorValidator,
   GetAdministratorByIDValidator,
   GetAdministratorsValidator,
-} from "src/validators/administrator.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../validators/administrator.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 

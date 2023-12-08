@@ -1,17 +1,17 @@
 import { Router, Request, Response } from "express";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   deleteCohortByYear,
   editCohortByYear,
   getCurrentCohort,
-} from "src/helpers/cohorts.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
-import { createCohort, getManyCohorts } from "src/models/cohorts.db";
+} from "../helpers/cohorts.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
+import { createCohort, getManyCohorts } from "../models/cohorts.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const router = Router();
 

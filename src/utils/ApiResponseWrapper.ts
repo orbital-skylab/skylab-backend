@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import { HttpStatusCode } from "./HTTP_Status_Codes";
 
 export const apiResponseWrapper = (

@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { prisma } from "../client";
 
 export async function findFirstDeadline({

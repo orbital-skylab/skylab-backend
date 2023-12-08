@@ -1,13 +1,13 @@
 import { DeadlineType } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
-import { findUniqueAdviserWithProjectData } from "src/models/advisers.db";
-import { findManyDeadlines } from "src/models/deadline.db";
-import { findManyRelationsWithFromToProjectData } from "src/models/relations.db";
+import { SkylabError } from "../errors/SkylabError";
+import { findUniqueAdviserWithProjectData } from "../models/advisers.db";
+import { findManyDeadlines } from "../models/deadline.db";
+import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
 import {
   findFirstNonDraftSubmission,
   findFirstSubmission,
-} from "src/models/submissions.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/submissions.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export async function getDeadlinesByAdviserId(adviserId: number) {
   const adviser = await findUniqueAdviserWithProjectData({
@@ -30,7 +30,6 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
     },
     orderBy: { dueBy: "asc" },
   });
-
   const pDeadlinesOfAdviser = deadlines.map(async (deadline) => {
     if (deadline.type == "Evaluation") {
       if (!deadline.evaluatingMilestoneId) {
@@ -45,8 +44,8 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
           const { id: toProjectId } = project;
           const pSubmission = findFirstSubmission({
             where: {
-              id: deadline.id,
-              fromUserId: adviser.id,
+              deadlineId: deadline.id,
+              fromUserId: adviser.userId,
               toProjectId: toProjectId,
             },
           });
@@ -56,7 +55,6 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
               deadlineId: evaluatingMilestoneId,
               fromProjectId: project.id,
             },
-            select: { id: true },
           });
 
           const [submission, projectSubmission] = await Promise.all([
@@ -66,13 +64,9 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
 
           return {
             deadline: deadline,
-            toProject: {
-              ...project,
-              submissionId: projectSubmission
-                ? projectSubmission.id
-                : undefined,
-            },
-            submission: submission ? submission : undefined,
+            toProject: project,
+            toProjectSubmission: projectSubmission ?? undefined,
+            submission: submission ?? undefined,
           };
         })
       );

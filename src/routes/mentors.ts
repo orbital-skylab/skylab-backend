@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { SkylabError } from "src/errors/SkylabError";
+import { SkylabError } from "../errors/SkylabError";
 import {
   createManyUsersWithMentorRole,
   createUserWithMentorRole,
@@ -8,20 +8,20 @@ import {
   editMentorDataByMentorID,
   getManyMentorsWithFilter,
   getOneMentorById,
-} from "src/helpers/mentors.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
+} from "../helpers/mentors.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import {
   BatchCreateMentorValidator,
   CreateMentorValidator,
   GetMentorByIDValidator,
   GetMentorsValidator,
-} from "src/validators/mentor.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../validators/mentor.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 
@@ -75,7 +75,6 @@ router.post(
   authorizeAdmin,
   BatchCreateMentorValidator,
   async (req: Request, res: Response) => {
-    console.log("Called");
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       return throwValidationError(res, errors);

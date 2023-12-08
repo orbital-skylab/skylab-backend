@@ -9,10 +9,10 @@
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
     "format": "npx prettier --config .prettierrc.js --write \"src/**/*.ts\"",
     "lint": "eslint . --ext .ts",
-    "start": "export NODE_ENV=production || set NODE_ENV=production&&node dist/index.js",
+    "start": "export NODE_ENV=production || set NODE_ENV=production && babel-node dist/index.js",
     "dev": "export NODE_ENV=development || set NODE_ENV=development&&nodemon src/index.ts",
     "heroku-postbuild": "npx prisma generate",
-    "cy-test": "prisma migrate deploy && prisma db seed && export NODE_ENV=test || set NODE_ENV=test && nodemon src/index.ts"
+    "e2e": "export NODE_ENV=test || set NODE_ENV=test && tsc && node dist/index.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -89,6 +89,10 @@
     "typescript": "^4.6.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.22.20",
+    "@babel/node": "^7.22.19",
+    "@babel/preset-env": "^7.22.20",
+    "@cypress/code-coverage": "^3.12.1",
     "@faker-js/faker": "^7.4.0",
     "@types/bcrypt": "^5.0.0",
     "@types/command-line-args": "^5.2.0",

@@ -1,4 +1,4 @@
-import { prisma } from "src/client";
+import { prisma } from "../../client";
 
 export async function checkAdviserIdExists(adviserId: number) {
   try {

@@ -1,14 +1,14 @@
 import { TargetAudienceRole } from "@prisma/client";
-import { SkylabError } from "src/errors/SkylabError";
-import { countAdvisers } from "src/models/advisers.db";
+import { SkylabError } from "../errors/SkylabError";
+import { countAdvisers } from "../models/advisers.db";
 import {
   countAnnouncementReadLogs,
   upsertOneAnnouncementReadLog,
-} from "src/models/announcementReadLogs.db";
-import { getOneAnnouncement } from "src/models/announcements.db";
-import { countMentors } from "src/models/mentors.db";
-import { countStudents } from "src/models/students.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+} from "../models/announcementReadLogs.db";
+import { getOneAnnouncement } from "../models/announcements.db";
+import { countMentors } from "../models/mentors.db";
+import { countStudents } from "../models/students.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export async function getAnnouncementReadPercentage({
   announcementId,

@@ -1,8 +1,8 @@
-import { SkylabError } from "src/errors/SkylabError";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { getOneAnnouncementComment } from "src/models/announcements.db";
+import { getOneAnnouncementComment } from "../models/announcements.db";
 
 const authorizeAuthorOfComment = async (
   req: Request,

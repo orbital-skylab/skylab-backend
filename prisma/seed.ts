@@ -4,29 +4,29 @@ import { seedStudents } from "./seed/student.seed";
 import { seedAdvisers } from "./seed/adviser.seed";
 import { seedMentors } from "./seed/mentor.seed";
 import { seedAdmin } from "./seed/administrator.seed";
+import { seedDeadlines } from "./seed/deadline.seed";
+import { seedSubmissions } from "./seed/submission.seed";
 
 const prisma = new PrismaClient();
 
 async function main() {
   await prisma.$connect();
 
-  await seedCohorts(prisma).then(() =>
-    console.log("cohorts seeded successfully")
-  );
-  await seedStudents(prisma).then(() =>
-    console.log("students seeded successfully")
-  );
-  await seedAdvisers(prisma).then(() =>
-    console.log("advisers seeded successfully")
-  );
-  await seedMentors(prisma).then(() =>
-    console.log("mentors seeded successfully")
-  );
-  await seedAdmin(prisma).then(() => console.log("admins seeded successfully"));
+  await seedCohorts(prisma).then(() => console.log("cohorts seeded"));
+  await seedStudents(prisma).then(() => console.log("students seeded"));
+  await seedAdvisers(prisma).then(() => console.log("advisers seeded"));
+  await seedMentors(prisma).then(() => console.log("mentors seeded"));
+  await seedAdmin(prisma).then(() => console.log("admins seeded"));
+  await seedDeadlines(prisma).then(() => console.log("deadlines seeded"));
+  await seedSubmissions(prisma).then(() => console.log("submissions seeded"));
 }
 
 main()
-  .catch((e) => console.error(e))
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  })
   .finally(async () => {
     await prisma.$disconnect();
     process.exit(0);

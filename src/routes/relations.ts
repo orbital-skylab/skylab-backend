@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import { validationResult } from "express-validator";
-import { getOneProjectById } from "src/helpers/projects.helper";
+import { getOneProjectById } from "../helpers/projects.helper";
 import {
   createRelation,
   createRelationsByGroup,
@@ -10,17 +10,17 @@ import {
   editOneEvaluationRelationByRelationID,
   getManyRelationsWithAdviserID,
   getManyRelationsWithFilter,
-} from "src/helpers/relations.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
-import authorizeAdviserOfGroup from "src/middleware/authorizeAdviserOfGroup";
-import authorizeAdviserOfProject from "src/middleware/authorizeAdviserOfProject";
-import authorizeAdviserOfRelation from "src/middleware/authorizeAdviserOfRelation";
-import authorizeAdviserOfTwoProjects from "src/middleware/authorizeAdviserOfTwoProjects";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
+} from "../helpers/relations.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
+import authorizeAdviserOfGroup from "../middleware/authorizeAdviserOfGroup";
+import authorizeAdviserOfProject from "../middleware/authorizeAdviserOfProject";
+import authorizeAdviserOfRelation from "../middleware/authorizeAdviserOfRelation";
+import authorizeAdviserOfTwoProjects from "../middleware/authorizeAdviserOfTwoProjects";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 import {
   CreateRelationValidator,
   DeleteRelationByRelationIDValidator,
@@ -29,8 +29,8 @@ import {
   GetRelationsValidator,
   GetRelationsWithAdviserIDValidator,
   UpdateRelationByRelationIDValidator,
-} from "src/validators/relation.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../validators/relation.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 

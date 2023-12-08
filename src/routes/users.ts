@@ -1,29 +1,29 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { addAdviserRoleToManyUsers } from "src/helpers/advisers.helper";
+import { addAdviserRoleToManyUsers } from "../helpers/advisers.helper";
 import {
   addRoleToUsers,
   deleteOneUserById,
   editOneUserById,
   getManyUsersWithFilter,
   getOneUserById,
-} from "src/helpers/users.helper";
-import authorizeAdmin from "src/middleware/authorizeAdmin";
-import authorizeSelf from "src/middleware/authorizeSelf";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
-import { getLeanUsersWithFilter } from "src/models/users.db";
+} from "../helpers/users.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
+import authorizeSelf from "../middleware/authorizeSelf";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
+import { getLeanUsersWithFilter } from "../models/users.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 import {
   DeleteUserByIDValidator,
   GetUserByIDValidator,
   GetUsersLeanValidator,
   GetUsersValidator,
   UserRolesEnum,
-} from "src/validators/user.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+} from "../validators/user.validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 

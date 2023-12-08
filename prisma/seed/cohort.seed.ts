@@ -1,19 +1,21 @@
 import { type PrismaClient } from "@prisma/client";
 
+const thisYear = new Date().getFullYear();
+
 export const cohort1 = {
-  startDate: new Date("2022-07-06T14:48:09.274Z"),
-  endDate: new Date("2023-07-06T14:48:09.274Z"),
-  academicYear: 2022,
+  startDate: new Date(thisYear - 1, 0, 1),
+  endDate: new Date(thisYear - 1, 11, 31),
+  academicYear: thisYear - 1,
 };
 export const cohort2 = {
-  startDate: new Date("2023-07-06T14:48:09.274Z"),
-  endDate: new Date("2024-07-06T14:48:09.274Z"),
-  academicYear: 2023,
+  startDate: new Date(thisYear, 0, 1),
+  endDate: new Date(thisYear, 11, 31),
+  academicYear: thisYear,
 };
 export const cohort3 = {
-  startDate: new Date("2024-07-06T14:48:09.274Z"),
-  endDate: new Date("2025-07-06T14:48:09.274Z"),
-  academicYear: 2024,
+  startDate: new Date(thisYear + 1, 0, 1),
+  endDate: new Date(thisYear + 1, 11, 31),
+  academicYear: thisYear + 1,
 };
 
 export const cohorts = [cohort1, cohort2, cohort3];
