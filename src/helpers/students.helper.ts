@@ -189,13 +189,16 @@ export async function createManyUsersWithStudentRole(
       }
 
       const { cohortYear, ...studentData } = student;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { cohortYear: _cohortYear, ...projectData } = project;
       await prisma.$transaction([
         prisma.user.create({ data: user }),
         prisma.student.create({
           data: {
             ...studentData,
-            user: { connect: { email: user.email } },
+            user: {
+              connect: { email: user.email },
+            },
             cohort: { connect: { academicYear: cohortYear } },
             project: {
               connectOrCreate: {
