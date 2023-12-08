@@ -24,7 +24,7 @@ jobs:
 
       - name: Sync Submodule Reference in Parent Repository
         run: |
-          git submodule update --remote --merge
+          git submodule update --remote
           git add skylab-backend
           git commit -m "chore: update submodule reference"
           git push
