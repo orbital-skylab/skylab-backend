@@ -1,8 +1,9 @@
-import { Router, Request, Response } from "express";
+import { Request, Response, Router } from "express";
 import {
-  createInitialVoteEvent,
+  createVoteEvent,
   editVoteEvent,
   getAllVoteEvents,
+  getOneVoteEventById,
   removeVoteEvent,
 } from "../helpers/voteEvent.helper";
 import {
@@ -22,9 +23,20 @@ router.get("/", async (_, res: Response) => {
   }
 });
 
-router.post("/", async (_, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   try {
-    const voteEvent = await createInitialVoteEvent();
+    const voteEvent = await createVoteEvent(req.body);
+
+    return apiResponseWrapper(res, { voteEvent });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.get("/:voteEventId", async (req: Request, res: Response) => {
+  const { voteEventId } = req.params;
+  try {
+    const voteEvent = await getOneVoteEventById(Number(voteEventId));
 
     return apiResponseWrapper(res, { voteEvent });
   } catch (e) {
@@ -56,3 +68,5 @@ router.delete("/:voteEventId", async (req: Request, res: Response) => {
     return routeErrorHandler(res, e);
   }
 });
+
+export default router;

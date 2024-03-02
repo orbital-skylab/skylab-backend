@@ -3,6 +3,7 @@ import {
   createOneVoteEvent,
   deleteVoteEvent,
   findManyVoteEvents,
+  findUniqueVoteEvent,
   updateVoteEvent,
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
@@ -14,10 +15,24 @@ export async function getAllVoteEvents() {
   return voteEvents;
 }
 
-export async function createInitialVoteEvent() {
+export async function getOneVoteEventById(voteEventId: number) {
+  const voteEvent = await findUniqueVoteEvent({
+    where: { id: voteEventId },
+  });
+
+  return voteEvent;
+}
+
+export async function createVoteEvent(body: {
+  voteEvent: { title: string; startTime: Date; endTime: Date };
+}) {
+  const { title, startTime, endTime } = body.voteEvent;
+
   const voteEvent = await createOneVoteEvent({
     data: {
-      title: "Vote Event",
+      title: title,
+      startTime: startTime,
+      endTime: endTime,
     },
   });
 
@@ -36,14 +51,18 @@ export async function editVoteEvent({
   voteEventId,
 }: {
   body: {
-    title: string;
+    voteEvent: { title: string; startTime: Date; endTime: Date };
   };
   voteEventId: number;
 }) {
+  const { title, startTime, endTime } = body.voteEvent;
+
   const voteEvent = await updateVoteEvent({
     where: { id: voteEventId },
     data: {
-      title: body.title,
+      title: title,
+      startTime: startTime,
+      endTime: endTime,
     },
   });
 
