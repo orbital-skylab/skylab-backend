@@ -29,6 +29,7 @@ model User {
   announcements        Announcement[]
   announcementComments AnnouncementComment[]
   announcementReadLogs AnnouncementReadLog[]
+  voteEvents           VoteEvent[]
 }
 
 model Cohort {
@@ -109,6 +110,7 @@ model Project {
   received    Submission[]         @relation(name: "to_project")
   evaluator   EvaluationRelation[] @relation(name: "evaluator")
   evaluatee   EvaluationRelation[] @relation(name: "evaluatee")
+  voteEvents  VoteEvent[]
 
   @@unique([teamName, cohortYear])
 }
@@ -271,6 +273,29 @@ model AnnouncementReadLog {
   announcementId Int
 
   @@unique([userId, announcementId])
+}
+
+model VoteEvent {
+  id        Int       @id @default(autoincrement())
+  title     String
+  startTime DateTime?
+  endTime   DateTime?
+  voters    User[]
+  voterId   VoterId[]
+  projects  Project[]
+  votes     Vote[]
+}
+
+model VoterId {
+  id          String    @id
+  voteEvent   VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId Int
+}
+
+model Vote {
+  id          String    @id
+  voteEvent   VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId Int
 }
 
 enum TargetAudienceRole {
