@@ -143,6 +143,13 @@ export async function getManyUsersWithFilter(
   return parsedUsers;
 }
 
+export async function getManyUsersOfVoteEvent(voteEventId: number) {
+  const users = await findManyUsers({
+    where: { voteEvents: { some: { id: voteEventId } } },
+  });
+  return users;
+}
+
 export async function getOneUserById(userId: number) {
   try {
     return removePasswordFromUser(

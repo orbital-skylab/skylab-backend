@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
+import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
@@ -57,6 +57,66 @@ export async function deleteVoteEvent(query: Prisma.VoteEventDeleteArgs) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
+export async function updateUserAsInternalVoter(query: Prisma.UserUpdateArgs) {
+  try {
+    return await prisma.user.update(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
+export async function findManyExternalVoters(
+  query: Prisma.ExternalVoterFindManyArgs
+) {
+  const manyExternalVoters = await prisma.externalVoter.findMany(query);
+  return manyExternalVoters;
+}
+
+export async function createExternalVoter(
+  query: Prisma.ExternalVoterCreateArgs
+) {
+  try {
+    return await prisma.externalVoter.create(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
+export async function deleteExternalVoter(
+  query: Prisma.ExternalVoterDeleteArgs
+) {
+  try {
+    return await prisma.externalVoter.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
+export async function updateVoterManagement(
+  query: Prisma.VoterManagementUpsertArgs
+) {
+  try {
+    return await prisma.voterManagement.upsert(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 }

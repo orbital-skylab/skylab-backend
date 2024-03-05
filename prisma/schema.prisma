@@ -276,26 +276,87 @@ model AnnouncementReadLog {
 }
 
 model VoteEvent {
-  id        Int       @id @default(autoincrement())
-  title     String
-  startTime DateTime?
-  endTime   DateTime?
-  voters    User[]
-  voterId   VoterId[]
-  projects  Project[]
-  votes     Vote[]
+  id                 Int              @id @default(autoincrement())
+  title              String
+  startTime          DateTime?
+  endTime            DateTime?
+  isRegistrationOpen Boolean
+  voters             User[]
+  externalVoters     ExternalVoter[]
+  projects           Project[]
+  votes              Vote[]
+  voterManagement    VoterManagement?
+  voteStyle          VoteStyle?
+  resultFilter       ResultFilter?
 }
 
-model VoterId {
-  id          String    @id
+model ExternalVoter {
+  id          String
   voteEvent   VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
   voteEventId Int
+
+  @@id([id, voteEventId])
 }
 
 model Vote {
-  id          String    @id
-  voteEvent   VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
-  voteEventId Int
+  voteEvent         VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId       Int       @id
+  internalList      Boolean
+  registration      Boolean
+  internalCsvImport Boolean
+  externalList      Boolean
+  generation        Boolean
+  externalCsvImport Boolean
+}
+
+model VoterManagement {
+  voteEvent         VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId       Int       @id
+  internalList      Boolean
+  registration      Boolean
+  internalCsvImport Boolean
+  externalList      Boolean
+  generation        Boolean
+  externalCsvImport Boolean
+}
+
+model VoteStyle {
+  voteEvent   VoteEvent   @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId Int         @id
+  maxVotes    Int
+  minVotes    Int
+  randomOrder Boolean
+  cumulative  Boolean
+  ranked      Boolean
+  type        DisplayType
+}
+
+model ResultFilter {
+  voteEvent           VoteEvent    @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId         Int          @id
+  displayTop          Int
+  displayPoints       Boolean
+  displayPercentage   Boolean
+  studentWeight       Float
+  advisorWeight       Float
+  mentorWeight        Float
+  administratorWeight Float
+  publicWeight        Float
+  rankWeights         RankWeight[]
+}
+
+model RankWeight {
+  id              Int          @id @default(autoincrement())
+  resultFilter    ResultFilter @relation(fields: [resultFiltertId], references: [voteEventId], onDelete: Cascade)
+  resultFiltertId Int
+  rank            Int
+  weight          Float
+}
+
+enum DisplayType {
+  None
+  List
+  Gallery
 }
 
 enum TargetAudienceRole {
