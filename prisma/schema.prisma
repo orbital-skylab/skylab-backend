@@ -29,6 +29,7 @@ model User {
   announcements        Announcement[]
   announcementComments AnnouncementComment[]
   announcementReadLogs AnnouncementReadLog[]
+  ForumPosts           ForumPost[]
 }
 
 model Cohort {
@@ -273,6 +274,16 @@ model AnnouncementReadLog {
   @@unique([userId, announcementId])
 }
 
+model ForumPost {
+  id        Int           @id @default(autoincrement())
+  createdAt DateTime      @default(now())
+  userId    Int
+  title     String
+  body      String
+  category  ForumCategory 
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 enum TargetAudienceRole {
   Student
   Adviser
@@ -311,4 +322,13 @@ enum ApplicationStatus {
   Unprocessed
   Approved
   Rejected
+}
+
+enum ForumCategory {
+  MilestoneOne
+  MilestoneTwo
+  MilestoneThree
+  General
+  MentorMatching
+  Others
 }
