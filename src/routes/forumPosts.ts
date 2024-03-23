@@ -1,9 +1,10 @@
 import { Router, Request, Response } from "express";
 import {
   getManyForumPostsWithFilter,
-  fetchOneForumPostById,
+  getForumPostWithCommentThreads,
   createForumPost,
   editForumPost,
+  createForumPostComment,
 } from "../helpers/forumPosts.helper";
 import {
   apiResponseWrapper,
@@ -31,12 +32,13 @@ router.get("/", async (req: Request, res: Response) => {
 // Get forum post using id
 router.get("/:postId", async (req: Request, res: Response) => {
   const { postId } = req.params;
-
   try {
-    const postWithId = await fetchOneForumPostById(Number(postId));
-    return apiResponseWrapper(res, { forumPost: postWithId });
+    const forumPost = await getForumPostWithCommentThreads({
+      postId: Number(postId),
+    });
+    return apiResponseWrapper(res, { forumPost });
   } catch (e) {
-    routeErrorHandler(res, e);
+    return routeErrorHandler(res, e);
   }
 });
 
@@ -69,6 +71,19 @@ router.put("/:postId", async (req: Request, res: Response) => {
       postId: Number(postId),
     });
     return apiResponseWrapper(res, { announcement: editedForumPost });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.post("/:postId/comments", async (req: Request, res: Response) => {
+  const { postId } = req.params;
+  try {
+    const createdPostComment = await createForumPostComment({
+      body: req.body,
+      postId: Number(postId),
+    });
+    return apiResponseWrapper(res, { comment: createdPostComment });
   } catch (e) {
     return routeErrorHandler(res, e);
   }

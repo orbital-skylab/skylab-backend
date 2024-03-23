@@ -29,7 +29,8 @@ model User {
   announcements        Announcement[]
   announcementComments AnnouncementComment[]
   announcementReadLogs AnnouncementReadLog[]
-  ForumPosts           ForumPost[]
+  forumposts           ForumPost[]
+  forumpostComments ForumComment[]
 }
 
 model Cohort {
@@ -282,6 +283,22 @@ model ForumPost {
   body      String
   category  ForumCategory 
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forumComments ForumComment[]
+}
+
+model ForumComment {
+  id              Int            @id @default(autoincrement())
+  content         String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  parentCommentId Int?
+  parentComment   ForumComment?  @relation("NestedPostComments", fields: [parentCommentId], references: [id])
+  childComments   ForumComment[] @relation("NestedPostComments")
+  userId          Int
+  forumPostId     Int
+  user            User           @relation(fields: [userId], references: [id])
+  forumPost       ForumPost      @relation(fields: [forumPostId], references: [id], onDelete: Cascade)
 }
 
 enum TargetAudienceRole {

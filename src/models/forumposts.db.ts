@@ -24,31 +24,39 @@ export const findManyForumPosts = async (
  * @returns The forum post object if found, otherwise `null`.
  * @throws SkylabError with an appropriate error message and HTTP status code if an error occurs.
  */
-export async function getOneForumPostById(postId: number) {
-  try {
-    const forumPost = await prisma.forumPost.findUnique({
-      where: {
-        id: postId,
+export const getOneForumPostById = async ({ postId }: { postId }) => {
+  const forumPost = await prisma.forumPost.findUnique({
+    where: {
+      id: postId,
+    },
+    include: {
+      user: {
+        select: {
+          profilePicUrl: true,
+          name: true,
+        },
       },
-      include: {
-        user: {
-          select: {
-            profilePicUrl: true,
-            name: true,
+      forumComments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              profilePicUrl: true,
+            },
           },
         },
       },
-    });
-
-    return forumPost;
-  } catch (error) {
+    },
+  });
+  if (!forumPost) {
     throw new SkylabError(
-      "Failed to retrieve the forum post",
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      error
+      "Announcement was not found",
+      HttpStatusCode.BAD_REQUEST
     );
   }
-}
+  return forumPost;
+};
 
 /**
  * Creates a new forum post in the database with the specified data.
@@ -93,5 +101,20 @@ export const updateForumPost = async (query: Prisma.ForumPostUpdateArgs) => {
     }
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+};
+
+export const createOneForumPostComment = async (
+  query: Prisma.ForumCommentCreateArgs
+) => {
+  try {
+    const newForumPostComment = await prisma.forumComment.create(query);
+    return newForumPostComment;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
 };
