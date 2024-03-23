@@ -11,10 +11,6 @@ import {
   createOneForumPostComment,
 } from "src/models/forumposts.db";
 
-type QueryType = {
-  category?: ForumCategory | "YourPosts";
-};
-
 export async function getForumPostWithCommentThreads({
   postId,
 }: {
