@@ -9,6 +9,9 @@ import {
   createOneForumPost,
   updateForumPost,
   createOneForumPostComment,
+  updateForumComment,
+  countComments,
+  deleteForumComment,
 } from "src/models/forumposts.db";
 
 export async function getForumPostWithCommentThreads({
@@ -74,18 +77,17 @@ export async function getManyForumPostsWithFilter({
   userId,
 }: {
   query: any & {
-    category?: ForumCategory | "YourPosts";
+    category?: ForumCategory | "Author";
+    limit?: number;
+    page?: number;
   };
   userId: number;
 }) {
-  const { category } = query;
+  const { category, limit, page } = query;
 
-  // If the category is 'All', we don't apply any category filter.
-  // If the category is 'YourPosts', we filter by the provided userId.
   let whereCondition = {};
-
   if (category && category !== "All") {
-    if (category === "YourPosts") {
+    if (category === "Author") {
       whereCondition = {
         userId: { equals: userId },
       };
@@ -96,7 +98,13 @@ export async function getManyForumPostsWithFilter({
     }
   }
 
+  const paginationParams = {
+    take: limit ? Number(limit) : undefined,
+    skip: limit && page ? Number(limit) * Number(page) : undefined,
+  };
+
   const forumPostQuery: Prisma.ForumPostFindManyArgs = {
+    ...paginationParams,
     where: whereCondition,
     include: {
       user: {
@@ -112,7 +120,9 @@ export async function getManyForumPostsWithFilter({
   };
 
   const forumPosts = await findManyForumPosts(forumPostQuery);
-  return forumPosts;
+  return forumPosts.map((post) => ({
+    ...post,
+  }));
 }
 
 export async function createForumPost(postData: {
@@ -216,4 +226,87 @@ export async function createForumPostComment({
   }
 
   return createdComment;
+}
+
+export async function editForumComment({
+  body,
+  commentId,
+}: {
+  body: {
+    comment: {
+      content?: string;
+    };
+  };
+  commentId: number;
+}) {
+  const { comment } = body;
+
+  const updatedForumComment = await updateForumComment({
+    where: {
+      id: commentId,
+    },
+    data: {
+      ...comment,
+      deletedAt: null,
+    },
+  });
+
+  if (!updatedForumComment) {
+    throw new SkylabError(
+      "Error occurred while updating comment",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return updateForumPost;
+}
+
+export async function deleteOrSoftDeleteForumComment({
+  commentId,
+}: {
+  commentId: number;
+}) {
+  const hasReplies =
+    (await countComments({
+      where: {
+        parentCommentId: commentId,
+      },
+    })) > 0;
+
+  // Soft delete
+  if (hasReplies) {
+    const updatedForumComment = await updateForumComment({
+      where: {
+        id: commentId,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    if (!updatedForumComment) {
+      throw new SkylabError(
+        "Error occurred while soft deleting comment",
+        HttpStatusCode.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    return updateForumComment;
+  }
+
+  // Hard-delete
+  const deletedForumComment = await deleteForumComment({
+    where: {
+      id: commentId,
+    },
+  });
+
+  if (!deletedForumComment) {
+    throw new SkylabError(
+      "Error occurred while deleting comment",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return deletedForumComment;
 }

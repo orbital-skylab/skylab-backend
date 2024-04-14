@@ -5,6 +5,8 @@ import {
   createForumPost,
   editForumPost,
   createForumPostComment,
+  editForumComment,
+  deleteOrSoftDeleteForumComment,
 } from "../helpers/forumPosts.helper";
 import {
   apiResponseWrapper,
@@ -12,22 +14,29 @@ import {
 } from "../utils/ApiResponseWrapper";
 import { extractJwtData } from "../helpers/authentication.helper";
 import { deleteForumPost } from "src/models/forumposts.db";
+import authorizeTargetAudienceRole from "../middleware/authorizeTargetAudienceRole";
+import authorizeAuthorOfPostComment from "src/middleware/authorizeAuthorOfPostComment";
+import authorizeAuthorOfPost from "src/middleware/authorizeAuthorOfPost";
 
 const router = Router();
 
 // Get all forum posts
-router.get("/", async (req: Request, res: Response) => {
-  try {
-    const { id: userId } = extractJwtData(req, res);
-    const forumPosts = await getManyForumPostsWithFilter({
-      query: req.query,
-      userId: Number(userId),
-    });
-    return apiResponseWrapper(res, { forumPosts: forumPosts });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+router.get(
+  "/",
+  authorizeTargetAudienceRole,
+  async (req: Request, res: Response) => {
+    try {
+      const { id: userId } = extractJwtData(req, res);
+      const forumPosts = await getManyForumPostsWithFilter({
+        query: req.query,
+        userId: Number(userId),
+      });
+      return apiResponseWrapper(res, { forumPosts: forumPosts });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 // Get forum post using id
 router.get("/:postId", async (req: Request, res: Response) => {
@@ -51,7 +60,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-router.delete("/:postId", async (req, res) => {
+router.delete("/:postId", authorizeAuthorOfPost, async (req, res) => {
   const { postId } = req.params;
   try {
     const deletedforumPost = await deleteForumPost({
@@ -63,18 +72,22 @@ router.delete("/:postId", async (req, res) => {
   }
 });
 
-router.put("/:postId", async (req: Request, res: Response) => {
-  const { postId } = req.params;
-  try {
-    const editedForumPost = await editForumPost({
-      updateData: req.body,
-      postId: Number(postId),
-    });
-    return apiResponseWrapper(res, { announcement: editedForumPost });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+router.put(
+  "/:postId",
+  authorizeAuthorOfPost,
+  async (req: Request, res: Response) => {
+    const { postId } = req.params;
+    try {
+      const editedForumPost = await editForumPost({
+        updateData: req.body,
+        postId: Number(postId),
+      });
+      return apiResponseWrapper(res, { announcement: editedForumPost });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.post("/:postId/comments", async (req: Request, res: Response) => {
   const { postId } = req.params;
@@ -88,5 +101,38 @@ router.post("/:postId/comments", async (req: Request, res: Response) => {
     return routeErrorHandler(res, e);
   }
 });
+
+router.put(
+  "/:postId/comments/:commentId",
+  authorizeAuthorOfPostComment,
+  async (req, res) => {
+    const { commentId } = req.params;
+    try {
+      const editedForumComment = await editForumComment({
+        body: req.body,
+        commentId: Number(commentId),
+      });
+      return apiResponseWrapper(res, { comment: editedForumComment });
+    } catch (error) {
+      return routeErrorHandler(res, error);
+    }
+  }
+);
+
+router.delete(
+  "/:announcementId/comments/:commentId",
+  authorizeAuthorOfPostComment,
+  async (req, res) => {
+    const { commentId } = req.params;
+    try {
+      const deletedPostComment = await deleteOrSoftDeleteForumComment({
+        commentId: Number(commentId),
+      });
+      return apiResponseWrapper(res, { comment: deletedPostComment });
+    } catch (error) {
+      return routeErrorHandler(res, error);
+    }
+  }
+);
 
 export default router;

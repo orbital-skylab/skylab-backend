@@ -5,6 +5,26 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { prisma } from "../client";
 
 /**
+ * @function getOneForumPost Find the forum post that matches the given unique query conditions
+ * @param query The unique query conditions to retrieve the post by
+ * @returns The unique post that matches the given query conditions
+ */
+export const getOneForumPost = async (
+  query: Prisma.ForumPostFindUniqueArgs
+) => {
+  const forumPost = await prisma.forumPost.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
+
+  if (!forumPost) {
+    throw new SkylabError("Post was not found", HttpStatusCode.BAD_REQUEST);
+  }
+
+  return forumPost;
+};
+
+/**
  * Fetches forum posts from the database based on the given Prisma query conditions.
  *
  * @param query The Prisma query conditions to use for fetching forum posts.
@@ -50,10 +70,7 @@ export const getOneForumPostById = async ({ postId }: { postId }) => {
     },
   });
   if (!forumPost) {
-    throw new SkylabError(
-      "Announcement was not found",
-      HttpStatusCode.BAD_REQUEST
-    );
+    throw new SkylabError("Post was not found", HttpStatusCode.BAD_REQUEST);
   }
   return forumPost;
 };
@@ -117,4 +134,31 @@ export const createOneForumPostComment = async (
 
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
   }
+};
+
+export const updateForumComment = async (
+  query: Prisma.ForumCommentUpdateArgs
+) => {
+  return await prisma.forumComment.update({ ...query });
+};
+
+export const countComments = async (query: Prisma.ForumCommentCountArgs) => {
+  return await prisma.forumComment.count(query);
+};
+
+export const deleteForumComment = async (
+  query: Prisma.ForumCommentDeleteArgs
+) => {
+  return await prisma.forumComment.delete({
+    ...query,
+  });
+};
+
+export const getOneForumComment = async (
+  query: Prisma.ForumCommentFindUniqueArgs
+) => {
+  return await prisma.forumComment.findUnique({
+    ...query,
+    rejectOnNotFound: false,
+  });
 };
