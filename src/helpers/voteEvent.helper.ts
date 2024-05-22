@@ -10,7 +10,6 @@ import {
   findUniqueVoteEvent,
   updateUserAsInternalVoter,
   updateVoteEvent,
-  updateVoterManagement,
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
@@ -25,6 +24,7 @@ export async function getOneVoteEventById(voteEventId: number) {
     where: { id: voteEventId },
     include: {
       voterManagement: true,
+      // TODO: include what is needed as features are added
     },
   });
 
@@ -41,7 +41,6 @@ export async function createVoteEvent(body: {
       title: title,
       startTime: startTime,
       endTime: endTime,
-      isRegistrationOpen: false,
     },
   });
 
@@ -64,7 +63,6 @@ export async function editVoteEvent({
       title?: string;
       startTime?: Date;
       endTime?: Date;
-      isRegistrationOpen?: boolean;
     };
   };
   voteEventId: number;
@@ -76,7 +74,7 @@ export async function editVoteEvent({
     data: {
       ...voteEvent,
     },
-    include: { voterManagement: true },
+    include: { voterManagement: true }, // TODO: include what is needed as features are added
   });
 
   if (!updatedVoteEvent) {
@@ -207,41 +205,41 @@ export async function removeExternalVoter(
   }
 }
 
-export async function editVoterManagement({
-  body,
-  voteEventId,
-}: {
-  body: {
-    voterManagement: {
-      internalList: boolean;
-      registration: boolean;
-      internalCsvImport: boolean;
-      externalList: boolean;
-      generation: boolean;
-      externalCsvImport: boolean;
-    };
-  };
-  voteEventId: number;
-}) {
-  const { voterManagement } = body;
+// export async function editVoterManagement({
+//   body,
+//   voteEventId,
+// }: {
+//   body: {
+//     voterManagement: {
+//       internalList: boolean;
+//       registration: boolean;
+//       internalCsvImport: boolean;
+//       externalList: boolean;
+//       generation: boolean;
+//       externalCsvImport: boolean;
+//     };
+//   };
+//   voteEventId: number;
+// }) {
+//   const { voterManagement } = body;
 
-  const updatedVoterManagement = await updateVoterManagement({
-    where: { voteEventId: voteEventId },
-    create: {
-      ...voterManagement,
-      voteEventId: voteEventId,
-    },
-    update: {
-      ...voterManagement,
-    },
-  });
+//   const updatedVoterManagement = await updateVoterManagement({
+//     where: { voteEventId: voteEventId },
+//     create: {
+//       ...voterManagement,
+//       voteEventId: voteEventId,
+//     },
+//     update: {
+//       ...voterManagement,
+//     },
+//   });
 
-  if (!updatedVoterManagement) {
-    throw new SkylabError(
-      "Error occurred while updating voter management config",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
+//   if (!updatedVoterManagement) {
+//     throw new SkylabError(
+//       "Error occurred while updating voter management config",
+//       HttpStatusCode.INTERNAL_SERVER_ERROR
+//     );
+//   }
 
-  return updatedVoterManagement;
-}
+//   return updatedVoterManagement;
+// }

@@ -5,7 +5,6 @@ import {
   addInternalVoter,
   createVoteEvent,
   editVoteEvent,
-  editVoterManagement,
   getAllExternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
@@ -174,23 +173,23 @@ router.delete(
   }
 );
 
-router.put(
-  "/:voteEventId/voter-management",
-  async (req: Request, res: Response) => {
-    const { voteEventId } = req.params;
-    try {
-      const editedVoterManagement = await editVoterManagement({
-        body: req.body,
-        voteEventId: Number(voteEventId),
-      });
+// router.put(
+//   "/:voteEventId/voter-management",
+//   async (req: Request, res: Response) => {
+//     const { voteEventId } = req.params;
+//     try {
+//       const editedVoterManagement = await editVoterManagement({
+//         body: req.body,
+//         voteEventId: Number(voteEventId),
+//       });
 
-      return apiResponseWrapper(res, {
-        voterManagement: editedVoterManagement,
-      });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  }
-);
+//       return apiResponseWrapper(res, {
+//         voterManagement: editedVoterManagement,
+//       });
+//     } catch (e) {
+//       return routeErrorHandler(res, e);
+//     }
+//   }
+// );
 
 export default router;
