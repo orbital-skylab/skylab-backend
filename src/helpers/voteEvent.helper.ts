@@ -1,3 +1,4 @@
+import { prisma } from "src/client";
 import { SkylabError } from "../errors/SkylabError";
 import { updateUniqueUser } from "../models/users.db";
 import {
@@ -12,6 +13,13 @@ import {
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
+const VOTE_EVENT_INCLUSION = {
+  // TODO: include what is needed as features are added
+  voterManagement: true,
+};
+
+// --- Vote Event Helper Functions ---
+
 export async function getAllVoteEvents() {
   const voteEvents = await findManyVoteEvents({});
 
@@ -21,10 +29,7 @@ export async function getAllVoteEvents() {
 export async function getOneVoteEventById(voteEventId: number) {
   const voteEvent = await findUniqueVoteEvent({
     where: { id: voteEventId },
-    include: {
-      voterManagement: true,
-      // TODO: include what is needed as features are added
-    },
+    include: VOTE_EVENT_INCLUSION,
   });
 
   return voteEvent;
@@ -73,7 +78,7 @@ export async function editVoteEvent({
     data: {
       ...voteEvent,
     },
-    include: { voterManagement: true }, // TODO: include what is needed as features are added
+    include: VOTE_EVENT_INCLUSION,
   });
 
   if (!updatedVoteEvent) {
@@ -98,6 +103,8 @@ export async function removeVoteEvent(voteEventId: number) {
     );
   }
 }
+
+// --- Internal Voter Helper Functions ---
 
 export async function addInternalVoter({
   body,
@@ -150,6 +157,28 @@ export async function removeInternalVoter(
 
   return updatedUser;
 }
+
+export async function removeAllInternalVotersByVoteEvent(voteEventId: number) {
+  const updatedVoteEvent = await updateVoteEvent({
+    where: { id: voteEventId },
+    data: {
+      internalVoters: {
+        set: [],
+      },
+    },
+  });
+
+  if (!updatedVoteEvent) {
+    throw new SkylabError(
+      "Error occurred while removing internal voters",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return updatedVoteEvent;
+}
+
+// --- External Voter Helper Functions ---
 
 export async function getAllExternalVotersByVoteEvent(voteEventId: number) {
   const externalVoters = await findManyExternalVoters({
@@ -204,41 +233,43 @@ export async function removeExternalVoter(
   }
 }
 
-// export async function editVoterManagement({
-//   body,
-//   voteEventId,
-// }: {
-//   body: {
-//     voterManagement: {
-//       internalList: boolean;
-//       registration: boolean;
-//       internalCsvImport: boolean;
-//       externalList: boolean;
-//       generation: boolean;
-//       externalCsvImport: boolean;
-//     };
-//   };
-//   voteEventId: number;
-// }) {
-//   const { voterManagement } = body;
+export async function removeAllExternalVotersByVoteEvent(voteEventId: number) {
+  const updatedVoteEvent = await updateVoteEvent({
+    where: { id: voteEventId },
+    data: {
+      externalVoters: {
+        deleteMany: {},
+      },
+    },
+  });
 
-//   const updatedVoterManagement = await updateVoterManagement({
-//     where: { voteEventId: voteEventId },
-//     create: {
-//       ...voterManagement,
-//       voteEventId: voteEventId,
-//     },
-//     update: {
-//       ...voterManagement,
-//     },
-//   });
+  if (!updatedVoteEvent) {
+    throw new SkylabError(
+      "Error occurred while removing external voters",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
 
-//   if (!updatedVoterManagement) {
-//     throw new SkylabError(
-//       "Error occurred while updating voter management config",
-//       HttpStatusCode.INTERNAL_SERVER_ERROR
-//     );
-//   }
+  return updatedVoteEvent;
+}
 
-//   return updatedVoterManagement;
-// }
+// --- Transaction Helper Functions ---
+export function editVoterManagement({
+  body,
+  voteEventId,
+}: {
+  body: {
+    voteEvent: {
+      title?: string;
+      startTime?: Date;
+      endTime?: Date;
+    };
+  };
+  voteEventId: number;
+}) {
+  return prisma.$transaction(async () => {
+    editVoteEvent({ body, voteEventId });
+    removeAllInternalVotersByVoteEvent(voteEventId);
+    removeAllExternalVotersByVoteEvent(voteEventId);
+  });
+}
