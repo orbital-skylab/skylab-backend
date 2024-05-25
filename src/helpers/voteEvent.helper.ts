@@ -8,7 +8,6 @@ import {
   findManyExternalVoters,
   findManyVoteEvents,
   findUniqueVoteEvent,
-  updateUserAsInternalVoter,
   updateVoteEvent,
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
@@ -110,7 +109,7 @@ export async function addInternalVoter({
   voteEventId: number;
 }) {
   const { email } = body;
-  const updatedUser = await updateUserAsInternalVoter({
+  const updatedUser = await updateUniqueUser({
     where: { email: email },
     data: {
       voteEvents: {
@@ -144,7 +143,7 @@ export async function removeInternalVoter(
 
   if (!updatedUser) {
     throw new SkylabError(
-      "Error occurred while updating vote event",
+      "Error occurred while removing internal voter",
       HttpStatusCode.INTERNAL_SERVER_ERROR
     );
   }
@@ -199,7 +198,7 @@ export async function removeExternalVoter(
 
   if (!deletedVoteEvent) {
     throw new SkylabError(
-      "Error occurred while deleting vote event",
+      "Error occurred while deleting external voter",
       HttpStatusCode.INTERNAL_SERVER_ERROR
     );
   }

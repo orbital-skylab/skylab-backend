@@ -61,18 +61,6 @@ export async function deleteVoteEvent(query: Prisma.VoteEventDeleteArgs) {
   }
 }
 
-export async function updateUserAsInternalVoter(query: Prisma.UserUpdateArgs) {
-  try {
-    return await prisma.user.update(query);
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-}
-
 export async function findManyExternalVoters(
   query: Prisma.ExternalVoterFindManyArgs
 ) {
