@@ -1,4 +1,4 @@
-import { prisma } from "src/client";
+import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { updateUniqueUser } from "../models/users.db";
 import {
