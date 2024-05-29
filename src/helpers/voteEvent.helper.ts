@@ -1,6 +1,6 @@
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
-import { updateUniqueUser } from "../models/users.db";
+import { findManyUsers, updateUniqueUser } from "../models/users.db";
 import {
   createExternalVoter,
   createOneVoteEvent,
@@ -105,6 +105,13 @@ export async function removeVoteEvent(voteEventId: number) {
 }
 
 // --- Internal Voter Helper Functions ---
+
+export async function getAllInternalVotersByVoteEvent(voteEventId: number) {
+  const users = await findManyUsers({
+    where: { voteEvents: { some: { id: voteEventId } } },
+  });
+  return users;
+}
 
 export async function addInternalVoter({
   body,

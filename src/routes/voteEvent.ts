@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { getManyUsersOfVoteEvent } from "../helpers/users.helper";
 import {
   addExternalVoter,
   addInternalVoter,
@@ -7,6 +6,7 @@ import {
   editVoteEvent,
   editVoterManagement,
   getAllExternalVotersByVoteEvent,
+  getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
   removeExternalVoter,
@@ -81,7 +81,9 @@ router.get(
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
-      const internalVoters = await getManyUsersOfVoteEvent(Number(voteEventId));
+      const internalVoters = await getAllInternalVotersByVoteEvent(
+        Number(voteEventId)
+      );
 
       return apiResponseWrapper(res, { internalVoters: internalVoters });
     } catch (e) {
