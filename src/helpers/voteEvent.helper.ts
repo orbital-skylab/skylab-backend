@@ -13,7 +13,7 @@ import {
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
-const VOTE_EVENT_INCLUSION = {
+export const VOTE_EVENT_INCLUSION = {
   // TODO: include what is needed as features are added
   voterManagement: true,
 };
