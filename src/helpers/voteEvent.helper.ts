@@ -226,13 +226,13 @@ export async function removeExternalVoter(
   voteEventId: number,
   externalVoterId: string
 ) {
-  const deletedVoteEvent = await deleteExternalVoter({
+  const deletedExternalVoter = await deleteExternalVoter({
     where: {
       id_voteEventId: { id: externalVoterId, voteEventId: voteEventId },
     },
   });
 
-  if (!deletedVoteEvent) {
+  if (!deletedExternalVoter) {
     throw new SkylabError(
       "Error occurred while deleting external voter",
       HttpStatusCode.INTERNAL_SERVER_ERROR

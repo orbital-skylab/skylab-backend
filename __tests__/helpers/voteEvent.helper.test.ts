@@ -11,6 +11,7 @@ import {
   addInternalVoter,
   editVoteEvent,
   getAllExternalVotersByVoteEvent,
+  getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
   removeAllExternalVotersByVoteEvent,
@@ -24,8 +25,6 @@ import * as voteEventModel from "../../src/models/voteEvent.db";
 import * as userModel from "../../src/models/users.db";
 import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
 import { SkylabError } from "../../src/errors/SkylabError";
-
-// --- Vote Event Helper Functions Tests ---
 
 const MOCK_VOTE_EVENT_1 = {
   id: 1,
@@ -81,6 +80,8 @@ const MOCK_EXTERNAL_VOTER_2 = {
 const NON_EXISTENT_VOTE_EVENT_ID = 99;
 const NON_EXISTENT_USER_ID = 99;
 const NON_EXISTENT_USER_EMAIL = "non.existent@example.com";
+
+// --- Vote Event Helper Functions Tests ---
 
 describe("getAllVoteEvents helper test", () => {
   let findManyVoteEventsSpy;
@@ -316,7 +317,62 @@ describe("removeVoteEvent helper test", () => {
   });
 });
 
+// --- End of Vote Event Helper Functions Tests ---
+
 // --- Internal Voter Helper Functions Tests ---
+
+describe("getAllInternalVotersByVoteEvent helper test", () => {
+  let findManyUsersSpy;
+
+  beforeAll(() => {
+    findManyUsersSpy = jest.spyOn(userModel, "findManyUsers");
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should successfully retrieve all internal voters by vote event ID", async () => {
+    const MOCK_INTERNAL_VOTERS = [
+      { ...USER_1, voteEvents: [{ id: MOCK_VOTE_EVENT_1.id }] },
+    ];
+    findManyUsersSpy.mockResolvedValueOnce(MOCK_INTERNAL_VOTERS);
+
+    const result = await getAllInternalVotersByVoteEvent(MOCK_VOTE_EVENT_1.id);
+
+    expect(result).toEqual(MOCK_INTERNAL_VOTERS);
+    expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
+    expect(findManyUsersSpy).toHaveBeenCalledWith({
+      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1.id } } },
+    });
+  });
+
+  it("should return an empty array if no internal voters found", async () => {
+    findManyUsersSpy.mockResolvedValueOnce([]);
+
+    const result = await getAllInternalVotersByVoteEvent(MOCK_VOTE_EVENT_1.id);
+
+    expect(result).toEqual([]);
+    expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
+    expect(findManyUsersSpy).toHaveBeenCalledWith({
+      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1.id } } },
+    });
+  });
+
+  it("should propagate errors", async () => {
+    const errorMessage = "Database connection error";
+    findManyUsersSpy.mockRejectedValueOnce(new Error(errorMessage));
+
+    await expect(
+      getAllInternalVotersByVoteEvent(MOCK_VOTE_EVENT_1.id)
+    ).rejects.toThrowError(new Error(errorMessage));
+
+    expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
+    expect(findManyUsersSpy).toHaveBeenCalledWith({
+      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1.id } } },
+    });
+  });
+});
 
 describe("addInternalVoter helper test", () => {
   let updateUniqueUserSpy;
@@ -557,6 +613,8 @@ describe("removeAllInternalVotersByVoteEvent helper test", () => {
   });
 });
 
+// --- End of Internal Voter Helper Functions Tests ---
+
 // --- External Voter Helper Functions Tests ---
 
 describe("getAllExternalVotersByVoteEvent helper test", () => {
@@ -626,19 +684,14 @@ describe("addExternalVoter helper test", () => {
   });
 
   it("should successfully add an external voter to a vote event", async () => {
-    const mockExternalVoter = {
-      id: MOCK_EXTERNAL_VOTER_1.id,
-      voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
-    };
-
-    createExternalVoterSpy.mockResolvedValueOnce(mockExternalVoter);
+    createExternalVoterSpy.mockResolvedValueOnce(MOCK_EXTERNAL_VOTER_1);
 
     const result = await addExternalVoter({
       body: { voterId: MOCK_EXTERNAL_VOTER_1.id },
       voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
     });
 
-    expect(result).toEqual(mockExternalVoter);
+    expect(result).toEqual(MOCK_EXTERNAL_VOTER_1);
     expect(createExternalVoterSpy).toHaveBeenCalledTimes(1);
     expect(createExternalVoterSpy).toHaveBeenCalledWith({
       data: {
@@ -705,7 +758,7 @@ describe("removeExternalVoter helper test", () => {
   });
 
   it("should successfully remove an external voter from a vote event", async () => {
-    deleteExternalVoterSpy.mockResolvedValueOnce(true);
+    deleteExternalVoterSpy.mockResolvedValueOnce(MOCK_EXTERNAL_VOTER_1);
 
     await removeExternalVoter(
       MOCK_EXTERNAL_VOTER_1.voteEventId,
@@ -724,7 +777,7 @@ describe("removeExternalVoter helper test", () => {
   });
 
   it("should throw SkylabError when the external voter is not returned", async () => {
-    deleteExternalVoterSpy.mockResolvedValueOnce(false);
+    deleteExternalVoterSpy.mockResolvedValueOnce(null);
 
     await expect(
       removeExternalVoter(
@@ -784,13 +837,13 @@ describe("removeAllExternalVotersByVoteEvent helper test", () => {
   });
 
   it("should successfully remove all external voters from a vote event", async () => {
-    updateVoteEventSpy.mockResolvedValueOnce({ id: MOCK_VOTE_EVENT_1.id });
+    updateVoteEventSpy.mockResolvedValueOnce(MOCK_VOTE_EVENT_1);
 
     const result = await removeAllExternalVotersByVoteEvent(
       MOCK_VOTE_EVENT_1.id
     );
 
-    expect(result).toEqual({ id: MOCK_VOTE_EVENT_1.id });
+    expect(result).toEqual(MOCK_VOTE_EVENT_1);
     expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(updateVoteEventSpy).toHaveBeenCalledWith({
       where: { id: MOCK_VOTE_EVENT_1.id },
