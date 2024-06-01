@@ -6,7 +6,9 @@ import {
   it,
   jest,
 } from "@jest/globals";
+import { SkylabError } from "../../src/errors/SkylabError";
 import {
+  VOTE_EVENT_INCLUSION,
   addExternalVoter,
   addInternalVoter,
   editVoteEvent,
@@ -14,17 +16,13 @@ import {
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
-  removeAllExternalVotersByVoteEvent,
-  removeAllInternalVotersByVoteEvent,
   removeExternalVoter,
   removeInternalVoter,
   removeVoteEvent,
-  VOTE_EVENT_INCLUSION,
 } from "../../src/helpers/voteEvent.helper";
-import * as voteEventModel from "../../src/models/voteEvent.db";
 import * as userModel from "../../src/models/users.db";
+import * as voteEventModel from "../../src/models/voteEvent.db";
 import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
-import { SkylabError } from "../../src/errors/SkylabError";
 
 const MOCK_VOTE_EVENT_1 = {
   id: 1,
@@ -489,6 +487,7 @@ describe("removeInternalVoter helper test", () => {
           disconnect: { id: MOCK_VOTE_EVENT_1.id },
         },
       },
+      include: { voteEvents: true },
     });
   });
 
@@ -512,6 +511,7 @@ describe("removeInternalVoter helper test", () => {
           disconnect: { id: MOCK_VOTE_EVENT_1.id },
         },
       },
+      include: { voteEvents: true },
     });
   });
 
@@ -531,84 +531,7 @@ describe("removeInternalVoter helper test", () => {
           disconnect: { id: MOCK_VOTE_EVENT_1.id },
         },
       },
-    });
-  });
-});
-
-describe("removeAllInternalVotersByVoteEvent helper test", () => {
-  let updateVoteEventSpy;
-
-  beforeAll(() => {
-    updateVoteEventSpy = jest.spyOn(voteEventModel, "updateVoteEvent");
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should successfully remove all internal voters from a vote event", async () => {
-    const mockUpdatedVoteEvent = {
-      ...MOCK_VOTE_EVENT_1,
-      internalVoters: [],
-    };
-
-    updateVoteEventSpy.mockResolvedValueOnce(mockUpdatedVoteEvent);
-
-    const result = await removeAllInternalVotersByVoteEvent(
-      MOCK_VOTE_EVENT_1.id
-    );
-
-    expect(result).toEqual(mockUpdatedVoteEvent);
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1.id },
-      data: {
-        internalVoters: {
-          set: [],
-        },
-      },
-    });
-  });
-
-  it("should throw SkylabError when the vote event does not exist", async () => {
-    updateVoteEventSpy.mockResolvedValueOnce(null);
-
-    await expect(
-      removeAllInternalVotersByVoteEvent(NON_EXISTENT_VOTE_EVENT_ID)
-    ).rejects.toThrowError(
-      new SkylabError(
-        "Error occurred while removing internal voters",
-        HttpStatusCode.INTERNAL_SERVER_ERROR
-      )
-    );
-
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: NON_EXISTENT_VOTE_EVENT_ID },
-      data: {
-        internalVoters: {
-          set: [],
-        },
-      },
-    });
-  });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    updateVoteEventSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      removeAllInternalVotersByVoteEvent(MOCK_VOTE_EVENT_1.id)
-    ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1.id },
-      data: {
-        internalVoters: {
-          set: [],
-        },
-      },
+      include: { voteEvents: true },
     });
   });
 });
@@ -819,79 +742,6 @@ describe("removeExternalVoter helper test", () => {
         id_voteEventId: {
           id: MOCK_EXTERNAL_VOTER_1.id,
           voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
-        },
-      },
-    });
-  });
-});
-
-describe("removeAllExternalVotersByVoteEvent helper test", () => {
-  let updateVoteEventSpy;
-
-  beforeAll(() => {
-    updateVoteEventSpy = jest.spyOn(voteEventModel, "updateVoteEvent");
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should successfully remove all external voters from a vote event", async () => {
-    updateVoteEventSpy.mockResolvedValueOnce(MOCK_VOTE_EVENT_1);
-
-    const result = await removeAllExternalVotersByVoteEvent(
-      MOCK_VOTE_EVENT_1.id
-    );
-
-    expect(result).toEqual(MOCK_VOTE_EVENT_1);
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1.id },
-      data: {
-        externalVoters: {
-          deleteMany: {},
-        },
-      },
-    });
-  });
-
-  it("should throw SkylabError when no external voters is returned", async () => {
-    updateVoteEventSpy.mockResolvedValueOnce(null);
-
-    await expect(
-      removeAllExternalVotersByVoteEvent(MOCK_VOTE_EVENT_1.id)
-    ).rejects.toThrowError(
-      new SkylabError(
-        "Error occurred while removing external voters",
-        HttpStatusCode.INTERNAL_SERVER_ERROR
-      )
-    );
-
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1.id },
-      data: {
-        externalVoters: {
-          deleteMany: {},
-        },
-      },
-    });
-  });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    updateVoteEventSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      removeAllExternalVotersByVoteEvent(MOCK_VOTE_EVENT_1.id)
-    ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1.id },
-      data: {
-        externalVoters: {
-          deleteMany: {},
         },
       },
     });
