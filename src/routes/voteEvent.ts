@@ -181,11 +181,10 @@ router.put(
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
-      const results = await editVoterManagement({
+      const editedVoteEvent = await editVoterManagement({
         body: req.body,
         voteEventId: Number(voteEventId),
       });
-      const editedVoteEvent = results[0];
 
       return apiResponseWrapper(res, { voteEvent: editedVoteEvent });
     } catch (e) {
