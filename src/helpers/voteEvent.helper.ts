@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyUsers, updateUniqueUser } from "../models/users.db";
@@ -15,7 +16,41 @@ import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 export const VOTE_EVENT_INCLUSION = {
   // TODO: include what is needed as features are added
-  voterManagement: true,
+  voterManagement: {
+    select: {
+      hasInternalList: true,
+      hasRegistration: true,
+      hasInternalCsvImport: true,
+      hasExternalList: true,
+      hasGeneration: true,
+      hasExternalCsvImport: true,
+      isRegistrationOpen: true,
+    },
+  },
+};
+
+const processEditVoteEventData = (voteEvent: any) => {
+  let data = {
+    ...voteEvent,
+  };
+
+  if (voteEvent.voterManagement) {
+    data = {
+      ...voteEvent,
+      voterManagement: {
+        upsert: {
+          create: {
+            ...voteEvent.voterManagement,
+          },
+          update: {
+            ...voteEvent.voterManagement,
+          },
+        },
+      },
+    };
+  }
+
+  return data;
 };
 
 // --- Vote Event Helper Functions ---
@@ -63,11 +98,7 @@ export async function editVoteEvent({
   voteEventId,
 }: {
   body: {
-    voteEvent: {
-      title?: string;
-      startTime?: Date;
-      endTime?: Date;
-    };
+    voteEvent: any;
   };
   voteEventId: number;
 }) {
@@ -75,9 +106,7 @@ export async function editVoteEvent({
 
   const updatedVoteEvent = await updateVoteEvent({
     where: { id: voteEventId },
-    data: {
-      ...voteEvent,
-    },
+    data: processEditVoteEventData(voteEvent),
     include: VOTE_EVENT_INCLUSION,
   });
 
@@ -102,6 +131,8 @@ export async function removeVoteEvent(voteEventId: number) {
       HttpStatusCode.INTERNAL_SERVER_ERROR
     );
   }
+
+  return deletedVoteEvent;
 }
 
 // --- Internal Voter Helper Functions ---
@@ -153,6 +184,7 @@ export async function removeInternalVoter(
         disconnect: { id: voteEventId },
       },
     },
+    include: { voteEvents: true },
   });
 
   if (!updatedUser) {
@@ -163,26 +195,6 @@ export async function removeInternalVoter(
   }
 
   return updatedUser;
-}
-
-export async function removeAllInternalVotersByVoteEvent(voteEventId: number) {
-  const updatedVoteEvent = await updateVoteEvent({
-    where: { id: voteEventId },
-    data: {
-      internalVoters: {
-        set: [],
-      },
-    },
-  });
-
-  if (!updatedVoteEvent) {
-    throw new SkylabError(
-      "Error occurred while removing internal voters",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  return updatedVoteEvent;
 }
 
 // --- External Voter Helper Functions ---
@@ -238,45 +250,44 @@ export async function removeExternalVoter(
       HttpStatusCode.INTERNAL_SERVER_ERROR
     );
   }
-}
 
-export async function removeAllExternalVotersByVoteEvent(voteEventId: number) {
-  const updatedVoteEvent = await updateVoteEvent({
-    where: { id: voteEventId },
-    data: {
-      externalVoters: {
-        deleteMany: {},
-      },
-    },
-  });
-
-  if (!updatedVoteEvent) {
-    throw new SkylabError(
-      "Error occurred while removing external voters",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  return updatedVoteEvent;
+  return deletedExternalVoter;
 }
 
 // --- Transaction Helper Functions ---
-export function editVoterManagement({
+export async function editVoterManagement({
   body,
   voteEventId,
 }: {
   body: {
-    voteEvent: {
-      title?: string;
-      startTime?: Date;
-      endTime?: Date;
-    };
+    voteEvent: any;
   };
   voteEventId: number;
 }) {
-  return prisma.$transaction(async () => {
-    editVoteEvent({ body, voteEventId });
-    removeAllInternalVotersByVoteEvent(voteEventId);
-    removeAllExternalVotersByVoteEvent(voteEventId);
+  const { voteEvent } = body;
+
+  return await prisma.$transaction(async (tx) => {
+    const updatedVoteEvent = await tx.voteEvent.update({
+      where: { id: voteEventId },
+      data: processEditVoteEventData(voteEvent),
+      include: VOTE_EVENT_INCLUSION,
+    });
+    await tx.voteEvent.update({
+      where: { id: voteEventId },
+      data: {
+        internalVoters: {
+          set: [],
+        },
+      },
+    });
+    await tx.voteEvent.update({
+      where: { id: voteEventId },
+      data: {
+        externalVoters: {
+          deleteMany: {},
+        },
+      },
+    });
+    return updatedVoteEvent;
   });
 }
