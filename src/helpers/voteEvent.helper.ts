@@ -230,21 +230,34 @@ export async function addExternalVoter({
   voteEventId: number;
 }) {
   const { voterId } = body;
-  const externalVoter = await createExternalVoter({
+
+  // check if external voter is already part of vote event
+  const externalVoter = await findManyExternalVoters({
+    where: { id: voterId, voteEventId: voteEventId },
+  });
+
+  if (externalVoter.length > 0) {
+    throw new SkylabError(
+      "External voter is already part of the vote event",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const newExternalVoter = await createExternalVoter({
     data: {
       id: voterId,
       voteEventId: voteEventId,
     },
   });
 
-  if (!externalVoter) {
+  if (!newExternalVoter) {
     throw new SkylabError(
       "Error occurred while adding external voter",
       HttpStatusCode.INTERNAL_SERVER_ERROR
     );
   }
 
-  return externalVoter;
+  return newExternalVoter;
 }
 
 export async function removeExternalVoter(

@@ -329,7 +329,7 @@ describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
   });
 });
 
-describe.only("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
+describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
   it("should add a new internal voter to a given vote event", async () => {
     const response = await request(app)
       .put(
@@ -557,6 +557,19 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
     expect(dbCheck?.voteEventId).toBe(MOCK_VOTE_EVENT_2.id);
   });
 
+  it("should return 400 if the external voter already exists", async () => {
+    const response = await request(app)
+      .post(
+        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters`
+      )
+      .send({
+        voterId: VOTER_ID_1,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty("message");
+  });
+
   it("should return 500 with invalid request body", async () => {
     const invalidExternalVoter = {
       // Missing required properties
@@ -564,7 +577,7 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
 
     const response = await request(app)
       .post(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters`
+        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/external-voters`
       )
       .send(invalidExternalVoter);
 
@@ -579,7 +592,7 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
 
     const response = await request(app)
       .post(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters`
+        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/external-voters`
       )
       .send({
         voterId: VOTER_ID_1,

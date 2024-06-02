@@ -81,7 +81,7 @@ const NON_EXISTENT_USER_EMAIL = "non.existent@example.com";
 
 // --- Vote Event Helper Functions Tests ---
 
-describe.only("getAllVoteEvents helper test", () => {
+describe("getAllVoteEvents helper test", () => {
   let findManyVoteEventsSpy;
 
   beforeAll(() => {
@@ -374,9 +374,15 @@ describe("getAllInternalVotersByVoteEvent helper test", () => {
 
 describe("addInternalVoter helper test", () => {
   let updateUniqueUserSpy;
+  let findManyUsersSpy;
+  const mockUpdatedUser = {
+    ...USER_1,
+    voteEvents: [{ id: MOCK_VOTE_EVENT_1 }],
+  };
 
   beforeAll(() => {
     updateUniqueUserSpy = jest.spyOn(userModel, "updateUniqueUser");
+    findManyUsersSpy = jest.spyOn(userModel, "findManyUsers");
   });
 
   afterEach(() => {
@@ -384,12 +390,8 @@ describe("addInternalVoter helper test", () => {
   });
 
   it("should successfully add a voter to a vote event", async () => {
-    const mockUpdatedUser = {
-      ...USER_1,
-      voteEvents: [{ id: MOCK_VOTE_EVENT_1 }],
-    };
-
     updateUniqueUserSpy.mockResolvedValueOnce(mockUpdatedUser);
+    findManyUsersSpy.mockResolvedValueOnce([]);
 
     const result = await addInternalVoter({
       body: { email: USER_1.email },
@@ -406,10 +408,37 @@ describe("addInternalVoter helper test", () => {
         },
       },
     });
+    expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
+    expect(findManyUsersSpy).toHaveBeenCalledWith({
+      where: {
+        email: USER_1.email,
+        voteEvents: { some: { id: MOCK_VOTE_EVENT_1.id } },
+      },
+    });
+  });
+
+  it("should throw SkylabError when the user is already part of the vote event", async () => {
+    const mockUser = mockUpdatedUser;
+    findManyUsersSpy.mockResolvedValueOnce([mockUser]);
+
+    await expect(
+      addInternalVoter({
+        body: { email: USER_1.email },
+        voteEventId: MOCK_VOTE_EVENT_1.id,
+      })
+    ).rejects.toThrowError(
+      new SkylabError(
+        "User is already part of the vote event",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+
+    expect(updateUniqueUserSpy).toHaveBeenCalledTimes(0);
   });
 
   it("should throw SkylabError when the user does not exist", async () => {
     updateUniqueUserSpy.mockResolvedValueOnce(null);
+    findManyUsersSpy.mockResolvedValueOnce([]);
 
     await expect(
       addInternalVoter({
@@ -437,6 +466,7 @@ describe("addInternalVoter helper test", () => {
   it("should propagate other errors", async () => {
     const errorMessage = "Database connection error";
     updateUniqueUserSpy.mockRejectedValueOnce(new Error(errorMessage));
+    findManyUsersSpy.mockResolvedValueOnce([]);
 
     await expect(
       addInternalVoter({
@@ -597,9 +627,14 @@ describe("getAllExternalVotersByVoteEvent helper test", () => {
 
 describe("addExternalVoter helper test", () => {
   let createExternalVoterSpy;
+  let findManyExternalVotersSpy;
 
   beforeAll(() => {
     createExternalVoterSpy = jest.spyOn(voteEventModel, "createExternalVoter");
+    findManyExternalVotersSpy = jest.spyOn(
+      voteEventModel,
+      "findManyExternalVoters"
+    );
   });
 
   afterEach(() => {
@@ -608,6 +643,7 @@ describe("addExternalVoter helper test", () => {
 
   it("should successfully add an external voter to a vote event", async () => {
     createExternalVoterSpy.mockResolvedValueOnce(MOCK_EXTERNAL_VOTER_1);
+    findManyExternalVotersSpy.mockResolvedValueOnce([]);
 
     const result = await addExternalVoter({
       body: { voterId: MOCK_EXTERNAL_VOTER_1.id },
@@ -622,6 +658,31 @@ describe("addExternalVoter helper test", () => {
         voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
       },
     });
+    expect(findManyExternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(findManyExternalVotersSpy).toHaveBeenCalledWith({
+      where: {
+        id: MOCK_EXTERNAL_VOTER_1.id,
+        voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
+      },
+    });
+  });
+
+  it("should throw SkylabError when external voter is already part of the vote event", async () => {
+    findManyExternalVotersSpy.mockResolvedValueOnce([MOCK_EXTERNAL_VOTER_1]);
+
+    await expect(
+      addExternalVoter({
+        body: { voterId: MOCK_EXTERNAL_VOTER_1.id },
+        voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
+      })
+    ).rejects.toThrowError(
+      new SkylabError(
+        "External voter is already part of the vote event",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+
+    expect(createExternalVoterSpy).toHaveBeenCalledTimes(0);
   });
 
   it("should throw SkylabError when no external voter is returned", async () => {
