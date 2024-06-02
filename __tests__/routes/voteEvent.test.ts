@@ -329,11 +329,11 @@ describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
   });
 });
 
-describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
+describe.only("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
   it("should add a new internal voter to a given vote event", async () => {
     const response = await request(app)
       .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
+        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/internal-voters`
       )
       .send({ email: KNOWN_EMAILS[0] });
 
@@ -352,6 +352,19 @@ describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
     expect(dbCheck.email).toBe(KNOWN_EMAILS[0]);
   });
 
+  it("should return 400 if request tries to add a duplicate internal voter", async () => {
+    const response = await request(app)
+      .put(
+        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
+      )
+      .send({ email: KNOWN_EMAILS[0] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "User is already part of the vote event"
+    );
+  });
+
   it("should return 500 with invalid request body", async () => {
     const invalidRequest = {
       // Missing required fields
@@ -359,7 +372,7 @@ describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
 
     const response = await request(app)
       .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
+        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/internal-voters`
       )
       .send(invalidRequest);
 
@@ -374,7 +387,7 @@ describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
 
     const response = await request(app)
       .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
+        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/internal-voters`
       )
       .send({ email: KNOWN_EMAILS[0] });
 

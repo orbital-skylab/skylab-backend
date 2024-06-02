@@ -81,7 +81,7 @@ const NON_EXISTENT_USER_EMAIL = "non.existent@example.com";
 
 // --- Vote Event Helper Functions Tests ---
 
-describe("getAllVoteEvents helper test", () => {
+describe.only("getAllVoteEvents helper test", () => {
   let findManyVoteEventsSpy;
 
   beforeAll(() => {

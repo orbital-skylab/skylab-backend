@@ -154,6 +154,19 @@ export async function addInternalVoter({
   voteEventId: number;
 }) {
   const { email } = body;
+
+  //check if user is already part of vote event
+  const user = await findManyUsers({
+    where: { email, voteEvents: { some: { id: voteEventId } } },
+  });
+
+  if (user.length > 0) {
+    throw new SkylabError(
+      "User is already part of the vote event",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
   const updatedUser = await updateUniqueUser({
     where: { email: email },
     data: {
