@@ -12,6 +12,7 @@ export const seedForumPosts = async (prisma: PrismaClient) => {
         body: faker.lorem.paragraphs(),
         category: faker.helpers.arrayElement(Object.values(ForumCategory)),
         userId: userId,
+        isStickied: false,
       },
     });
   }

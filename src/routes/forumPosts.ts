@@ -7,6 +7,7 @@ import {
   createForumPostComment,
   editForumComment,
   deleteOrSoftDeleteForumComment,
+  stickyForumPost,
 } from "../helpers/forumPosts.helper";
 import {
   apiResponseWrapper,
@@ -17,6 +18,7 @@ import { deleteForumPost } from "src/models/forumposts.db";
 import authorizeTargetAudienceRole from "../middleware/authorizeTargetAudienceRole";
 import authorizeAuthorOfPostComment from "src/middleware/authorizeAuthorOfPostComment";
 import authorizeAuthorOfPost from "src/middleware/authorizeAuthorOfPost";
+import authorizeAdmin from "src/middleware/authorizeAdmin";
 
 const router = Router();
 
@@ -82,7 +84,7 @@ router.put(
         updateData: req.body,
         postId: Number(postId),
       });
-      return apiResponseWrapper(res, { announcement: editedForumPost });
+      return apiResponseWrapper(res, { forumpost: editedForumPost });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -131,6 +133,22 @@ router.delete(
       return apiResponseWrapper(res, { comment: deletedPostComment });
     } catch (error) {
       return routeErrorHandler(res, error);
+    }
+  }
+);
+
+router.put(
+  "/sticky/:postId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { postId } = req.params;
+    try {
+      const editedForumPost = await stickyForumPost({
+        postId: Number(postId),
+      });
+      return apiResponseWrapper(res, { forumpost: editedForumPost });
+    } catch (e) {
+      return routeErrorHandler(res, e);
     }
   }
 );

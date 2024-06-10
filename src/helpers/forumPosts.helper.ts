@@ -80,10 +80,11 @@ export async function getManyForumPostsWithFilter({
     category?: ForumCategory | "Author";
     limit?: number;
     page?: number;
+    searchQuery?: string;
   };
   userId: number;
 }) {
-  const { category, limit, page } = query;
+  const { category, limit, page, searchQuery } = query;
 
   let whereCondition = {};
   if (category && category !== "All") {
@@ -96,6 +97,20 @@ export async function getManyForumPostsWithFilter({
         OR: [{ category: { equals: category } }],
       };
     }
+  }
+
+  if (searchQuery) {
+    whereCondition = {
+      ...whereCondition,
+      AND: [
+        {
+          title: {
+            contains: searchQuery,
+            mode: "insensitive",
+          },
+        },
+      ],
+    };
   }
 
   const paginationParams = {
@@ -114,9 +129,7 @@ export async function getManyForumPostsWithFilter({
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: [{ isStickied: "desc" }, { createdAt: "desc" }],
   };
 
   const forumPosts = await findManyForumPosts(forumPostQuery);
@@ -138,6 +151,7 @@ export async function createForumPost(postData: {
         body: postData.body,
         category: postData.category,
         user: { connect: { id: postData.userId } },
+        isStickied: false,
       },
     });
 
@@ -309,4 +323,33 @@ export async function deleteOrSoftDeleteForumComment({
   }
 
   return deletedForumComment;
+}
+
+export async function stickyForumPost({ postId }: { postId: number }) {
+  try {
+    const post = await getOneForumPostById({
+      postId,
+    });
+
+    if (!post) {
+      throw new SkylabError("Post not found", HttpStatusCode.NOT_FOUND);
+    }
+
+    const updatedForumPost = await updateForumPost({
+      where: {
+        id: postId,
+      },
+      data: {
+        isStickied: !post.isStickied,
+      },
+    });
+
+    return updatedForumPost;
+  } catch (error) {
+    throw new SkylabError(
+      "Error occurred while stickying post",
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      error.message
+    );
+  }
 }

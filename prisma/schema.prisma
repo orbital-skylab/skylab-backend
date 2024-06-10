@@ -284,6 +284,7 @@ model ForumPost {
   category  ForumCategory 
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   forumComments ForumComment[]
+  isStickied Boolean @default(true)
 }
 
 model ForumComment {
