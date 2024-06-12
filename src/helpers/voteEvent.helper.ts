@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { AchievementLevel } from "@prisma/client";
+import { findManyProjects, updateOneProject } from "../models/projects.db";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyUsers, updateUniqueUser } from "../models/users.db";
@@ -278,6 +280,119 @@ export async function removeExternalVoter(
   }
 
   return deletedExternalVoter;
+}
+
+// --- Candidate Helper Functions ---
+
+export async function getAllCandidatesByVoteEvent(voteEventId: number) {
+  const candidates = await findManyProjects({
+    where: { voteEvents: { some: { id: voteEventId } } },
+  });
+
+  return candidates;
+}
+
+export async function addCandidate({
+  body,
+  voteEventId,
+}: {
+  body: {
+    projectId: number;
+  };
+  voteEventId: number;
+}) {
+  const { projectId } = body;
+
+  // check if project is already part of vote event
+  const project = await findManyProjects({
+    where: { id: projectId, voteEvents: { some: { id: voteEventId } } },
+  });
+
+  if (project.length > 0) {
+    throw new SkylabError(
+      "Project is already part of the vote event",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  let updatedProject;
+
+  try {
+    updatedProject = await updateOneProject({
+      where: { id: projectId },
+      data: {
+        voteEvents: {
+          connect: { id: voteEventId },
+        },
+      },
+    });
+  } catch (e) {
+    if (e.code === "P2016") {
+      throw new SkylabError(
+        "Project ID does not exist",
+        HttpStatusCode.BAD_REQUEST
+      );
+    } else {
+      throw e;
+    }
+  }
+
+  return updatedProject;
+}
+
+export async function addManyCandidates({
+  body,
+  voteEventId,
+}: {
+  body: { cohort: number; achievement: string };
+  voteEventId: number;
+}) {
+  const { cohort, achievement } = body;
+
+  if (!cohort || !achievement) {
+    throw new SkylabError(
+      "Invalid request body",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const whereQuery =
+    achievement === "all"
+      ? { cohortYear: cohort }
+      : { cohortYear: cohort, achievement: achievement as AchievementLevel };
+
+  const projectsToUpdate = await findManyProjects({
+    where: whereQuery,
+  });
+
+  const voteEvent: any = await updateVoteEvent({
+    where: { id: voteEventId },
+    data: {
+      candidates: {
+        connect: projectsToUpdate.map((project) => ({ id: project.id })),
+      },
+    },
+    include: { candidates: true },
+  });
+
+  return voteEvent.candidates;
+}
+
+export async function removeCandidate(
+  voteEventId: number,
+  candidateId: number
+) {
+  const deletedCandidate = await updateOneProject({
+    where: { id: candidateId },
+    data: {
+      voteEvents: {
+        disconnect: { id: voteEventId },
+      },
+    },
+    include: { voteEvents: true },
+  });
+
+  return deletedCandidate;
 }
 
 // --- Transaction Helper Functions ---

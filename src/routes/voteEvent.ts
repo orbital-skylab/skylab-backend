@@ -1,14 +1,18 @@
 import { Request, Response, Router } from "express";
 import {
+  addCandidate,
   addExternalVoter,
   addInternalVoter,
+  addManyCandidates,
   createVoteEvent,
   editVoteEvent,
   editVoterManagement,
+  getAllCandidatesByVoteEvent,
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
+  removeCandidate,
   removeExternalVoter,
   removeInternalVoter,
   removeVoteEvent,
@@ -17,6 +21,7 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
 
 const router = Router();
 
@@ -187,6 +192,71 @@ router.put(
       });
 
       return apiResponseWrapper(res, { voteEvent: editedVoteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.get("/:voteEventId/candidates", async (req: Request, res: Response) => {
+  const { voteEventId } = req.params;
+  try {
+    const candidates = await getAllCandidatesByVoteEvent(Number(voteEventId));
+
+    return apiResponseWrapper(res, { candidates });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.post(
+  "/:voteEventId/candidates",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const candidate = await addCandidate({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { candidate });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post(
+  "/:voteEventId/candidates/batch",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const candidates = await addManyCandidates({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { candidates });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.delete(
+  "/:voteEventId/candidates/:candidateId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId, candidateId } = req.params;
+    try {
+      const candidate = await removeCandidate(
+        Number(voteEventId),
+        Number(candidateId)
+      );
+
+      return apiResponseWrapper(res, { candidate });
     } catch (e) {
       return routeErrorHandler(res, e);
     }

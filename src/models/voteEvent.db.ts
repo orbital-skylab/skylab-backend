@@ -4,6 +4,8 @@ import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
+// --- Vote Event DB Functions ---
+
 export async function findManyVoteEvents(query: Prisma.VoteEventFindManyArgs) {
   const manyVoteEvents = await prisma.voteEvent.findMany(query);
   return manyVoteEvents;
@@ -61,6 +63,8 @@ export async function deleteVoteEvent(query: Prisma.VoteEventDeleteArgs) {
   }
 }
 
+// --- External Voter DB Functions ---
+
 export async function findManyExternalVoters(
   query: Prisma.ExternalVoterFindManyArgs
 ) {
@@ -91,20 +95,6 @@ export async function deleteExternalVoter(
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
     }
-    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
-  }
-}
-
-export async function updateVoterManagement(
-  query: Prisma.VoterManagementUpsertArgs
-) {
-  try {
-    return await prisma.voterManagement.upsert(query);
-  } catch (e) {
-    if (!(e instanceof PrismaClientKnownRequestError)) {
-      throw e;
-    }
-
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 }
