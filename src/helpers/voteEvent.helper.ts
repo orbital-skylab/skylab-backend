@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AchievementLevel } from "@prisma/client";
+import { AchievementLevel, User } from "@prisma/client";
 import { findManyProjects, updateOneProject } from "../models/projects.db";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
@@ -68,6 +68,13 @@ export async function getOneVoteEventById(voteEventId: number) {
     where: { id: voteEventId },
     include: VOTE_EVENT_INCLUSION,
   });
+
+  if (!voteEvent) {
+    throw new SkylabError(
+      "Vote event was not found",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
 
   return voteEvent;
 }
@@ -169,20 +176,26 @@ export async function addInternalVoter({
     );
   }
 
-  const updatedUser = await updateUniqueUser({
-    where: { email: email },
-    data: {
-      voteEvents: {
-        connect: { id: voteEventId },
-      },
-    },
-  });
+  let updatedUser: User;
 
-  if (!updatedUser) {
-    throw new SkylabError(
-      "Error occurred while adding internal voter",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
+  try {
+    updatedUser = await updateUniqueUser({
+      where: { email: email },
+      data: {
+        voteEvents: {
+          connect: { id: voteEventId },
+        },
+      },
+    });
+  } catch (e) {
+    if (e.code === "P2016") {
+      throw new SkylabError(
+        "There is no user with that email address",
+        HttpStatusCode.BAD_REQUEST
+      );
+    } else {
+      throw e;
+    }
   }
 
   return updatedUser;
