@@ -35,7 +35,7 @@ router.get("/", async (_, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", authorizeAdmin, async (req: Request, res: Response) => {
   try {
     const voteEvent = await createVoteEvent(req.body);
 
@@ -45,44 +45,57 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:voteEventId", async (req: Request, res: Response) => {
-  const { voteEventId } = req.params;
-  try {
-    const voteEvent = await getOneVoteEventById(Number(voteEventId));
+router.get(
+  "/:voteEventId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const voteEvent = await getOneVoteEventById(Number(voteEventId));
 
-    return apiResponseWrapper(res, { voteEvent });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+      return apiResponseWrapper(res, { voteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
-router.put("/:voteEventId", async (req: Request, res: Response) => {
-  const { voteEventId } = req.params;
-  try {
-    const editedVoteEvent = await editVoteEvent({
-      body: req.body,
-      voteEventId: Number(voteEventId),
-    });
+router.put(
+  "/:voteEventId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const editedVoteEvent = await editVoteEvent({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
 
-    return apiResponseWrapper(res, { voteEvent: editedVoteEvent });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+      return apiResponseWrapper(res, { voteEvent: editedVoteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
-router.delete("/:voteEventId", async (req: Request, res: Response) => {
-  const { voteEventId } = req.params;
-  try {
-    const deletedVoteEvent = await removeVoteEvent(Number(voteEventId));
+router.delete(
+  "/:voteEventId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const deletedVoteEvent = await removeVoteEvent(Number(voteEventId));
 
-    return apiResponseWrapper(res, { voteEvent: deletedVoteEvent });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+      return apiResponseWrapper(res, { voteEvent: deletedVoteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.get(
   "/:voteEventId/voter-management/internal-voters",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
@@ -97,8 +110,9 @@ router.get(
   }
 );
 
-router.put(
+router.post(
   "/:voteEventId/voter-management/internal-voters",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
@@ -116,6 +130,7 @@ router.put(
 
 router.delete(
   "/:voteEventId/voter-management/internal-voters/:internalVoterId",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId, internalVoterId } = req.params;
     try {
@@ -133,6 +148,7 @@ router.delete(
 
 router.get(
   "/:voteEventId/voter-management/external-voters",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
@@ -149,6 +165,7 @@ router.get(
 
 router.post(
   "/:voteEventId/voter-management/external-voters",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
@@ -166,6 +183,7 @@ router.post(
 
 router.delete(
   "/:voteEventId/voter-management/external-voters/:externalVoterId",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId, externalVoterId } = req.params;
     try {
@@ -183,6 +201,7 @@ router.delete(
 
 router.put(
   "/:voteEventId/voter-management",
+  authorizeAdmin,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {

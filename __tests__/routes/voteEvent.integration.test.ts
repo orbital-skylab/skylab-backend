@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -8,110 +8,61 @@ import {
   it,
   jest,
 } from "@jest/globals";
-import request from "supertest";
+import { AchievementLevel } from "@prisma/client";
+import {
+  MOCK_PROJECT_1,
+  MOCK_VOTE_EVENT_1,
+  MOCK_VOTE_EVENT_2,
+  NON_EXISTENT_ID,
+  VOTER_ID_1,
+  VOTER_ID_2,
+} from "../../__mocks__/voteEvent.mocks";
 import { prisma } from "../../src/client";
 import * as voteEventHelpers from "../../src/helpers/voteEvent.helper";
-import app from "../../src/server";
+import {
+  KNOWN_EMAILS,
+  setUpRequestWithAdminAuth,
+  voteEventTestSetUp,
+  voteEventTestTearDown,
+} from "../../src/utils/testUtils";
 
-const MOCK_VOTE_EVENT_1 = {
-  id: 1,
-  title: "Event 1",
-  startTime: new Date("2024-03-25"),
-  endTime: new Date("2024-07-25"),
-};
-const MOCK_VOTE_EVENT_2 = {
-  id: 2,
-  title: "Event 2",
-  startTime: new Date("2024-10-25"),
-  endTime: new Date("2024-12-20"),
-};
-const UPDATED_VOTE_EVENT_1 = {
-  id: 1,
-  title: "Updated Event 1",
-  startTime: new Date("2024-05-25"),
-  endTime: new Date("2024-07-25"),
-};
-const UPDATED_VOTE_EVENT_2 = {
-  id: 1,
-  title: "Updated Event 1 with voter management",
-  startTime: new Date(),
-  endTime: new Date(),
-  voterManagement: {
-    hasInternalList: true,
-    hasRegistration: true,
-    hasInternalCsvImport: true,
-    hasExternalList: true,
-    hasGeneration: true,
-    hasExternalCsvImport: true,
-    isRegistrationOpen: true,
-  },
-};
-
-const NON_EXISTENT_VOTE_EVENT_ID = 999999;
-const NON_EXISTENT_USER_ID = 999999999;
-const VOTE_EVENTS = [MOCK_VOTE_EVENT_1, MOCK_VOTE_EVENT_2];
 const BASE_URL = "/api/vote-events";
-const KNOWN_EMAILS = [
-  "student@skylab.com",
-  "adviser@skylab.com",
-  "mentor@skylab.com",
-  "admin@skylab.com",
-];
-const VOTER_ID_1 = "abc123";
-const VOTER_ID_2 = "efg456";
 
-async function setUp() {
-  await prisma.voteEvent.deleteMany();
+let mockVoteEvent1Id;
+let mockVoteEvent2Id;
+let mockProject1Id;
+let request;
 
-  for (const voteEvent of VOTE_EVENTS) {
-    await prisma.voteEvent.create({
-      data: voteEvent,
-    });
-  }
+beforeAll(async () => {
+  request = await setUpRequestWithAdminAuth();
 
-  for (const email of KNOWN_EMAILS) {
-    await voteEventHelpers.addInternalVoter({
-      body: {
-        email: email,
-      },
-      voteEventId: 1,
-    });
-  }
-
-  await prisma.externalVoter.create({
-    data: {
-      id: VOTER_ID_1,
-      voteEventId: MOCK_VOTE_EVENT_1.id,
-    },
-  });
-
-  await prisma.externalVoter.create({
-    data: {
-      id: VOTER_ID_2,
-      voteEventId: MOCK_VOTE_EVENT_1.id,
-    },
-  });
-}
-
-async function tearDown() {
-  await prisma.voteEvent.deleteMany();
-}
-
-beforeEach(async () => {
-  return await setUp();
+  return request;
 });
 
-afterAll(async () => {
-  return await tearDown();
+beforeEach(async () => {
+  const result = await voteEventTestSetUp();
+
+  mockVoteEvent1Id = result.voteEvent1Id;
+  mockVoteEvent2Id = result.voteEvent2Id;
+  mockProject1Id = result.mockProject1Id;
+
+  return result;
+});
+
+afterEach(async () => {
+  return await voteEventTestTearDown();
 });
 
 // --- Vote event API tests ---
 
 describe("GET / endpoint", () => {
   it("should return all vote events", async () => {
-    const response = await request(app).get(BASE_URL + "/");
+    const response = await request.get(BASE_URL + "/");
 
-    const voteEventsWithISOStrings = VOTE_EVENTS.map((event) => ({
+    const voteEventsWithISOStrings = [
+      { ...MOCK_VOTE_EVENT_1, id: mockVoteEvent1Id },
+      { ...MOCK_VOTE_EVENT_2, id: mockVoteEvent2Id },
+    ].map((event) => ({
       ...event,
       startTime: event.startTime.toISOString(),
       endTime: event.endTime.toISOString(),
@@ -119,7 +70,6 @@ describe("GET / endpoint", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ voteEvents: voteEventsWithISOStrings });
-    expect(response.body.voteEvents).toHaveLength(VOTE_EVENTS.length);
   });
 });
 
@@ -131,7 +81,7 @@ describe("POST / endpoint", () => {
   };
 
   it("should create a new vote event with valid request body", async () => {
-    const response = await request(app)
+    const response = await request
       .post(BASE_URL + "/")
       .send({ voteEvent: newVoteEvent });
 
@@ -155,7 +105,7 @@ describe("POST / endpoint", () => {
       // Missing required properties
     };
 
-    const response = await request(app)
+    const response = await request
       .post(BASE_URL + "/")
       .send({ voteEvent: invalidVoteEvent });
 
@@ -168,7 +118,7 @@ describe("POST / endpoint", () => {
     const createVoteEvent = jest.spyOn(voteEventHelpers, "createVoteEvent");
     createVoteEvent.mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app)
+    const response = await request
       .post(BASE_URL + "/")
       .send({ voteEvent: newVoteEvent });
 
@@ -180,29 +130,41 @@ describe("POST / endpoint", () => {
 });
 
 describe("PUT /:voteEventId endpoint", () => {
+  const updatedVoteEvent = {
+    id: mockVoteEvent1Id,
+    title: "Updated Event 1 with voter management",
+    startTime: new Date(),
+    endTime: new Date(),
+    voterManagement: {
+      hasInternalList: true,
+      hasRegistration: true,
+      hasInternalCsvImport: true,
+      hasExternalList: true,
+      hasGeneration: true,
+      hasExternalCsvImport: true,
+      isRegistrationOpen: true,
+    },
+  };
+
   it("should update a vote event with valid request body", async () => {
-    const response = await request(app)
-      .put(`${BASE_URL}/${MOCK_VOTE_EVENT_1.id}`)
-      .send({ voteEvent: UPDATED_VOTE_EVENT_2 });
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}`)
+      .send({ voteEvent: updatedVoteEvent });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("voteEvent");
     const { voteEvent } = response.body;
-    expect(voteEvent.id).toBe(MOCK_VOTE_EVENT_1.id);
-    expect(voteEvent.title).toBe(UPDATED_VOTE_EVENT_2.title);
-    expect(new Date(voteEvent.startTime)).toEqual(
-      UPDATED_VOTE_EVENT_2.startTime
-    );
-    expect(new Date(voteEvent.endTime)).toEqual(UPDATED_VOTE_EVENT_2.endTime);
-    expect(voteEvent.voterManagement).toEqual(
-      UPDATED_VOTE_EVENT_2.voterManagement
-    );
+    expect(voteEvent.id).toBe(mockVoteEvent1Id);
+    expect(voteEvent.title).toBe(updatedVoteEvent.title);
+    expect(new Date(voteEvent.startTime)).toEqual(updatedVoteEvent.startTime);
+    expect(new Date(voteEvent.endTime)).toEqual(updatedVoteEvent.endTime);
+    expect(voteEvent.voterManagement).toEqual(updatedVoteEvent.voterManagement);
   });
 
   it("should return 400 if the vote event does not exist", async () => {
-    const response = await request(app)
-      .put(`${BASE_URL}/${NON_EXISTENT_VOTE_EVENT_ID}`)
-      .send({ voteEvent: UPDATED_VOTE_EVENT_1 });
+    const response = await request
+      .put(`${BASE_URL}/${NON_EXISTENT_ID}`)
+      .send({ voteEvent: updatedVoteEvent });
 
     expect(response.status).toBe(400);
     expect(response.body).toHaveProperty("message");
@@ -213,8 +175,8 @@ describe("PUT /:voteEventId endpoint", () => {
       invalidProperty: "Invalid property",
     };
 
-    const response = await request(app)
-      .put(`${BASE_URL}/${MOCK_VOTE_EVENT_1.id}`)
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}`)
       .send({ voteEvent: invalidVoteEvent });
 
     expect(response.status).toBe(500);
@@ -226,9 +188,9 @@ describe("PUT /:voteEventId endpoint", () => {
       .spyOn(voteEventHelpers, "editVoteEvent")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app)
-      .put(`${BASE_URL}/${MOCK_VOTE_EVENT_1.id}`)
-      .send({ voteEvent: UPDATED_VOTE_EVENT_1 });
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}`)
+      .send({ voteEvent: updatedVoteEvent });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: "Database error" });
@@ -239,29 +201,25 @@ describe("PUT /:voteEventId endpoint", () => {
 
 describe("DELETE /:voteEventId endpoint", () => {
   it("should delete an existing vote event", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}`
-    );
+    const response = await request.delete(`${BASE_URL}/${mockVoteEvent1Id}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("voteEvent");
     const { voteEvent } = response.body;
-    expect(voteEvent.id).toBe(MOCK_VOTE_EVENT_1.id);
+    expect(voteEvent.id).toBe(mockVoteEvent1Id);
     expect(voteEvent.title).toBe(MOCK_VOTE_EVENT_1.title);
     expect(new Date(voteEvent.startTime)).toEqual(MOCK_VOTE_EVENT_1.startTime);
     expect(new Date(voteEvent.endTime)).toEqual(MOCK_VOTE_EVENT_1.endTime);
 
     // Verify the vote event was actually deleted from the database
     const dbCheck = await prisma.voteEvent.findUnique({
-      where: { id: MOCK_VOTE_EVENT_1.id },
+      where: { id: mockVoteEvent1Id },
     });
     expect(dbCheck).toBeNull();
   });
 
   it("should return 400 if the vote event does not exist", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${NON_EXISTENT_VOTE_EVENT_ID}`
-    );
+    const response = await request.delete(`${BASE_URL}/${NON_EXISTENT_ID}`);
 
     expect(response.status).toBe(400);
     expect(response.body).toHaveProperty("message");
@@ -272,9 +230,7 @@ describe("DELETE /:voteEventId endpoint", () => {
       .spyOn(voteEventHelpers, "removeVoteEvent")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}`
-    );
+    const response = await request.delete(`${BASE_URL}/${mockVoteEvent1Id}`);
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: "Database error" });
@@ -289,8 +245,8 @@ describe("DELETE /:voteEventId endpoint", () => {
 
 describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
   it("should return all internal voters for a given vote event", async () => {
-    const response = await request(app).get(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters`
     );
 
     expect(response.status).toBe(200);
@@ -305,8 +261,8 @@ describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
   });
 
   it("should return an empty array if the vote event does not exist", async () => {
-    const response = await request(app).get(
-      `${BASE_URL}/${NON_EXISTENT_VOTE_EVENT_ID}/voter-management/internal-voters`
+    const response = await request.get(
+      `${BASE_URL}/${NON_EXISTENT_ID}/voter-management/internal-voters`
     );
 
     expect(response.status).toBe(200);
@@ -318,8 +274,8 @@ describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
       .spyOn(voteEventHelpers, "getAllInternalVotersByVoteEvent")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app).get(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters`
     );
 
     expect(response.status).toBe(500);
@@ -329,12 +285,10 @@ describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
   });
 });
 
-describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
+describe("POST /:voteEventId/voter-management/internal-voters endpoint", () => {
   it("should add a new internal voter to a given vote event", async () => {
-    const response = await request(app)
-      .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/internal-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters`)
       .send({ email: KNOWN_EMAILS[0] });
 
     expect(response.status).toBe(200);
@@ -353,10 +307,8 @@ describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
   });
 
   it("should return 400 if request tries to add a duplicate internal voter", async () => {
-    const response = await request(app)
-      .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters`)
       .send({ email: KNOWN_EMAILS[0] });
 
     expect(response.status).toBe(400);
@@ -370,10 +322,8 @@ describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
       // Missing required fields
     };
 
-    const response = await request(app)
-      .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/internal-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters`)
       .send(invalidRequest);
 
     expect(response.status).toBe(500);
@@ -385,10 +335,8 @@ describe("PUT /:voteEventId/voter-management/internal-voters endpoint", () => {
       .spyOn(voteEventHelpers, "addInternalVoter")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app)
-      .put(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/internal-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters`)
       .send({ email: KNOWN_EMAILS[0] });
 
     expect(response.status).toBe(500);
@@ -415,8 +363,8 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
   });
 
   it("should delete an internal voter from a given vote event", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters/${idToDelete}`
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters/${idToDelete}`
     );
 
     expect(response.status).toBe(200);
@@ -432,13 +380,13 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
     });
     const voteEvents = dbCheck?.voteEvents || [];
     expect(voteEvents).not.toContainEqual(
-      expect.objectContaining({ id: MOCK_VOTE_EVENT_1.id })
+      expect.objectContaining({ id: mockVoteEvent1Id })
     );
   });
 
   it("should return 400 if the internal voter does not exist", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters/${NON_EXISTENT_USER_ID}`
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters/${NON_EXISTENT_ID}`
     ); // Non-existent internal voter ID
 
     expect(response.status).toBe(400);
@@ -446,8 +394,8 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
   });
 
   it("should return user without the vote event if the vote event does not exist", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${NON_EXISTENT_VOTE_EVENT_ID}/voter-management/internal-voters/${idToDelete}`
+    const response = await request.delete(
+      `${BASE_URL}/${NON_EXISTENT_ID}/voter-management/internal-voters/${idToDelete}`
     ); // Non-existent vote event ID
 
     expect(response.status).toBe(200);
@@ -456,7 +404,7 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
     expect(internalVoter.id).toBe(idToDelete);
     expect(internalVoter.email).toBe(KNOWN_EMAILS[0]);
     expect(internalVoter.voteEvents).not.toContainEqual(
-      expect.objectContaining({ id: NON_EXISTENT_VOTE_EVENT_ID })
+      expect.objectContaining({ id: NON_EXISTENT_ID })
     );
   });
 
@@ -465,8 +413,8 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
       .spyOn(voteEventHelpers, "removeInternalVoter")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/internal-voters/${idToDelete}`
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters/${idToDelete}`
     );
 
     expect(response.status).toBe(500);
@@ -482,8 +430,8 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
 
 describe("GET /:voteEventId/voter-management/external-voters endpoint", () => {
   it("should return all external voters for a given vote event", async () => {
-    const response = await request(app).get(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters`
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters`
     );
 
     expect(response.status).toBe(200);
@@ -494,19 +442,19 @@ describe("GET /:voteEventId/voter-management/external-voters endpoint", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: VOTER_ID_1,
-          voteEventId: MOCK_VOTE_EVENT_1.id,
+          voteEventId: mockVoteEvent1Id,
         }),
         expect.objectContaining({
           id: VOTER_ID_2,
-          voteEventId: MOCK_VOTE_EVENT_1.id,
+          voteEventId: mockVoteEvent1Id,
         }),
       ])
     );
   });
 
   it("should return empty array if the vote event does not exist", async () => {
-    const response = await request(app).get(
-      `${BASE_URL}/${NON_EXISTENT_VOTE_EVENT_ID}/voter-management/external-voters`
+    const response = await request.get(
+      `${BASE_URL}/${NON_EXISTENT_ID}/voter-management/external-voters`
     ); // Non-existent vote event ID
 
     expect(response.status).toBe(200);
@@ -518,8 +466,8 @@ describe("GET /:voteEventId/voter-management/external-voters endpoint", () => {
       .spyOn(voteEventHelpers, "getAllExternalVotersByVoteEvent")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app).get(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters`
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters`
     );
 
     expect(response.status).toBe(500);
@@ -531,39 +479,42 @@ describe("GET /:voteEventId/voter-management/external-voters endpoint", () => {
 
 describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
   it("should create a new external voter for a given vote event", async () => {
-    const response = await request(app)
-      .post(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/external-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/external-voters`)
       .send({
-        voterId: VOTER_ID_1,
+        voterId: { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id,
       });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("externalVoter");
     const { externalVoter } = response.body;
-    expect(externalVoter.id).toBe(VOTER_ID_1);
-    expect(externalVoter.voteEventId).toBe(MOCK_VOTE_EVENT_2.id);
+    expect(externalVoter.id).toBe(
+      { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id
+    );
+    expect(externalVoter.voteEventId).toBe(mockVoteEvent2Id);
 
     // Verify the external voter was actually created in the database
     const dbCheck = await prisma.externalVoter.findUnique({
       where: {
-        id_voteEventId: { id: VOTER_ID_1, voteEventId: MOCK_VOTE_EVENT_2.id },
+        id_voteEventId: {
+          id: { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id,
+          voteEventId: mockVoteEvent2Id,
+        },
       },
     });
     expect(dbCheck).not.toBeNull();
     if (!dbCheck) return;
-    expect(dbCheck.id).toBe(VOTER_ID_1);
-    expect(dbCheck?.voteEventId).toBe(MOCK_VOTE_EVENT_2.id);
+    expect(dbCheck.id).toBe(
+      { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id
+    );
+    expect(dbCheck?.voteEventId).toBe(mockVoteEvent2Id);
   });
 
   it("should return 400 if the external voter already exists", async () => {
-    const response = await request(app)
-      .post(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters`)
       .send({
-        voterId: VOTER_ID_1,
+        voterId: { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id,
       });
 
     expect(response.status).toBe(400);
@@ -575,10 +526,8 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
       // Missing required properties
     };
 
-    const response = await request(app)
-      .post(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/external-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/external-voters`)
       .send(invalidExternalVoter);
 
     expect(response.status).toBe(500);
@@ -590,12 +539,10 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
       .spyOn(voteEventHelpers, "addExternalVoter")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app)
-      .post(
-        `${BASE_URL}/${MOCK_VOTE_EVENT_2.id}/voter-management/external-voters`
-      )
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/external-voters`)
       .send({
-        voterId: VOTER_ID_1,
+        voterId: { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id,
       });
 
     expect(response.status).toBe(500);
@@ -607,28 +554,35 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
 
 describe("DELETE /:voteEventId/voter-management/external-voters/:externalVoterId endpoint", () => {
   it("should delete an external voter for a given vote event", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters/${VOTER_ID_1}`
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters/${
+        { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id
+      }`
     );
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("externalVoter");
     const { externalVoter } = response.body;
-    expect(externalVoter.id).toBe(VOTER_ID_1);
-    expect(externalVoter.voteEventId).toBe(MOCK_VOTE_EVENT_1.id);
+    expect(externalVoter.id).toBe(
+      { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id
+    );
+    expect(externalVoter.voteEventId).toBe(mockVoteEvent1Id);
 
     // Verify the external voter was actually deleted from the database
     const dbCheck = await prisma.externalVoter.findUnique({
       where: {
-        id_voteEventId: { id: VOTER_ID_1, voteEventId: MOCK_VOTE_EVENT_1.id },
+        id_voteEventId: {
+          id: { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id,
+          voteEventId: mockVoteEvent1Id,
+        },
       },
     });
     expect(dbCheck).toBeNull();
   });
 
   it("should return 400 if the external voter does not exist", async () => {
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters/nonexistent`
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters/nonexistent`
     );
 
     expect(response.status).toBe(400);
@@ -640,8 +594,10 @@ describe("DELETE /:voteEventId/voter-management/external-voters/:externalVoterId
       .spyOn(voteEventHelpers, "removeExternalVoter")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app).delete(
-      `${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management/external-voters/${VOTER_ID_1}`
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters/${
+        { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id }.id
+      }`
     );
 
     expect(response.status).toBe(500);
@@ -672,8 +628,8 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
   };
 
   it("should edit voter management settings for a given vote event and remove all internal and external voters", async () => {
-    const response = await request(app)
-      .put(`${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management`)
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
       .send({ voteEvent: updatedVoteEvent });
 
     expect(response.status).toBe(200);
@@ -681,7 +637,7 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
     const { voteEvent } = response.body;
     expect(voteEvent).toEqual({
       ...updatedVoteEvent,
-      id: MOCK_VOTE_EVENT_1.id,
+      id: mockVoteEvent1Id,
       startTime: updatedVoteEvent.startTime.toISOString(),
       endTime: updatedVoteEvent.endTime.toISOString(),
     });
@@ -689,12 +645,12 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
 
     // Verify the vote event was actually updated in the database
     const dbCheck = await prisma.voteEvent.findUnique({
-      where: { id: MOCK_VOTE_EVENT_1.id },
+      where: { id: mockVoteEvent1Id },
       include: voteEventHelpers.VOTE_EVENT_INCLUSION,
     });
     expect(dbCheck).not.toBeNull();
     if (!dbCheck) return;
-    expect(dbCheck.id).toBe(MOCK_VOTE_EVENT_1.id);
+    expect(dbCheck.id).toBe(mockVoteEvent1Id);
     expect(dbCheck.title).toBe(updatedVoteEvent.title);
     expect(dbCheck.startTime).toEqual(updatedVoteEvent.startTime);
     expect(dbCheck.endTime).toEqual(updatedVoteEvent.endTime);
@@ -702,12 +658,12 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
 
     // Verify all internal and external voters were removed
     const internalVoters = await prisma.user.findMany({
-      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1.id } } },
+      where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
     });
     expect(internalVoters).toHaveLength(0);
 
     const externalVoters = await prisma.externalVoter.findMany({
-      where: { voteEventId: MOCK_VOTE_EVENT_1.id },
+      where: { voteEventId: mockVoteEvent1Id },
     });
     expect(externalVoters).toHaveLength(0);
   });
@@ -717,8 +673,8 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
       invalidProperty: "Invalid property",
     };
 
-    const response = await request(app)
-      .put(`${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management`)
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
       .send({ voteEvent: invalidVoteEvent });
 
     expect(response.status).toBe(500);
@@ -730,13 +686,257 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
       .spyOn(voteEventHelpers, "editVoterManagement")
       .mockRejectedValueOnce(new Error("Database error"));
 
-    const response = await request(app)
-      .put(`${BASE_URL}/${MOCK_VOTE_EVENT_1.id}/voter-management`)
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
       .send({ voteEvent: updatedVoteEvent });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: "Database error" });
 
     editVoterManagementMock.mockRestore();
+  });
+});
+
+describe("GET /:voteEventId/candidates", () => {
+  it("should return all candidates for a given vote event", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/candidates`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("candidates");
+    expect(response.body.candidates).toHaveLength(2);
+  });
+
+  it("should return an empty array if the vote event does not exist", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${NON_EXISTENT_ID}/candidates`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ candidates: [] });
+  });
+
+  it("should handle errors during candidate retrieval", async () => {
+    const getVoteEventCandidatesMock = jest
+      .spyOn(voteEventHelpers, "getAllCandidatesByVoteEvent")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/candidates`
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    getVoteEventCandidatesMock.mockRestore();
+  });
+});
+
+describe("POST /:voteEventId/candidates", () => {
+  it("should add a new candidate to a given vote event", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates`)
+      .send({ projectId: mockProject1Id });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("candidate");
+    const { candidate } = response.body;
+    expect(candidate).toHaveProperty("id");
+    expect(candidate.name).toBe(MOCK_PROJECT_1.name);
+
+    // Verify the candidate was actually added to the database
+    const dbCheck = await prisma.project.findUnique({
+      where: { id: candidate.id },
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck).toEqual(expect.objectContaining(MOCK_PROJECT_1));
+  });
+
+  it("should return 400 if the candidate is already part of the vote event", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/candidates`)
+      .send({ projectId: mockProject1Id });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Project is already part of the vote event",
+    });
+  });
+
+  it("should return 400 if the project does not exist", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates`)
+      .send({ projectId: NON_EXISTENT_ID });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ message: "Project ID does not exist" });
+  });
+
+  it("should return 500 with invalid request body", async () => {
+    const invalidRequest = {
+      // Missing required fields
+    };
+
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates`)
+      .send(invalidRequest);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message");
+  });
+
+  it("should handle errors during candidate addition", async () => {
+    const addCandidateMock = jest
+      .spyOn(voteEventHelpers, "addCandidate")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates`)
+      .send({ projectId: mockProject1Id });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    addCandidateMock.mockRestore();
+  });
+});
+
+describe("POST /:voteEventId/candidates/batch", () => {
+  const requestBody = {
+    cohort: MOCK_PROJECT_1.cohortYear,
+  };
+
+  for (const achievement of Object.values(AchievementLevel)) {
+    it(`should add multiple candidates to a given a cohort and ${achievement} achievement`, async () => {
+      // retrieve the projects
+      const projects = await prisma.project.findMany({
+        where: {
+          cohortYear: requestBody.cohort,
+          achievement: achievement,
+        },
+      });
+
+      const response = await request
+        .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
+        .send({ ...requestBody, achievement: achievement });
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("candidates");
+      expect(response.body.candidates).toEqual(projects);
+
+      // Verify the candidates were actually connected in database
+      const dbCheck = await prisma.voteEvent.findUnique({
+        where: { id: mockVoteEvent2Id },
+        include: { candidates: true },
+      });
+
+      expect(dbCheck).not.toBeNull();
+      if (!dbCheck) return;
+      expect(dbCheck.candidates).toEqual(projects);
+    });
+  }
+
+  it("should add multiple candidates to a given a cohort and all achievement", async () => {
+    // retrieve the projects
+    const projects = await prisma.project.findMany({
+      where: {
+        cohortYear: requestBody.cohort,
+      },
+    });
+
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
+      .send({ ...requestBody, achievement: "all" });
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("candidates");
+    expect(response.body.candidates).toEqual(projects);
+
+    // Verify the candidates were actually connected in database
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent2Id },
+      include: { candidates: true },
+    });
+
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck.candidates).toEqual(projects);
+  });
+
+  it("should not add candidates if cohort does not exist", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
+      .send({
+        cohort: 9999,
+        achievement: "Artemis",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("candidates");
+    expect(response.body.candidates).toEqual([]);
+  });
+
+  it("should return 500 with invalid request body", async () => {
+    const invalidRequest = {
+      // Missing required fields
+    };
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
+      .send(invalidRequest);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message");
+  });
+
+  it("should handle errors during candidate addition", async () => {
+    const addCandidateMock = jest
+      .spyOn(voteEventHelpers, "addManyCandidates")
+      .mockRejectedValueOnce(new Error("Database error"));
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
+      .send(requestBody);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+    addCandidateMock.mockRestore();
+  });
+});
+
+describe("DELETE /:voteEventId/candidates/:candidateId", () => {
+  it("should delete a candidate from a given vote event", async () => {
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/candidates/${mockProject1Id}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("candidate");
+    expect(response.body.candidate).toEqual(
+      expect.objectContaining(MOCK_PROJECT_1)
+    );
+
+    // Verify the candidate was actually removed from the database
+    const dbCheck = await prisma.project.findUnique({
+      where: { id: mockProject1Id },
+      include: { voteEvents: true },
+    });
+    const voteEvents = dbCheck?.voteEvents || [];
+    expect(voteEvents).not.toContainEqual(
+      expect.objectContaining({ id: mockVoteEvent1Id })
+    );
+  });
+
+  it("should handle errors during candidate deletion", async () => {
+    const removeCandidateMock = jest
+      .spyOn(voteEventHelpers, "removeCandidate")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/candidates/${mockProject1Id}`
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    removeCandidateMock.mockRestore();
   });
 });

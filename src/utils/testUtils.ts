@@ -97,7 +97,8 @@ export async function setUpRequestWithAdminAuth() {
 
 export const voteEventTestTearDown = async () => {
   await prisma.voteEvent.deleteMany();
-  await prisma.project.delete({
+
+  const project1 = await prisma.project.findUnique({
     where: {
       teamName_cohortYear: {
         teamName: MOCK_PROJECT_1.teamName,
@@ -105,7 +106,8 @@ export const voteEventTestTearDown = async () => {
       },
     },
   });
-  await prisma.project.delete({
+
+  const project2 = await prisma.project.findUnique({
     where: {
       teamName_cohortYear: {
         teamName: MOCK_PROJECT_2.teamName,
@@ -113,4 +115,26 @@ export const voteEventTestTearDown = async () => {
       },
     },
   });
+
+  if (project1) {
+    await prisma.project.delete({
+      where: {
+        teamName_cohortYear: {
+          teamName: MOCK_PROJECT_1.teamName,
+          cohortYear: MOCK_PROJECT_1.cohortYear,
+        },
+      },
+    });
+  }
+
+  if (project2) {
+    await prisma.project.delete({
+      where: {
+        teamName_cohortYear: {
+          teamName: MOCK_PROJECT_2.teamName,
+          cohortYear: MOCK_PROJECT_2.cohortYear,
+        },
+      },
+    });
+  }
 };
