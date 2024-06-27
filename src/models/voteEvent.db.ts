@@ -115,3 +115,28 @@ export async function deleteExternalVoter(
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 }
+
+// --- Votes DB Functions ---
+
+export async function findManyVotes(query: Prisma.VoteFindManyArgs) {
+  try {
+    const manyVotes = await prisma.vote.findMany(query);
+    return manyVotes;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
+export async function createManyVotes(query: Prisma.VoteCreateManyArgs) {
+  try {
+    return await prisma.vote.createMany(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}

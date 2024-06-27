@@ -1,16 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AchievementLevel, User } from "@prisma/client";
-import { findManyProjects, updateOneProject } from "../models/projects.db";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
+import { findManyProjects, updateOneProject } from "../models/projects.db";
 import { findManyUsers, updateUniqueUser } from "../models/users.db";
 import {
   createExternalVoter,
+  createManyVotes,
   createOneVoteEvent,
   deleteExternalVoter,
   deleteVoteEvent,
   findManyExternalVoters,
   findManyVoteEvents,
+  findManyVotes,
   findUniqueVoteEvent,
   updateVoteEvent,
 } from "../models/voteEvent.db";
@@ -21,12 +23,34 @@ export const VOTE_EVENT_INCLUSION = {
   voterManagement: {
     select: {
       hasInternalList: true,
-      hasRegistration: true,
-      hasInternalCsvImport: true,
       hasExternalList: true,
-      hasGeneration: true,
-      hasExternalCsvImport: true,
       isRegistrationOpen: true,
+    },
+  },
+  voteConfig: {
+    select: {
+      displayType: true,
+      minVotes: true,
+      maxVotes: true,
+      isRandomOrder: true,
+      instructions: true,
+    },
+  },
+};
+
+export const VOTE_EVENT_PUBLIC_INCLUSION = {
+  voterManagement: {
+    select: {
+      isRegistrationOpen: true,
+    },
+  },
+  voteConfig: {
+    select: {
+      displayType: true,
+      minVotes: true,
+      maxVotes: true,
+      isRandomOrder: true,
+      instructions: true,
     },
   },
 };
@@ -37,15 +61,39 @@ const processEditVoteEventData = (voteEvent: any) => {
   };
 
   if (voteEvent.voterManagement) {
+    const voterManagement = voteEvent.voterManagement;
+
     data = {
-      ...voteEvent,
+      ...data,
       voterManagement: {
         upsert: {
           create: {
-            ...voteEvent.voterManagement,
+            ...voterManagement,
           },
           update: {
-            ...voteEvent.voterManagement,
+            ...voterManagement,
+          },
+        },
+      },
+    };
+  }
+
+  if (voteEvent.voteConfig) {
+    const voteConfig = {
+      ...voteEvent.voteConfig,
+      minVotes: Number(voteEvent.voteConfig.minVotes),
+      maxVotes: Number(voteEvent.voteConfig.maxVotes),
+    };
+
+    data = {
+      ...data,
+      voteConfig: {
+        upsert: {
+          create: {
+            ...voteConfig,
+          },
+          update: {
+            ...voteConfig,
           },
         },
       },
@@ -58,7 +106,9 @@ const processEditVoteEventData = (voteEvent: any) => {
 // --- Vote Event Helper Functions ---
 
 export async function getAllVoteEvents() {
-  const voteEvents = await findManyVoteEvents({});
+  const voteEvents = await findManyVoteEvents({
+    include: VOTE_EVENT_PUBLIC_INCLUSION,
+  });
 
   return voteEvents;
 }
@@ -164,7 +214,7 @@ export async function addInternalVoter({
 }) {
   const { email } = body;
 
-  //check if user is already part of vote event
+  // check if user is already part of vote event
   const user = await findManyUsers({
     where: { email, voteEvents: { some: { id: voteEventId } } },
   });
@@ -370,7 +420,7 @@ export async function addManyCandidates({
   }
 
   const whereQuery =
-    achievement === "all"
+    achievement === "All"
       ? { cohortYear: cohort }
       : { cohortYear: cohort, achievement: achievement as AchievementLevel };
 
@@ -408,7 +458,127 @@ export async function removeCandidate(
   return deletedCandidate;
 }
 
+// --- Vote Helper Functions ---
+export async function getVotesByVoteEventAndVoter(
+  voteEventId: number,
+  userId?: number,
+  externalVoterId?: string
+) {
+  if (!userId && !externalVoterId) {
+    throw new SkylabError(
+      "You are not authorized to vote in this event",
+      HttpStatusCode.UNAUTHORIZED
+    );
+  }
+
+  const votes = await findManyVotes({
+    where: {
+      voteEventId: voteEventId,
+      userId: userId ?? undefined,
+      externalVoterId: externalVoterId ?? undefined,
+    },
+    select: { projectId: true },
+  });
+
+  return votes;
+}
+
+export async function addManyVotes({
+  body,
+  voteEventId,
+}: {
+  body: {
+    userId?: number;
+    externalVoterId?: string;
+    projectIds: number[];
+  };
+  voteEventId: number;
+}) {
+  const { userId, externalVoterId, projectIds } = body;
+
+  if (!userId && !externalVoterId) {
+    throw new SkylabError(
+      "You are not authorized to vote in this event",
+      HttpStatusCode.UNAUTHORIZED
+    );
+  }
+
+  const existingVotes = await findManyVotes({
+    where: {
+      voteEventId: voteEventId,
+      userId: userId,
+      externalVoterId: externalVoterId,
+    },
+  });
+
+  // check if user has already voted for any of the projects
+  if (existingVotes.length > 0) {
+    throw new SkylabError(
+      "You have already voted in this event",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const voteEvent: any = await findUniqueVoteEvent({
+    where: { id: voteEventId },
+    include: { voteConfig: true },
+  });
+
+  // check if vote event exists
+  if (!voteEvent) {
+    throw new SkylabError(
+      "Vote event does not exist",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  // check if voting is open
+  if (new Date() < voteEvent.startTime || new Date() > voteEvent.endTime) {
+    throw new SkylabError("Vote event is not open", HttpStatusCode.BAD_REQUEST);
+  }
+
+  // check if vote event is setup
+  if (!voteEvent.voteConfig) {
+    throw new SkylabError(
+      "Vote event setup is not complete",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  // checkif number of votes is within the limit
+  if (
+    projectIds.length > voteEvent.voteConfig.maxVotes ||
+    projectIds.length < voteEvent.voteConfig.minVotes
+  ) {
+    throw new SkylabError(
+      "Number of votes is not within the minimum and maximum limit",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  await createManyVotes({
+    data: projectIds.map((projectId) => ({
+      voteEventId: voteEventId,
+      userId: userId,
+      externalVoterId: externalVoterId,
+      projectId: projectId,
+    })),
+  });
+
+  const votes = await findManyVotes({
+    where: {
+      voteEventId: voteEventId,
+      userId: userId,
+      externalVoterId: externalVoterId,
+    },
+    select: { projectId: true },
+  });
+
+  return votes;
+}
+
 // --- Transaction Helper Functions ---
+
 export async function editVoterManagement({
   body,
   voteEventId,

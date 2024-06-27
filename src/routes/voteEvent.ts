@@ -4,6 +4,7 @@ import {
   addExternalVoter,
   addInternalVoter,
   addManyCandidates,
+  addManyVotes,
   createVoteEvent,
   editVoteEvent,
   editVoterManagement,
@@ -12,16 +13,17 @@ import {
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
+  getVotesByVoteEventAndVoter,
   removeCandidate,
   removeExternalVoter,
   removeInternalVoter,
   removeVoteEvent,
 } from "../helpers/voteEvent.helper";
+import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
-import authorizeAdmin from "../middleware/authorizeAdmin";
 
 const router = Router();
 
@@ -235,7 +237,7 @@ router.post(
     const { voteEventId } = req.params;
     try {
       const candidate = await addCandidate({
-        body: req.body,
+        body: { projectId: Number(req.body.projectId) },
         voteEventId: Number(voteEventId),
       });
 
@@ -253,7 +255,7 @@ router.post(
     const { voteEventId } = req.params;
     try {
       const candidates = await addManyCandidates({
-        body: req.body,
+        body: { ...req.body, cohort: Number(req.body.cohort) },
         voteEventId: Number(voteEventId),
       });
 
@@ -281,5 +283,40 @@ router.delete(
     }
   }
 );
+
+router.get("/:voteEventId/votes", async (req: Request, res: Response) => {
+  const { voteEventId } = req.params;
+  const { userId, externalVoterId } = req.query;
+
+  try {
+    const votes = await getVotesByVoteEventAndVoter(
+      Number(voteEventId),
+      userId ? Number(userId) : undefined,
+      externalVoterId ? externalVoterId.toString() : undefined
+    );
+
+    return apiResponseWrapper(res, { votes });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.post("/:voteEventId/votes", async (req: Request, res: Response) => {
+  const { voteEventId } = req.params;
+  try {
+    const votes = await addManyVotes({
+      body: {
+        ...req.body,
+        userId: req.body.userId ? Number(req.body.userId) : undefined,
+        projectIds: req.body.projectIds.map((id: number) => Number(id)),
+      },
+      voteEventId: Number(voteEventId),
+    });
+
+    return apiResponseWrapper(res, { votes });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 export default router;
