@@ -11,6 +11,8 @@ import {
 import { AchievementLevel } from "@prisma/client";
 import {
   MOCK_PROJECT_1,
+  MOCK_VOTER_MANAGEMENT,
+  MOCK_VOTE_CONFIG,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
   NON_EXISTENT_ID,
@@ -31,6 +33,8 @@ const BASE_URL = "/api/vote-events";
 let mockVoteEvent1Id;
 let mockVoteEvent2Id;
 let mockProject1Id;
+let mockProject2Id;
+let userIds;
 let request;
 
 beforeAll(async () => {
@@ -45,6 +49,8 @@ beforeEach(async () => {
   mockVoteEvent1Id = result.voteEvent1Id;
   mockVoteEvent2Id = result.voteEvent2Id;
   mockProject1Id = result.mockProject1Id;
+  mockProject2Id = result.mockProject2Id;
+  userIds = result.userIds;
 
   return result;
 });
@@ -60,8 +66,20 @@ describe("GET / endpoint", () => {
     const response = await request.get(BASE_URL + "/");
 
     const voteEventsWithISOStrings = [
-      { ...MOCK_VOTE_EVENT_1, id: mockVoteEvent1Id },
-      { ...MOCK_VOTE_EVENT_2, id: mockVoteEvent2Id },
+      {
+        ...MOCK_VOTE_EVENT_1,
+        id: mockVoteEvent1Id,
+        voteConfig: MOCK_VOTE_CONFIG,
+        voterManagement: {
+          isRegistrationOpen: MOCK_VOTER_MANAGEMENT.isRegistrationOpen,
+        },
+      },
+      {
+        ...MOCK_VOTE_EVENT_2,
+        id: mockVoteEvent2Id,
+        voteConfig: null,
+        voterManagement: null,
+      },
     ].map((event) => ({
       ...event,
       startTime: event.startTime.toISOString(),
@@ -137,11 +155,7 @@ describe("PUT /:voteEventId endpoint", () => {
     endTime: new Date(),
     voterManagement: {
       hasInternalList: true,
-      hasRegistration: true,
-      hasInternalCsvImport: true,
       hasExternalList: true,
-      hasGeneration: true,
-      hasExternalCsvImport: true,
       isRegistrationOpen: true,
     },
   };
@@ -618,11 +632,7 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
     endTime: new Date("2025-07-25"),
     voterManagement: {
       hasInternalList: true,
-      hasRegistration: true,
-      hasInternalCsvImport: true,
       hasExternalList: true,
-      hasGeneration: true,
-      hasExternalCsvImport: true,
       isRegistrationOpen: false,
     },
   };
@@ -640,6 +650,7 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
       id: mockVoteEvent1Id,
       startTime: updatedVoteEvent.startTime.toISOString(),
       endTime: updatedVoteEvent.endTime.toISOString(),
+      voteConfig: MOCK_VOTE_CONFIG,
     });
     expect(voteEvent.voterManagement).toEqual(updatedVoteEvent.voterManagement);
 
@@ -847,7 +858,7 @@ describe("POST /:voteEventId/candidates/batch", () => {
 
     const response = await request
       .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
-      .send({ ...requestBody, achievement: "all" });
+      .send({ ...requestBody, achievement: "All" });
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("candidates");
     expect(response.body.candidates).toEqual(projects);
@@ -938,5 +949,254 @@ describe("DELETE /:voteEventId/candidates/:candidateId", () => {
     expect(response.body).toEqual({ message: "Database error" });
 
     removeCandidateMock.mockRestore();
+  });
+});
+
+describe("GET /:voteEventId/votes", () => {
+  it("should return all votes for a given vote event and voter", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/votes?userId=${userIds[0]}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("votes");
+    expect(response.body.votes).toEqual([{ projectId: mockProject1Id }]);
+  });
+
+  it("should return an empty array if the vote event does not exist", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${NON_EXISTENT_ID}/votes?userId=${userIds[0]}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ votes: [] });
+  });
+
+  it("should handle errors during vote retrieval", async () => {
+    const getVoteEventVotesMock = jest
+      .spyOn(voteEventHelpers, "getVotesByVoteEventAndVoter")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request.get(`${BASE_URL}/${mockVoteEvent1Id}/votes`);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    getVoteEventVotesMock.mockRestore();
+  });
+});
+
+describe("POST /:voteEventId/votes", () => {
+  it("should add votes for a given vote event and internal voter", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("votes");
+    expect(response.body.votes).toEqual([{ projectId: mockProject1Id }]);
+
+    // Verify the votes were actually added to the database
+    const dbCheck = await prisma.vote.findMany({
+      where: { userId: userIds[1], projectId: mockProject1Id },
+    });
+    expect(dbCheck).toHaveLength(1);
+    expect(dbCheck[0]).toEqual(
+      expect.objectContaining({
+        userId: userIds[1],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+      })
+    );
+  });
+
+  it("should add votes for a given vote event and external voter", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
+      .send({
+        externalVoterId: VOTER_ID_2,
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("votes");
+    expect(response.body.votes).toEqual([{ projectId: mockProject1Id }]);
+
+    // Verify the votes were actually added to the database
+    const dbCheck = await prisma.vote.findMany({
+      where: { externalVoterId: VOTER_ID_2, projectId: mockProject1Id },
+    });
+    expect(dbCheck).toHaveLength(1);
+    expect(dbCheck[0]).toEqual(
+      expect.objectContaining({
+        externalVoterId: VOTER_ID_2,
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+      })
+    );
+  });
+
+  it("should return 401 if no IDs are provided", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
+      .send({
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      message: "You are not authorized to vote in this event",
+    });
+  });
+
+  it("should return 400 if votes are already submitted", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
+      .send({
+        userId: userIds[0],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "You have already voted in this event",
+    });
+  });
+
+  it("should return 400 if the vote event does not exist", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${NON_EXISTENT_ID}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Vote event does not exist",
+    });
+  });
+
+  it("should return 400 if vote config is not yet set", async () => {
+    await prisma.voteEvent.update({
+      where: { id: mockVoteEvent2Id },
+      data: {
+        startTime: new Date("2000-05-25"),
+        endTime: new Date("2100-07-25"),
+      },
+    });
+
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent2Id}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Vote event setup is not complete",
+    });
+  });
+
+  it("should return 400 if voting has not started", async () => {
+    const voteEvent = await prisma.voteEvent.create({
+      data: {
+        title: "Vote Event 3",
+        startTime: new Date("2100-05-25"),
+        endTime: new Date("2125-07-25"),
+      },
+    });
+
+    const response = await request
+      .post(`${BASE_URL}/${voteEvent.id}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Vote event is not open",
+    });
+  });
+
+  it("should return 400 if voting has ended", async () => {
+    const voteEvent = await prisma.voteEvent.create({
+      data: {
+        title: "Vote Event 3",
+        startTime: new Date("2000-05-25"),
+        endTime: new Date("2000-07-25"),
+      },
+    });
+
+    const response = await request
+      .post(`${BASE_URL}/${voteEvent.id}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Vote event is not open",
+    });
+  });
+
+  it("should return 400 if number of votes exceeds maximum amount", async () => {
+    const voteEvent = await prisma.voteEvent.update({
+      where: { id: mockVoteEvent1Id },
+      data: {
+        voteConfig: {
+          update: {
+            ...MOCK_VOTE_CONFIG,
+            maxVotes: 1,
+            minVotes: 1,
+          },
+        },
+      },
+    });
+
+    const response = await request
+      .post(`${BASE_URL}/${voteEvent.id}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id, mockProject2Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Number of votes is not within the minimum and maximum limit",
+    });
+  });
+
+  it("should return 400 if number of votes is below minimum amount", async () => {
+    const voteEvent = await prisma.voteEvent.update({
+      where: { id: mockVoteEvent1Id },
+      data: {
+        voteConfig: {
+          update: {
+            ...MOCK_VOTE_CONFIG,
+            maxVotes: 3,
+            minVotes: 3,
+          },
+        },
+      },
+    });
+
+    const response = await request
+      .post(`${BASE_URL}/${voteEvent.id}/votes`)
+      .send({
+        userId: userIds[1],
+        projectIds: [mockProject1Id],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "Number of votes is not within the minimum and maximum limit",
+    });
   });
 });

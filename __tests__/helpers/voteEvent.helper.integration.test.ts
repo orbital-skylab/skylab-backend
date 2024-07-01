@@ -9,6 +9,8 @@ import {
 import {
   MOCK_PROJECT_1,
   MOCK_PROJECT_2,
+  MOCK_VOTER_MANAGEMENT,
+  MOCK_VOTE_CONFIG,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
   NON_EXISTENT_ID,
@@ -22,6 +24,7 @@ import {
   addExternalVoter,
   addInternalVoter,
   addManyCandidates,
+  addManyVotes,
   createVoteEvent,
   editVoteEvent,
   getAllCandidatesByVoteEvent,
@@ -29,6 +32,7 @@ import {
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getOneVoteEventById,
+  getVotesByVoteEventAndVoter,
   removeCandidate,
   removeInternalVoter,
   removeVoteEvent,
@@ -65,8 +69,20 @@ describe("getAllVoteEvents helper integration test", () => {
     const voteEvents = await getAllVoteEvents();
 
     expect(voteEvents).toEqual([
-      { ...MOCK_VOTE_EVENT_1, id: mockVoteEvent1Id },
-      { ...MOCK_VOTE_EVENT_2, id: mockVoteEvent2Id },
+      {
+        ...MOCK_VOTE_EVENT_1,
+        id: mockVoteEvent1Id,
+        voteConfig: MOCK_VOTE_CONFIG,
+        voterManagement: {
+          isRegistrationOpen: MOCK_VOTER_MANAGEMENT.isRegistrationOpen,
+        },
+      },
+      {
+        ...MOCK_VOTE_EVENT_2,
+        id: mockVoteEvent2Id,
+        voteConfig: null,
+        voterManagement: null,
+      },
     ]);
   });
 
@@ -507,6 +523,84 @@ describe("removeCandidate helper integration test", () => {
   it("should throw an error if candidate not found", async () => {
     await expect(
       removeCandidate(mockVoteEvent1Id, NON_EXISTENT_ID)
+    ).rejects.toThrow();
+  });
+});
+
+describe("getVotesByVoteEventAndVoter helper integration test", () => {
+  it("should return all votes by vote event and voter", async () => {
+    const votes = await getVotesByVoteEventAndVoter(
+      mockVoteEvent1Id,
+      undefined,
+      VOTER_ID_1
+    );
+
+    expect(votes).toEqual([{ projectId: mockProject1Id }]);
+  });
+
+  it("should return an empty array if no votes found", async () => {
+    const votes = await getVotesByVoteEventAndVoter(
+      mockVoteEvent1Id,
+      undefined,
+      VOTER_ID_2
+    );
+
+    expect(votes).toEqual([]);
+  });
+});
+
+describe("addManyVotes helper integration test", () => {
+  it("should add multiple votes to a vote event", async () => {
+    const newVotes = await addManyVotes({
+      body: {
+        externalVoterId: VOTER_ID_2,
+        projectIds: [mockProject1Id, mockProject2Id],
+      },
+      voteEventId: mockVoteEvent1Id,
+    });
+
+    expect(newVotes).toHaveLength(2);
+    expect(newVotes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ projectId: mockProject1Id }),
+        expect.objectContaining({ projectId: mockProject2Id }),
+      ])
+    );
+  });
+
+  it("should throw an error if given userId does not exist", async () => {
+    await expect(
+      addManyVotes({
+        body: {
+          userId: NON_EXISTENT_ID,
+          projectIds: [mockProject1Id],
+        },
+        voteEventId: mockVoteEvent1Id,
+      })
+    ).rejects.toThrow();
+  });
+
+  it("should throw an error if given externalVoterId does not exist", async () => {
+    await expect(
+      addManyVotes({
+        body: {
+          externalVoterId: "non existent voter id",
+          projectIds: [mockProject1Id],
+        },
+        voteEventId: mockVoteEvent1Id,
+      })
+    ).rejects.toThrow();
+  });
+
+  it("should throw an error if given projectIds do not exist", async () => {
+    await expect(
+      addManyVotes({
+        body: {
+          externalVoterId: VOTER_ID_1,
+          projectIds: [NON_EXISTENT_ID],
+        },
+        voteEventId: mockVoteEvent1Id,
+      })
     ).rejects.toThrow();
   });
 });

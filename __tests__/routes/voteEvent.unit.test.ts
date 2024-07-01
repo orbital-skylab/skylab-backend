@@ -655,6 +655,7 @@ describe("POST /:voteEventId/candidates", () => {
       .post(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/candidates")
       .send(requestBody);
 
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
     expect(addCandidateSpy).toHaveBeenCalledTimes(1);
     expect(addCandidateSpy).toHaveBeenCalledWith({
       body: requestBody,
@@ -702,6 +703,7 @@ describe("POST /:voteEventId/candidates/batch", () => {
       .post(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/candidates/batch")
       .send(requestBody);
 
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
     expect(addManyCandidatesSpy).toHaveBeenCalledTimes(1);
     expect(addManyCandidatesSpy).toHaveBeenCalledWith({
       body: requestBody,
@@ -748,6 +750,7 @@ describe("DELETE /:voteEventId/candidates/:candidateId", () => {
         MOCK_PROJECT_1_WITH_ID.id
     );
 
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
     expect(removeCandidateSpy).toHaveBeenCalledTimes(1);
     expect(removeCandidateSpy).toHaveBeenCalledWith(
       MOCK_VOTE_EVENT_1_WITH_ID.id,
@@ -773,6 +776,99 @@ describe("DELETE /:voteEventId/candidates/:candidateId", () => {
       MOCK_VOTE_EVENT_1_WITH_ID.id,
       MOCK_PROJECT_1_WITH_ID.id
     );
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("GET /:voteEventId/votes", () => {
+  let getVotesByVoteEventAndVoterSpy;
+
+  beforeAll(() => {
+    getVotesByVoteEventAndVoterSpy = jest.spyOn(
+      voteEventHelpers,
+      "getVotesByVoteEventAndVoter"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    getVotesByVoteEventAndVoterSpy.mockResolvedValueOnce([
+      { projectId: MOCK_PROJECT_1_WITH_ID.id },
+    ]);
+
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes?userId=1"
+    );
+
+    expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledTimes(1);
+    expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledWith(
+      1,
+      1,
+      undefined
+    );
+
+    assertApiResponse({
+      votes: [{ projectId: MOCK_PROJECT_1_WITH_ID.id }],
+    });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    getVotesByVoteEventAndVoterSpy.mockRejectedValueOnce(
+      new Error("Test Error")
+    );
+
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes?userId=1"
+    );
+
+    expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledTimes(1);
+    expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledWith(
+      1,
+      1,
+      undefined
+    );
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("POST /:voteEventId/votes", () => {
+  let addManyVotesSpy;
+  const requestBody = { userId: 1, projectIds: [1, 2] };
+  const response = [{ projectId: 1 }, { projectId: 2 }];
+
+  beforeAll(() => {
+    addManyVotesSpy = jest.spyOn(voteEventHelpers, "addManyVotes");
+  });
+
+  it("should call the helper function correctly", async () => {
+    addManyVotesSpy.mockResolvedValueOnce(response);
+
+    await supertest(app)
+      .post(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes")
+      .send(requestBody);
+
+    expect(addManyVotesSpy).toHaveBeenCalledTimes(1);
+    expect(addManyVotesSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertApiResponse({ votes: response });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    addManyVotesSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app)
+      .post(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes")
+      .send(requestBody);
+
+    expect(addManyVotesSpy).toHaveBeenCalledTimes(1);
+    expect(addManyVotesSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
 
     assertRouteErrorHandler(new Error("Test Error"));
   });

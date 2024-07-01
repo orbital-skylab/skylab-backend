@@ -6,6 +6,8 @@ import supertest from "supertest";
 import {
   MOCK_PROJECT_1,
   MOCK_PROJECT_2,
+  MOCK_VOTER_MANAGEMENT,
+  MOCK_VOTE_CONFIG,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
   VOTER_ID_1,
@@ -26,12 +28,24 @@ export async function voteEventTestSetUp() {
     data: MOCK_VOTE_EVENT_1,
   });
 
+  await prisma.voteEvent.update({
+    where: { id: voteEvent1.id },
+    data: {
+      voterManagement: {
+        create: MOCK_VOTER_MANAGEMENT,
+      },
+      voteConfig: {
+        create: MOCK_VOTE_CONFIG,
+      },
+    },
+  });
+
   const voteEvent2 = await prisma.voteEvent.create({
     data: MOCK_VOTE_EVENT_2,
   });
 
-  for (const email of KNOWN_EMAILS) {
-    await prisma.user.update({
+  const userPromises = KNOWN_EMAILS.map(async (email) => {
+    const user = await prisma.user.update({
       where: { email: email },
       data: {
         voteEvents: {
@@ -39,7 +53,11 @@ export async function voteEventTestSetUp() {
         },
       },
     });
-  }
+
+    return user.id;
+  });
+
+  const userIds = await Promise.all(userPromises);
 
   const project1 = await prisma.project.create({
     data: {
@@ -75,7 +93,23 @@ export async function voteEventTestSetUp() {
     },
   });
 
+  await prisma.vote.createMany({
+    data: [
+      {
+        userId: userIds[0],
+        projectId: project1.id,
+        voteEventId: voteEvent1.id,
+      },
+      {
+        externalVoterId: VOTER_ID_1,
+        projectId: project1.id,
+        voteEventId: voteEvent1.id,
+      },
+    ],
+  });
+
   return {
+    userIds,
     voteEvent1Id: voteEvent1.id,
     voteEvent2Id: voteEvent2.id,
     mockProject1Id: project1.id,

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AchievementLevel, User } from "@prisma/client";
+import { AchievementLevel, Project, User } from "@prisma/client";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyProjects, updateOneProject } from "../models/projects.db";
@@ -142,13 +142,6 @@ export async function createVoteEvent(body: {
     },
   });
 
-  if (!voteEvent) {
-    throw new SkylabError(
-      "Error occurred while creating vote event",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
   return voteEvent;
 }
 
@@ -169,13 +162,6 @@ export async function editVoteEvent({
     include: VOTE_EVENT_INCLUSION,
   });
 
-  if (!updatedVoteEvent) {
-    throw new SkylabError(
-      "Error occurred while updating vote event",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
   return updatedVoteEvent;
 }
 
@@ -183,13 +169,6 @@ export async function removeVoteEvent(voteEventId: number) {
   const deletedVoteEvent = await deleteVoteEvent({
     where: { id: voteEventId },
   });
-
-  if (!deletedVoteEvent) {
-    throw new SkylabError(
-      "Error occurred while deleting vote event",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
 
   return deletedVoteEvent;
 }
@@ -200,6 +179,7 @@ export async function getAllInternalVotersByVoteEvent(voteEventId: number) {
   const users = await findManyUsers({
     where: { voteEvents: { some: { id: voteEventId } } },
   });
+
   return users;
 }
 
@@ -265,13 +245,6 @@ export async function removeInternalVoter(
     include: { voteEvents: true },
   });
 
-  if (!updatedUser) {
-    throw new SkylabError(
-      "Error occurred while removing internal voter",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
   return updatedUser;
 }
 
@@ -315,13 +288,6 @@ export async function addExternalVoter({
     },
   });
 
-  if (!newExternalVoter) {
-    throw new SkylabError(
-      "Error occurred while adding external voter",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
   return newExternalVoter;
 }
 
@@ -334,13 +300,6 @@ export async function removeExternalVoter(
       id_voteEventId: { id: externalVoterId, voteEventId: voteEventId },
     },
   });
-
-  if (!deletedExternalVoter) {
-    throw new SkylabError(
-      "Error occurred while deleting external voter",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
 
   return deletedExternalVoter;
 }
@@ -378,7 +337,7 @@ export async function addCandidate({
     );
   }
 
-  let updatedProject;
+  let updatedProject: Project;
 
   try {
     updatedProject = await updateOneProject({

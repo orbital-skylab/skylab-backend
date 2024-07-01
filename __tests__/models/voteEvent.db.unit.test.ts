@@ -10,16 +10,20 @@ import { prisma } from "../../src/client";
 import {
   MOCK_EXTERNAL_VOTER_1,
   MOCK_EXTERNAL_VOTER_2,
+  MOCK_VOTE_1,
+  MOCK_VOTE_2,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
 } from "../../__mocks__/voteEvent.mocks";
 import {
   createExternalVoter,
+  createManyVotes,
   createOneVoteEvent,
   deleteExternalVoter,
   deleteVoteEvent,
   findManyExternalVoters,
   findManyVoteEvents,
+  findManyVotes,
   findUniqueVoteEvent,
   updateVoteEvent,
 } from "../../src/models/voteEvent.db";
@@ -37,7 +41,7 @@ const assertKnownRequestError = (e) => {
 };
 
 afterEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
 });
 
 describe("findManyVoteEvents db unit test", () => {
@@ -290,6 +294,70 @@ describe("deleteExternalVoter db unit test", () => {
 
     try {
       await deleteExternalVoter(params);
+    } catch (e) {
+      assertKnownRequestError(e);
+    }
+  });
+});
+
+describe("findManyVotes db unit test", () => {
+  let findManyVotesSpy;
+  const params = {};
+
+  beforeAll(() => {
+    findManyVotesSpy = jest.spyOn(prisma.vote, "findMany");
+  });
+
+  it("should call prisma function with the correct args and return the correct values", async () => {
+    const mockVotes = [MOCK_VOTE_1, MOCK_VOTE_2];
+    findManyVotesSpy.mockResolvedValueOnce(mockVotes);
+
+    const result = await findManyVotes(params);
+
+    expect(result).toEqual(mockVotes);
+    expect(findManyVotesSpy).toHaveBeenCalledTimes(1);
+    expect(findManyVotesSpy).toHaveBeenCalledWith(params);
+  });
+
+  it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
+    findManyVotesSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
+
+    try {
+      await findManyVotes(params);
+    } catch (e) {
+      assertKnownRequestError(e);
+    }
+  });
+});
+
+describe("createManyVotes db unit test", () => {
+  let createManyVotesSpy;
+  const params = {
+    data: [
+      { ...MOCK_VOTE_1, userId: undefined },
+      { ...MOCK_VOTE_2, userId: undefined },
+    ],
+  };
+
+  beforeAll(() => {
+    createManyVotesSpy = jest.spyOn(prisma.vote, "createMany");
+  });
+
+  it("should call prisma function with the correct args and return the correct values", async () => {
+    createManyVotesSpy.mockResolvedValueOnce({ count: 2 });
+
+    const result = await createManyVotes(params);
+
+    expect(result).toEqual({ count: 2 });
+    expect(createManyVotesSpy).toHaveBeenCalledTimes(1);
+    expect(createManyVotesSpy).toHaveBeenCalledWith(params);
+  });
+
+  it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
+    createManyVotesSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
+
+    try {
+      await createManyVotes(params);
     } catch (e) {
       assertKnownRequestError(e);
     }

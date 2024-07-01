@@ -21,12 +21,16 @@ import {
 
 let mockVoteEvent1Id: number;
 let mockVoteEvent2Id: number;
+let mockProject1Id: number;
+let userIds: number[];
 
 beforeEach(async () => {
   const result = await voteEventTestSetUp();
 
   mockVoteEvent1Id = result.voteEvent1Id;
   mockVoteEvent2Id = result.voteEvent2Id;
+  mockProject1Id = result.mockProject1Id;
+  userIds = result.userIds;
 
   return result;
 });
@@ -164,5 +168,81 @@ describe("deleteExternalVoter db integration test", () => {
       },
     });
     expect(dbCheck).toBeNull();
+  });
+});
+
+describe("findManyVotes db integration test", () => {
+  it("should return all votes", async () => {
+    const votes = await prisma.vote.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+
+    expect(votes).toEqual([
+      expect.objectContaining({
+        userId: userIds[0],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+        externalVoterId: null,
+      }),
+      expect.objectContaining({
+        externalVoterId: VOTER_ID_1,
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+        userId: null,
+      }),
+    ]);
+  });
+});
+
+describe("createManyVotes db integration test", () => {
+  it("should create multiple votes", async () => {
+    const newVotes = [
+      {
+        userId: userIds[1],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+      },
+      {
+        externalVoterId: VOTER_ID_2,
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+      },
+    ];
+
+    const createdVotes = await prisma.vote.createMany({
+      data: newVotes,
+    });
+
+    expect(createdVotes).toEqual({ count: newVotes.length });
+
+    const dbCheck = await prisma.vote.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+    expect(dbCheck).toEqual([
+      expect.objectContaining({
+        userId: userIds[0],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+        externalVoterId: null,
+      }),
+      expect.objectContaining({
+        externalVoterId: VOTER_ID_1,
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+        userId: null,
+      }),
+      expect.objectContaining({
+        userId: userIds[1],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+        externalVoterId: null,
+      }),
+      expect.objectContaining({
+        externalVoterId: VOTER_ID_2,
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+        userId: null,
+      }),
+    ]);
   });
 });

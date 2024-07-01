@@ -1,11 +1,26 @@
+import { DisplayType } from "@prisma/client";
+
 /**
  * Contains data for testing the voteEvent testing
  */
+export const MOCK_VOTER_MANAGEMENT = {
+  hasInternalList: true,
+  hasExternalList: true,
+  isRegistrationOpen: false,
+};
+
+export const MOCK_VOTE_CONFIG = {
+  maxVotes: 3,
+  minVotes: 1,
+  isRandomOrder: false,
+  instructions: "Please vote for your favorite projects.",
+  displayType: DisplayType.Table,
+};
 
 export const MOCK_VOTE_EVENT_1 = {
   title: "Event 1",
-  startTime: new Date(),
-  endTime: new Date(),
+  startTime: new Date("2000-01-01"),
+  endTime: new Date("2100-01-01"),
 };
 
 export const MOCK_VOTE_EVENT_1_WITH_ID = {
@@ -104,6 +119,20 @@ export const MOCK_USER_1 = {
   announcementReadLogs: [],
   voteEvents: [],
   Vote: [],
+};
+
+export const MOCK_VOTE_1 = {
+  projectId: MOCK_PROJECT_1_WITH_ID.id,
+  voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+  externalVoterId: VOTER_ID_1,
+  userId: null,
+};
+
+export const MOCK_VOTE_2 = {
+  projectId: MOCK_PROJECT_2_WITH_ID.id,
+  voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+  externalVoterId: VOTER_ID_1,
+  userId: null,
 };
 
 export const NON_EXISTENT_ID = 99999999;
