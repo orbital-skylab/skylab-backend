@@ -1,5 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AchievementLevel, Project, User } from "@prisma/client";
+import {
+  AchievementLevel,
+  Administrator,
+  Adviser,
+  Mentor,
+  Project,
+  Student,
+  User,
+} from "@prisma/client";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyProjects, updateOneProject } from "../models/projects.db";
@@ -17,6 +25,7 @@ import {
   updateVoteEvent,
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+import { removePasswordFromUser } from "src/helpers/users.helper";
 
 export const VOTE_EVENT_INCLUSION = {
   // TODO: include what is needed as features are added
@@ -58,6 +67,8 @@ export const VOTE_EVENT_PUBLIC_INCLUSION = {
 const processEditVoteEventData = (voteEvent: any) => {
   let data = {
     ...voteEvent,
+    voterManagement: undefined,
+    voteConfig: undefined,
   };
 
   if (voteEvent.voterManagement) {
@@ -176,11 +187,35 @@ export async function removeVoteEvent(voteEventId: number) {
 // --- Internal Voter Helper Functions ---
 
 export async function getAllInternalVotersByVoteEvent(voteEventId: number) {
-  const users = await findManyUsers({
+  const users: (User & {
+    student?: Student[];
+    mentor?: Mentor[];
+    administrator?: Administrator[];
+    adviser?: Adviser[];
+  })[] = await findManyUsers({
     where: { voteEvents: { some: { id: voteEventId } } },
+    include: {
+      student: true,
+      mentor: true,
+      administrator: true,
+      adviser: true,
+    },
   });
 
-  return users;
+  /* Parse Users Objects */
+  const parsedUsers = users.map((user) => {
+    const { student, mentor, administrator, adviser, ...userInfo } = user;
+    const userInfoWithoutPassword = removePasswordFromUser(userInfo);
+    return {
+      ...userInfoWithoutPassword,
+      student: student ? student[0] ?? {} : {},
+      mentor: mentor ? mentor[0] ?? {} : {},
+      adviser: adviser ? adviser[0] ?? {} : undefined,
+      administrator: administrator ? administrator[0] ?? {} : undefined,
+    };
+  });
+
+  return parsedUsers;
 }
 
 export async function addInternalVoter({
