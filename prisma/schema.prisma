@@ -315,13 +315,14 @@ model ResultsFilter {
   areResultsPublished Boolean
   displayLimit        Int
   showRank            Boolean
+  showVotes           Boolean
   showPoints          Boolean
   showPercentage      Boolean
-  studentWeight       Float
-  advisorWeight       Float
-  mentorWeight        Float
-  administratorWeight Float
-  publicWeight        Float
+  studentWeight       Int
+  adviserWeight       Int
+  mentorWeight        Int
+  administratorWeight Int
+  publicWeight        Int
 }
 
 model ExternalVoter {

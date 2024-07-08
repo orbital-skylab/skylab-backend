@@ -12,11 +12,14 @@ import {
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
+  getAllVotesByVoteEvent,
   getOneVoteEventById,
+  getResultsByVoteEvent,
   getVotesByVoteEventAndVoter,
   removeCandidate,
   removeExternalVoter,
   removeInternalVoter,
+  removeVote,
   removeVoteEvent,
 } from "../helpers/voteEvent.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
@@ -237,7 +240,7 @@ router.post(
     const { voteEventId } = req.params;
     try {
       const candidate = await addCandidate({
-        body: { projectId: Number(req.body.projectId) },
+        body: req.body,
         voteEventId: Number(voteEventId),
       });
 
@@ -255,7 +258,7 @@ router.post(
     const { voteEventId } = req.params;
     try {
       const candidates = await addManyCandidates({
-        body: { ...req.body, cohort: Number(req.body.cohort) },
+        body: req.body,
         voteEventId: Number(voteEventId),
       });
 
@@ -301,15 +304,27 @@ router.get("/:voteEventId/votes", async (req: Request, res: Response) => {
   }
 });
 
+router.get(
+  "/:voteEventId/votes/all",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+
+    try {
+      const votes = await getAllVotesByVoteEvent(Number(voteEventId));
+
+      return apiResponseWrapper(res, { votes });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
 router.post("/:voteEventId/votes", async (req: Request, res: Response) => {
   const { voteEventId } = req.params;
   try {
     const votes = await addManyVotes({
-      body: {
-        ...req.body,
-        userId: req.body.userId ? Number(req.body.userId) : undefined,
-        projectIds: req.body.projectIds.map((id: number) => Number(id)),
-      },
+      body: req.body,
       voteEventId: Number(voteEventId),
     });
 
@@ -318,5 +333,36 @@ router.post("/:voteEventId/votes", async (req: Request, res: Response) => {
     return routeErrorHandler(res, e);
   }
 });
+
+router.delete(
+  "/:voteEventId/votes/:voteId",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteId } = req.params;
+    try {
+      const vote = await removeVote(Number(voteId));
+
+      return apiResponseWrapper(res, { vote });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.get(
+  "/:voteEventId/results",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+
+    try {
+      const results = await getResultsByVoteEvent(Number(voteEventId));
+
+      return apiResponseWrapper(res, { results });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 export default router;

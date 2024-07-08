@@ -5,9 +5,12 @@ import {
   Adviser,
   Mentor,
   Project,
+  ResultsFilter,
   Student,
   User,
+  Vote,
 } from "@prisma/client";
+import { removePasswordFromUser } from "../helpers/users.helper";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyProjects, updateOneProject } from "../models/projects.db";
@@ -17,6 +20,7 @@ import {
   createManyVotes,
   createOneVoteEvent,
   deleteExternalVoter,
+  deleteVote,
   deleteVoteEvent,
   findManyExternalVoters,
   findManyVoteEvents,
@@ -25,10 +29,22 @@ import {
   updateVoteEvent,
 } from "../models/voteEvent.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
-import { removePasswordFromUser } from "src/helpers/users.helper";
+
+enum ROLES {
+  STUDENTS = "Students",
+  ADVISERS = "Advisers",
+  MENTORS = "Mentors",
+  ADMINISTRATORS = "Administrators",
+}
+
+type UserWithRoles = User & {
+  student?: Student[];
+  mentor?: Mentor[];
+  administrator?: Administrator[];
+  adviser?: Adviser[];
+};
 
 export const VOTE_EVENT_INCLUSION = {
-  // TODO: include what is needed as features are added
   voterManagement: {
     select: {
       hasInternalList: true,
@@ -43,6 +59,21 @@ export const VOTE_EVENT_INCLUSION = {
       maxVotes: true,
       isRandomOrder: true,
       instructions: true,
+    },
+  },
+  resultsFilter: {
+    select: {
+      areResultsPublished: true,
+      displayLimit: true,
+      showRank: true,
+      showVotes: true,
+      showPoints: true,
+      showPercentage: true,
+      administratorWeight: true,
+      adviserWeight: true,
+      mentorWeight: true,
+      studentWeight: true,
+      publicWeight: true,
     },
   },
 };
@@ -62,6 +93,167 @@ export const VOTE_EVENT_PUBLIC_INCLUSION = {
       instructions: true,
     },
   },
+  resultsFilter: {
+    select: {
+      areResultsPublished: true,
+    },
+  },
+};
+
+export const DEFAULT_RESULTS_FILTER: Omit<ResultsFilter, "voteEventId"> = {
+  areResultsPublished: false,
+  displayLimit: 0,
+  showRank: true,
+  showVotes: true,
+  showPoints: true,
+  showPercentage: true,
+  administratorWeight: 1,
+  adviserWeight: 1,
+  mentorWeight: 1,
+  studentWeight: 1,
+  publicWeight: 1,
+};
+
+const roleMap: { [key: string]: keyof ResultsFilter } = {
+  [ROLES.ADMINISTRATORS]: "administratorWeight",
+  [ROLES.MENTORS]: "mentorWeight",
+  [ROLES.STUDENTS]: "studentWeight",
+  [ROLES.ADVISERS]: "adviserWeight",
+};
+
+const userHasRole = (
+  user: UserWithRoles | undefined,
+  selectedRole: ROLES | ROLES[]
+): boolean => {
+  if (!user) {
+    return false;
+  }
+
+  if (Array.isArray(selectedRole)) {
+    return Boolean(
+      selectedRole.reduce((acc, role) => acc || userHasRole(user, role), false)
+    );
+  }
+
+  if (
+    selectedRole === ROLES.STUDENTS &&
+    user.student &&
+    user.student[0] &&
+    user.student[0].id
+  ) {
+    return true;
+  } else if (
+    selectedRole === ROLES.ADVISERS &&
+    user.adviser &&
+    user.adviser[0] &&
+    user.adviser[0].id
+  ) {
+    return true;
+  } else if (
+    selectedRole === ROLES.MENTORS &&
+    user.mentor &&
+    user.mentor[0] &&
+    user.mentor[0].id
+  ) {
+    return true;
+  } else if (
+    selectedRole === ROLES.ADMINISTRATORS &&
+    user.administrator &&
+    user.administrator[0] &&
+    user.administrator[0].id
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+const getMostImportantRole = (user: User): ROLES => {
+  if (userHasRole(user, ROLES.ADMINISTRATORS)) {
+    return ROLES.ADMINISTRATORS;
+  } else if (userHasRole(user, ROLES.MENTORS)) {
+    return ROLES.MENTORS;
+  } else if (userHasRole(user, ROLES.ADVISERS)) {
+    return ROLES.ADVISERS;
+  } else {
+    return ROLES.STUDENTS;
+  }
+};
+
+export const calculateResults = (
+  votes: (Vote & { project: Project; internalVoter: UserWithRoles | null })[],
+  resultsFilter: ResultsFilter
+) => {
+  let totalPoints = 0;
+  const results = votes.reduce(
+    (acc, vote) => {
+      const { projectId, project, internalVoter } = vote;
+
+      const pointsToAdd = internalVoter
+        ? (resultsFilter[
+            roleMap[getMostImportantRole(internalVoter)]
+          ] as number)
+        : (resultsFilter["publicWeight"] as number);
+
+      totalPoints += pointsToAdd;
+
+      if (acc[projectId]) {
+        acc[projectId].votes++;
+        acc[projectId].points += pointsToAdd;
+      } else {
+        acc[projectId] = {
+          project,
+          votes: 1,
+          points: pointsToAdd,
+        };
+      }
+      return acc;
+    },
+    {} as Record<
+      number,
+      {
+        project: Project;
+        votes: number;
+        points: number;
+      }
+    >
+  );
+
+  const fullResults = Object.values(results)
+    .sort((a, b) => b.points - a.points)
+    .map((result, idx) => {
+      return {
+        ...result,
+        rank: idx + 1,
+        percentage: parseFloat(
+          ((result.points / totalPoints) * 100).toFixed(2)
+        ),
+      };
+    });
+
+  let filteredResults: {
+    rank: number | null;
+    percentage: number | null;
+    project: Project;
+    votes: number | null;
+    points: number | null;
+  }[] = fullResults;
+
+  if (resultsFilter.displayLimit > 0) {
+    filteredResults = fullResults.slice(0, resultsFilter.displayLimit);
+  }
+
+  filteredResults = filteredResults.map((result) => {
+    return {
+      ...result,
+      rank: resultsFilter.showRank ? result.rank : null,
+      percentage: resultsFilter.showPercentage ? result.percentage : null,
+      votes: resultsFilter.showVotes ? result.votes : null,
+      points: resultsFilter.showPoints ? result.points : null,
+    };
+  });
+
+  return filteredResults;
 };
 
 const processEditVoteEventData = (voteEvent: any) => {
@@ -69,6 +261,7 @@ const processEditVoteEventData = (voteEvent: any) => {
     ...voteEvent,
     voterManagement: undefined,
     voteConfig: undefined,
+    resultsFilter: { update: { ...voteEvent.resultsFilter } },
   };
 
   if (voteEvent.voterManagement) {
@@ -150,6 +343,7 @@ export async function createVoteEvent(body: {
       title: title,
       startTime: startTime,
       endTime: endTime,
+      resultsFilter: { create: DEFAULT_RESULTS_FILTER },
     },
   });
 
@@ -187,12 +381,7 @@ export async function removeVoteEvent(voteEventId: number) {
 // --- Internal Voter Helper Functions ---
 
 export async function getAllInternalVotersByVoteEvent(voteEventId: number) {
-  const users: (User & {
-    student?: Student[];
-    mentor?: Mentor[];
-    administrator?: Administrator[];
-    adviser?: Adviser[];
-  })[] = await findManyUsers({
+  const users: UserWithRoles[] = await findManyUsers({
     where: { voteEvents: { some: { id: voteEventId } } },
     include: {
       student: true,
@@ -453,6 +642,7 @@ export async function removeCandidate(
 }
 
 // --- Vote Helper Functions ---
+
 export async function getVotesByVoteEventAndVoter(
   voteEventId: number,
   userId?: number,
@@ -472,6 +662,20 @@ export async function getVotesByVoteEventAndVoter(
       externalVoterId: externalVoterId ?? undefined,
     },
     select: { projectId: true },
+  });
+
+  return votes;
+}
+
+export async function getAllVotesByVoteEvent(voteEventId: number) {
+  const votes = await findManyVotes({
+    where: {
+      voteEventId: voteEventId,
+    },
+    include: {
+      internalVoter: true,
+      project: true,
+    },
   });
 
   return votes;
@@ -569,6 +773,71 @@ export async function addManyVotes({
   });
 
   return votes;
+}
+
+export async function removeVote(voteId: number) {
+  const deletedVote = await deleteVote({
+    where: { id: voteId },
+  });
+
+  return deletedVote;
+}
+
+// --- Results Helper Functions ---
+
+export async function getResultsByVoteEvent(voteEventId: number) {
+  const voteEvent: any = await findUniqueVoteEvent({
+    where: { id: voteEventId },
+    include: {
+      resultsFilter: true,
+    },
+  });
+
+  if (!voteEvent) {
+    throw new SkylabError(
+      "Vote event does not exist",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  // check if vote event has started
+  if (voteEvent.startTime > new Date()) {
+    throw new SkylabError(
+      "Vote event has not started",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const { resultsFilter } = voteEvent;
+
+  // check if results are published
+  if (resultsFilter?.areResultsPublished !== true) {
+    throw new SkylabError(
+      "Results are not published",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const votes: any = await findManyVotes({
+    where: {
+      voteEventId: voteEventId,
+    },
+    include: {
+      internalVoter: {
+        include: {
+          student: true,
+          mentor: true,
+          administrator: true,
+          adviser: true,
+        },
+      },
+      project: true,
+    },
+  });
+
+  const results = calculateResults(votes, resultsFilter);
+
+  return results;
 }
 
 // --- Transaction Helper Functions ---

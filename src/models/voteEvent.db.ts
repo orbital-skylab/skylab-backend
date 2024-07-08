@@ -140,3 +140,14 @@ export async function createManyVotes(query: Prisma.VoteCreateManyArgs) {
     throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
   }
 }
+
+export async function deleteVote(query: Prisma.VoteDeleteArgs) {
+  try {
+    return await prisma.vote.delete(query);
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
