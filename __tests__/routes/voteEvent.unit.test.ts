@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   afterEach,
   beforeAll,
@@ -15,6 +16,7 @@ import {
   MOCK_PROJECT_1_WITH_ID,
   MOCK_PROJECT_2_WITH_ID,
   MOCK_USER_1,
+  MOCK_VOTE_1,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_1_WITH_ID,
 } from "../../__mocks__/voteEvent.mocks";
@@ -22,6 +24,7 @@ import * as voteEventHelpers from "../../src/helpers/voteEvent.helper";
 import authorizeAdmin from "../../src/middleware/authorizeAdmin";
 import app from "../../src/server";
 import * as utils from "../../src/utils/ApiResponseWrapper";
+import { AchievementLevel } from "@prisma/client";
 
 const BASE_URL = "/api/vote-events";
 
@@ -832,6 +835,51 @@ describe("GET /:voteEventId/votes", () => {
   });
 });
 
+describe("GET /:voteEventId/votes/all", () => {
+  let getAllVotesByVoteEventSpy;
+
+  beforeAll(() => {
+    getAllVotesByVoteEventSpy = jest.spyOn(
+      voteEventHelpers,
+      "getAllVotesByVoteEvent"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    getAllVotesByVoteEventSpy.mockResolvedValueOnce([]);
+
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes/all"
+    );
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(getAllVotesByVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(getAllVotesByVoteEventSpy).toHaveBeenCalledWith(
+      MOCK_VOTE_EVENT_1_WITH_ID.id
+    );
+
+    assertApiResponse({
+      votes: [],
+    });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    getAllVotesByVoteEventSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes/all"
+    );
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(getAllVotesByVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(getAllVotesByVoteEventSpy).toHaveBeenCalledWith(
+      MOCK_VOTE_EVENT_1_WITH_ID.id
+    );
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
 describe("POST /:voteEventId/votes", () => {
   let addManyVotesSpy;
   const requestBody = { userId: 1, projectIds: [1, 2] };
@@ -869,6 +917,95 @@ describe("POST /:voteEventId/votes", () => {
       body: requestBody,
       voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
     });
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("DELETE /:voteEventId/votes/:voteId", () => {
+  let removeVoteSpy;
+  const mockVoteId = 1;
+
+  beforeAll(() => {
+    removeVoteSpy = jest.spyOn(voteEventHelpers, "removeVote");
+  });
+
+  it("should call the helper function correctly", async () => {
+    removeVoteSpy.mockResolvedValueOnce(MOCK_VOTE_1);
+
+    await supertest(app).delete(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes/" + mockVoteId
+    );
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(removeVoteSpy).toHaveBeenCalledTimes(1);
+    expect(removeVoteSpy).toHaveBeenCalledWith(mockVoteId);
+
+    assertApiResponse({ vote: MOCK_VOTE_1 });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    removeVoteSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app).delete(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes/" + mockVoteId
+    );
+
+    expect(removeVoteSpy).toHaveBeenCalledTimes(1);
+    expect(removeVoteSpy).toHaveBeenCalledWith(mockVoteId);
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("GET /:voteEventId/results", () => {
+  let getResultsByVoteEventSpy;
+  const returnValue = {
+    rank: 1,
+    percentage: 66.67,
+    project: {
+      ...MOCK_PROJECT_1_WITH_ID,
+      achievement: MOCK_PROJECT_1_WITH_ID.achievement as AchievementLevel,
+    },
+    votes: 2,
+    points: 2,
+  };
+
+  beforeAll(() => {
+    getResultsByVoteEventSpy = jest.spyOn(
+      voteEventHelpers,
+      "getResultsByVoteEvent"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    getResultsByVoteEventSpy.mockResolvedValueOnce([returnValue]);
+
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/results"
+    );
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(getResultsByVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(getResultsByVoteEventSpy).toHaveBeenCalledWith(
+      MOCK_VOTE_EVENT_1_WITH_ID.id
+    );
+
+    assertApiResponse({ results: [returnValue] });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    getResultsByVoteEventSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/results"
+    );
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(getResultsByVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(getResultsByVoteEventSpy).toHaveBeenCalledWith(
+      MOCK_VOTE_EVENT_1_WITH_ID.id
+    );
 
     assertRouteErrorHandler(new Error("Test Error"));
   });

@@ -13,6 +13,7 @@ import {
   VOTER_ID_1,
   VOTER_ID_2,
 } from "../../__mocks__/voteEvent.mocks";
+import { DEFAULT_RESULTS_FILTER } from "../helpers/voteEvent.helper";
 
 export const KNOWN_EMAILS = [
   "student@skylab.com",
@@ -25,7 +26,12 @@ export async function voteEventTestSetUp() {
   await prisma.voteEvent.deleteMany();
 
   const voteEvent1 = await prisma.voteEvent.create({
-    data: MOCK_VOTE_EVENT_1,
+    data: {
+      ...MOCK_VOTE_EVENT_1,
+      resultsFilter: {
+        create: { ...DEFAULT_RESULTS_FILTER, areResultsPublished: true },
+      },
+    },
   });
 
   await prisma.voteEvent.update({
@@ -41,7 +47,10 @@ export async function voteEventTestSetUp() {
   });
 
   const voteEvent2 = await prisma.voteEvent.create({
-    data: MOCK_VOTE_EVENT_2,
+    data: {
+      ...MOCK_VOTE_EVENT_2,
+      resultsFilter: { create: DEFAULT_RESULTS_FILTER },
+    },
   });
 
   const userPromises = KNOWN_EMAILS.map(async (email) => {

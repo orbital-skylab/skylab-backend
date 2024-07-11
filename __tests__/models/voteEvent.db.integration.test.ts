@@ -8,6 +8,7 @@ import {
 import { prisma } from "../../src/client";
 import {
   createOneVoteEvent,
+  deleteVote,
   deleteVoteEvent,
   findManyExternalVoters,
   findManyVoteEvents,
@@ -244,5 +245,36 @@ describe("createManyVotes db integration test", () => {
         userId: null,
       }),
     ]);
+  });
+});
+
+describe("deleteVote db integration test", () => {
+  it("should delete a vote", async () => {
+    const voteToDelete = {
+      userId: userIds[1],
+      projectId: mockProject1Id,
+      voteEventId: mockVoteEvent1Id,
+    };
+    const toDelete = await prisma.vote.create({
+      data: voteToDelete,
+    });
+
+    const deletedVote = await deleteVote({
+      where: {
+        id: toDelete.id,
+      },
+    });
+
+    expect(deletedVote).toEqual({
+      ...toDelete,
+      externalVoterId: null,
+    });
+
+    const dbCheck = await prisma.vote.findUnique({
+      where: {
+        id: toDelete.id,
+      },
+    });
+    expect(dbCheck).toBeNull();
   });
 });

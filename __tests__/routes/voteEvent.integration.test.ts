@@ -73,12 +73,18 @@ describe("GET / endpoint", () => {
         voterManagement: {
           isRegistrationOpen: MOCK_VOTER_MANAGEMENT.isRegistrationOpen,
         },
+        resultsFilter: {
+          areResultsPublished: true,
+        },
       },
       {
         ...MOCK_VOTE_EVENT_2,
         id: mockVoteEvent2Id,
         voteConfig: null,
         voterManagement: null,
+        resultsFilter: {
+          areResultsPublished: false,
+        },
       },
     ].map((event) => ({
       ...event,
@@ -648,6 +654,10 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
     expect(voteEvent).toEqual({
       ...updatedVoteEvent,
       id: mockVoteEvent1Id,
+      resultsFilter: {
+        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
+        areResultsPublished: true,
+      },
       startTime: updatedVoteEvent.startTime.toISOString(),
       endTime: updatedVoteEvent.endTime.toISOString(),
       voteConfig: MOCK_VOTE_CONFIG,
@@ -986,6 +996,42 @@ describe("GET /:voteEventId/votes", () => {
   });
 });
 
+describe("GET /:voteEventId/votes/all", () => {
+  it("should return all votes for a given vote event", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/votes/all`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("votes");
+    expect(response.body.votes).toHaveLength(2);
+  });
+
+  it("should return an empty array if the vote event does not exist", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${NON_EXISTENT_ID}/votes/all`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ votes: [] });
+  });
+
+  it("should handle errors during vote retrieval", async () => {
+    const getVoteEventVotesMock = jest
+      .spyOn(voteEventHelpers, "getAllVotesByVoteEvent")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/votes/all`
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    getVoteEventVotesMock.mockRestore();
+  });
+});
+
 describe("POST /:voteEventId/votes", () => {
   it("should add votes for a given vote event and internal voter", async () => {
     const response = await request
@@ -1198,5 +1244,111 @@ describe("POST /:voteEventId/votes", () => {
     expect(response.body).toEqual({
       message: "Number of votes is not within the minimum and maximum limit",
     });
+  });
+});
+
+describe("DELETE /:voteEventId/votes/:voteId", () => {
+  it("should delete a vote from a given vote event", async () => {
+    const vote = await prisma.vote.create({
+      data: {
+        userId: userIds[0],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent2Id,
+      },
+    });
+
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent2Id}/votes/${vote.id}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("vote");
+    expect(response.body.vote).toEqual(vote);
+
+    // Verify the vote was actually removed from the database
+    const dbCheck = await prisma.vote.findUnique({
+      where: { id: vote.id },
+    });
+    expect(dbCheck).toBeNull();
+  });
+
+  it("should handle errors during vote deletion", async () => {
+    const removeVoteMock = jest
+      .spyOn(voteEventHelpers, "removeVote")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/votes/${NON_EXISTENT_ID}`
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    removeVoteMock.mockRestore();
+  });
+});
+
+describe("GET /:voteEventId/results", () => {
+  it("should return all results for a given vote event", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/results`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("results");
+    expect(response.body.results).toEqual([
+      {
+        percentage: 100,
+        points: 2,
+        votes: 2,
+        rank: 1,
+        project: { ...MOCK_PROJECT_1, id: mockProject1Id },
+      },
+    ]);
+  });
+
+  it("should return 400 if vote event does not exist", async () => {
+    const response = await request.get(
+      `${BASE_URL}/${NON_EXISTENT_ID}/results`
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ message: "Vote event does not exist" });
+  });
+
+  it("should return 400 if vote evnt has not started", async () => {
+    const voteEvent = await prisma.voteEvent.create({
+      data: {
+        title: "Vote Event 3",
+        startTime: new Date("2100-05-25"),
+        endTime: new Date("2125-07-25"),
+      },
+    });
+
+    const response = await request.get(`${BASE_URL}/${voteEvent.id}/results`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ message: "Vote event has not started" });
+  });
+
+  it("should return 400 if results are not published", async () => {
+    const voteEvent = await prisma.voteEvent.create({
+      data: {
+        title: "Vote Event 3",
+        startTime: new Date("2000-05-25"),
+        endTime: new Date("2000-07-25"),
+        resultsFilter: {
+          create: {
+            ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
+            areResultsPublished: false,
+          },
+        },
+      },
+    });
+
+    const response = await request.get(`${BASE_URL}/${voteEvent.id}/results`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ message: "Results are not published" });
   });
 });

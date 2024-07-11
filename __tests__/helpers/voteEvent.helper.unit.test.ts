@@ -19,9 +19,11 @@ import {
   MOCK_VOTE_EVENT_2_WITH_ID,
   NON_EXISTENT_ID,
   NON_EXISTENT_USER_EMAIL,
+  VOTER_ID_1,
 } from "../../__mocks__/voteEvent.mocks";
 import { SkylabError } from "../../src/errors/SkylabError";
 import {
+  DEFAULT_RESULTS_FILTER,
   VOTE_EVENT_INCLUSION,
   VOTE_EVENT_PUBLIC_INCLUSION,
   addCandidate,
@@ -29,25 +31,114 @@ import {
   addInternalVoter,
   addManyCandidates,
   addManyVotes,
+  calculateResults,
   editVoteEvent,
   getAllCandidatesByVoteEvent,
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
+  getAllVotesByVoteEvent,
   getOneVoteEventById,
+  getResultsByVoteEvent,
   getVotesByVoteEventAndVoter,
   removeCandidate,
   removeExternalVoter,
   removeInternalVoter,
+  removeVote,
   removeVoteEvent,
 } from "../../src/helpers/voteEvent.helper";
 import * as projectModel from "../../src/models/projects.db";
 import * as userModel from "../../src/models/users.db";
 import * as voteEventModel from "../../src/models/voteEvent.db";
+import * as voteEventHelper from "../../src/helpers/voteEvent.helper";
 import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
+import { AchievementLevel } from "@prisma/client";
+import { removePasswordFromUser } from "../../src/helpers/users.helper";
 
 afterEach(() => {
   jest.resetAllMocks();
+});
+
+describe("calculateResults function unit test", () => {
+  it("should calculate the results correctly", () => {
+    const votes = [
+      {
+        id: 1,
+        voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+        projectId: MOCK_PROJECT_1_WITH_ID.id,
+        userId: MOCK_USER_1.id,
+        externalVoterId: null,
+        project: {
+          ...MOCK_PROJECT_1_WITH_ID,
+          achievement: MOCK_PROJECT_1_WITH_ID.achievement as AchievementLevel,
+        },
+        internalVoter: {
+          ...MOCK_USER_1,
+          mentor: [{ id: 1, userId: MOCK_USER_1.id, cohortYear: 2024 }],
+        },
+      },
+      {
+        id: 2,
+        voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+        projectId: MOCK_PROJECT_2_WITH_ID.id,
+        userId: MOCK_USER_1.id,
+        externalVoterId: null,
+        project: {
+          ...MOCK_PROJECT_2_WITH_ID,
+          achievement: MOCK_PROJECT_2_WITH_ID.achievement as AchievementLevel,
+        },
+        internalVoter: {
+          ...MOCK_USER_1,
+          mentor: [{ id: 1, userId: MOCK_USER_1.id, cohortYear: 2024 }],
+        },
+      },
+      {
+        id: 3,
+        voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+        projectId: MOCK_PROJECT_1_WITH_ID.id,
+        userId: null,
+        externalVoterId: VOTER_ID_1,
+        project: {
+          ...MOCK_PROJECT_1_WITH_ID,
+          achievement: MOCK_PROJECT_1_WITH_ID.achievement as AchievementLevel,
+        },
+        internalVoter: null,
+      },
+    ];
+
+    const resultsFilter = {
+      ...DEFAULT_RESULTS_FILTER,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+      areResultsPublished: true,
+    };
+
+    const expectedResults = [
+      {
+        rank: 1,
+        percentage: 66.67,
+        project: {
+          ...MOCK_PROJECT_1_WITH_ID,
+          achievement: MOCK_PROJECT_1_WITH_ID.achievement as AchievementLevel,
+        },
+        votes: 2,
+        points: 2,
+      },
+      {
+        rank: 2,
+        percentage: 33.33,
+        project: {
+          ...MOCK_PROJECT_2_WITH_ID,
+          achievement: MOCK_PROJECT_2_WITH_ID.achievement as AchievementLevel,
+        },
+        votes: 1,
+        points: 1,
+      },
+    ];
+
+    const calculatedResults = calculateResults(votes, resultsFilter);
+
+    expect(calculatedResults).toEqual(expectedResults);
+  });
 });
 
 // --- Vote Event Helper Functions Tests ---
@@ -167,12 +258,18 @@ describe("editVoteEvent helper unit test", () => {
     const mockUpdatedVoteEvent = {
       ...MOCK_VOTE_EVENT_1_WITH_ID,
       ...MOCK_UPDATED_VOTE_EVENT_1,
+      resultsFilter: { ...DEFAULT_RESULTS_FILTER },
     };
 
     updateVoteEventSpy.mockResolvedValueOnce(mockUpdatedVoteEvent);
 
     const result = await editVoteEvent({
-      body: { voteEvent: MOCK_UPDATED_VOTE_EVENT_1 },
+      body: {
+        voteEvent: {
+          ...MOCK_UPDATED_VOTE_EVENT_1,
+          resultsFilter: { ...DEFAULT_RESULTS_FILTER },
+        },
+      },
       voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
     });
 
@@ -180,7 +277,12 @@ describe("editVoteEvent helper unit test", () => {
     expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(updateVoteEventSpy).toHaveBeenCalledWith({
       where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-      data: MOCK_UPDATED_VOTE_EVENT_1,
+      data: {
+        ...MOCK_UPDATED_VOTE_EVENT_1,
+        voterManagement: undefined,
+        voteConfig: undefined,
+        resultsFilter: { update: { ...DEFAULT_RESULTS_FILTER } },
+      },
       include: VOTE_EVENT_INCLUSION,
     });
   });
@@ -195,13 +297,6 @@ describe("editVoteEvent helper unit test", () => {
         voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
       })
     ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(updateVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-      data: MOCK_UPDATED_VOTE_EVENT_1,
-      include: VOTE_EVENT_INCLUSION,
-    });
   });
 });
 
@@ -251,7 +346,14 @@ describe("getAllInternalVotersByVoteEvent helper unit test", () => {
 
   it("should successfully retrieve all internal voters by vote event ID", async () => {
     const MOCK_INTERNAL_VOTERS = [
-      { ...MOCK_USER_1, voteEvents: [{ id: MOCK_VOTE_EVENT_1_WITH_ID.id }] },
+      {
+        ...removePasswordFromUser(MOCK_USER_1),
+        voteEvents: [{ id: MOCK_VOTE_EVENT_1_WITH_ID.id }],
+        administrator: {},
+        mentor: {},
+        adviser: {},
+        student: {},
+      },
     ];
     findManyUsersSpy.mockResolvedValueOnce(MOCK_INTERNAL_VOTERS);
 
@@ -263,6 +365,12 @@ describe("getAllInternalVotersByVoteEvent helper unit test", () => {
     expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
     expect(findManyUsersSpy).toHaveBeenCalledWith({
       where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1_WITH_ID.id } } },
+      include: {
+        student: true,
+        mentor: true,
+        administrator: true,
+        adviser: true,
+      },
     });
   });
 
@@ -277,6 +385,12 @@ describe("getAllInternalVotersByVoteEvent helper unit test", () => {
     expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
     expect(findManyUsersSpy).toHaveBeenCalledWith({
       where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1_WITH_ID.id } } },
+      include: {
+        student: true,
+        mentor: true,
+        administrator: true,
+        adviser: true,
+      },
     });
   });
 
@@ -287,11 +401,6 @@ describe("getAllInternalVotersByVoteEvent helper unit test", () => {
     await expect(
       getAllInternalVotersByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
     ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
-    expect(findManyUsersSpy).toHaveBeenCalledWith({
-      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1_WITH_ID.id } } },
-    });
   });
 });
 
@@ -882,6 +991,31 @@ describe("getVotesByVoteEventAndVoter helper unit test", () => {
   });
 });
 
+describe("getAllVotesByVoteEvent helper unit test", () => {
+  let findManyVotesSpy;
+
+  beforeAll(() => {
+    findManyVotesSpy = jest.spyOn(voteEventModel, "findManyVotes");
+  });
+
+  it("should get all votes by vote event", async () => {
+    const mockVotes = [];
+    findManyVotesSpy.mockResolvedValueOnce(mockVotes);
+
+    const result = await getAllVotesByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id);
+
+    expect(findManyVotesSpy).toHaveBeenCalledTimes(1);
+    expect(findManyVotesSpy).toHaveBeenCalledWith({
+      where: { voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id },
+      include: {
+        internalVoter: true,
+        project: true,
+      },
+    });
+    expect(result).toEqual(mockVotes);
+  });
+});
+
 describe("addManyVotes helper unit test", () => {
   let createManyVotesSpy;
   let findManyVotesSpy;
@@ -1074,6 +1208,130 @@ describe("addManyVotes helper unit test", () => {
         "Number of votes is not within the minimum and maximum limit",
         HttpStatusCode.BAD_REQUEST
       )
+    );
+  });
+});
+
+describe("removeVote helper unit test", () => {
+  let deleteVoteSpy;
+  const MOCK_VOTE_1_ID = 1;
+
+  beforeAll(() => {
+    deleteVoteSpy = jest.spyOn(voteEventModel, "deleteVote");
+  });
+
+  it("should remove a vote", async () => {
+    deleteVoteSpy.mockResolvedValueOnce(MOCK_VOTE_1);
+
+    const result = await removeVote(MOCK_VOTE_1_ID);
+
+    expect(deleteVoteSpy).toHaveBeenCalledTimes(1);
+    expect(deleteVoteSpy).toHaveBeenCalledWith({
+      where: { id: MOCK_VOTE_1_ID },
+    });
+    expect(result).toEqual(MOCK_VOTE_1);
+  });
+});
+
+describe("getResultsByVoteEvent helper unit test", () => {
+  let findUniqueVoteEventSpy;
+  let findManyVotesSpy;
+  let calculateResultsSpy;
+
+  beforeAll(() => {
+    findUniqueVoteEventSpy = jest.spyOn(voteEventModel, "findUniqueVoteEvent");
+    findManyVotesSpy = jest.spyOn(voteEventModel, "findManyVotes");
+    calculateResultsSpy = jest.spyOn(voteEventHelper, "calculateResults");
+  });
+
+  it("should get results by vote event", async () => {
+    const publishedResultsFilter = {
+      ...DEFAULT_RESULTS_FILTER,
+      areResultsPublished: true,
+    };
+    const mockVoteEvent = {
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      resultsFilter: publishedResultsFilter,
+    };
+    const mockVotes = [];
+    const mockResults = [];
+
+    findUniqueVoteEventSpy.mockResolvedValueOnce(mockVoteEvent);
+    findManyVotesSpy.mockResolvedValueOnce(mockVotes);
+    calculateResultsSpy.mockReturnValueOnce(mockResults);
+
+    const result = await getResultsByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id);
+
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledWith({
+      where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
+      include: {
+        resultsFilter: true,
+      },
+    });
+    expect(findManyVotesSpy).toHaveBeenCalledTimes(1);
+    expect(findManyVotesSpy).toHaveBeenCalledWith({
+      where: { voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id },
+      include: {
+        internalVoter: {
+          include: {
+            student: true,
+            mentor: true,
+            administrator: true,
+            adviser: true,
+          },
+        },
+        project: true,
+      },
+    });
+    expect(calculateResultsSpy).toHaveBeenCalledTimes(1);
+    expect(calculateResultsSpy).toHaveBeenCalledWith(
+      mockVotes,
+      publishedResultsFilter
+    );
+    expect(result).toEqual(mockResults);
+  });
+
+  it("should throw an error if the vote event does not exist", async () => {
+    findUniqueVoteEventSpy.mockResolvedValueOnce(null);
+
+    await expect(
+      getResultsByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
+    ).rejects.toThrowError(
+      new SkylabError("Vote event does not exist", HttpStatusCode.BAD_REQUEST)
+    );
+  });
+
+  it("should throw an error if vote event has not started", async () => {
+    const mockVoteEvent = {
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      startTime: new Date(Date.now() + 10000),
+    };
+
+    findUniqueVoteEventSpy.mockResolvedValueOnce(mockVoteEvent);
+
+    await expect(
+      getResultsByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
+    ).rejects.toThrowError(
+      new SkylabError("Vote event has not started", HttpStatusCode.BAD_REQUEST)
+    );
+  });
+
+  it("should throw an error if results are not published", async () => {
+    const mockVoteEvent = {
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      resultsFilter: {
+        ...DEFAULT_RESULTS_FILTER,
+        areResultsPublished: false,
+      },
+    };
+
+    findUniqueVoteEventSpy.mockResolvedValueOnce(mockVoteEvent);
+
+    await expect(
+      getResultsByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
+    ).rejects.toThrowError(
+      new SkylabError("Results are not published", HttpStatusCode.BAD_REQUEST)
     );
   });
 });

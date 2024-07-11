@@ -20,6 +20,7 @@ import {
   createManyVotes,
   createOneVoteEvent,
   deleteExternalVoter,
+  deleteVote,
   deleteVoteEvent,
   findManyExternalVoters,
   findManyVoteEvents,
@@ -358,6 +359,35 @@ describe("createManyVotes db unit test", () => {
 
     try {
       await createManyVotes(params);
+    } catch (e) {
+      assertKnownRequestError(e);
+    }
+  });
+});
+
+describe("deleteVote db unit test", () => {
+  let deleteVoteSpy;
+  const params = { where: { id: 1 } };
+
+  beforeAll(() => {
+    deleteVoteSpy = jest.spyOn(prisma.vote, "delete");
+  });
+
+  it("should call prisma function with the correct args and return the correct values", async () => {
+    deleteVoteSpy.mockResolvedValueOnce(MOCK_VOTE_1);
+
+    const result = await deleteVote(params);
+
+    expect(result).toEqual(MOCK_VOTE_1);
+    expect(deleteVoteSpy).toHaveBeenCalledTimes(1);
+    expect(deleteVoteSpy).toHaveBeenCalledWith(params);
+  });
+
+  it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
+    deleteVoteSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
+
+    try {
+      await deleteVote(params);
     } catch (e) {
       assertKnownRequestError(e);
     }

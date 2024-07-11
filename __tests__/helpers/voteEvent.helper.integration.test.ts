@@ -6,13 +6,14 @@ import {
   expect,
   it,
 } from "@jest/globals";
+import { AchievementLevel } from "@prisma/client";
 import {
   MOCK_PROJECT_1,
   MOCK_PROJECT_2,
-  MOCK_VOTER_MANAGEMENT,
   MOCK_VOTE_CONFIG,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
+  MOCK_VOTER_MANAGEMENT,
   NON_EXISTENT_ID,
   NON_EXISTENT_USER_EMAIL,
   VOTER_ID_1,
@@ -31,10 +32,13 @@ import {
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
+  getAllVotesByVoteEvent,
   getOneVoteEventById,
+  getResultsByVoteEvent,
   getVotesByVoteEventAndVoter,
   removeCandidate,
   removeInternalVoter,
+  removeVote,
   removeVoteEvent,
 } from "../../src/helpers/voteEvent.helper";
 import {
@@ -42,12 +46,12 @@ import {
   voteEventTestSetUp,
   voteEventTestTearDown,
 } from "../../src/utils/testUtils";
-import { AchievementLevel } from "@prisma/client";
 
 let mockVoteEvent1Id: number;
 let mockVoteEvent2Id: number;
 let mockProject1Id: number;
 let mockProject2Id: number;
+let userIds: number[];
 
 beforeEach(async () => {
   const result = await voteEventTestSetUp();
@@ -56,6 +60,7 @@ beforeEach(async () => {
   mockVoteEvent2Id = result.voteEvent2Id;
   mockProject1Id = result.mockProject1Id;
   mockProject2Id = result.mockProject2Id;
+  userIds = result.userIds;
 
   return result;
 });
@@ -76,12 +81,18 @@ describe("getAllVoteEvents helper integration test", () => {
         voterManagement: {
           isRegistrationOpen: MOCK_VOTER_MANAGEMENT.isRegistrationOpen,
         },
+        resultsFilter: {
+          areResultsPublished: true,
+        },
       },
       {
         ...MOCK_VOTE_EVENT_2,
         id: mockVoteEvent2Id,
         voteConfig: null,
         voterManagement: null,
+        resultsFilter: {
+          areResultsPublished: false,
+        },
       },
     ]);
   });
@@ -549,6 +560,31 @@ describe("getVotesByVoteEventAndVoter helper integration test", () => {
   });
 });
 
+describe("getAllVotesByVoteEvent helper integration test", () => {
+  it("should return all votes by vote event", async () => {
+    const votesInDb = await prisma.vote.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+      include: {
+        internalVoter: true,
+        project: true,
+      },
+    });
+    const votes = await getAllVotesByVoteEvent(mockVoteEvent1Id);
+
+    expect(votes).toHaveLength(votesInDb.length);
+    expect(votes).toEqual(votesInDb);
+  });
+
+  it("should return an empty array if no votes found", async () => {
+    // delete all votes
+    await prisma.vote.deleteMany();
+
+    const votes = await getAllVotesByVoteEvent(mockVoteEvent1Id);
+
+    expect(votes).toEqual([]);
+  });
+});
+
 describe("addManyVotes helper integration test", () => {
   it("should add multiple votes to a vote event", async () => {
     const newVotes = await addManyVotes({
@@ -602,5 +638,62 @@ describe("addManyVotes helper integration test", () => {
         voteEventId: mockVoteEvent1Id,
       })
     ).rejects.toThrow();
+  });
+});
+
+describe("removeVote helper integration test", () => {
+  it("should remove a vote from a vote event", async () => {
+    const voteToDelete = {
+      userId: userIds[1],
+      projectId: mockProject1Id,
+      voteEventId: mockVoteEvent1Id,
+    };
+    const toDelete = await prisma.vote.create({
+      data: voteToDelete,
+    });
+
+    const deletedVote = await removeVote(toDelete.id);
+
+    expect(deletedVote).toEqual(toDelete);
+
+    const dbCheck = await prisma.vote.findUnique({
+      where: {
+        id: toDelete.id,
+      },
+    });
+    expect(dbCheck).toBeNull();
+  });
+
+  it("should throw an error if vote not found", async () => {
+    await expect(removeVote(NON_EXISTENT_ID)).rejects.toThrow();
+  });
+});
+
+describe("getResultsByVoteEvent helper integration test", () => {
+  it("should return the results of a vote event", async () => {
+    const results = await getResultsByVoteEvent(mockVoteEvent1Id);
+
+    expect(results).toEqual([
+      {
+        rank: 1,
+        percentage: 100,
+        votes: 2,
+        points: 2,
+        project: { ...MOCK_PROJECT_1, id: mockProject1Id },
+      },
+    ]);
+  });
+
+  it("should return an empty array if no results found", async () => {
+    // delete all votes
+    await prisma.vote.deleteMany();
+
+    const results = await getResultsByVoteEvent(mockVoteEvent1Id);
+
+    expect(results).toEqual([]);
+  });
+
+  it("should throw an error if vote event not found", async () => {
+    await expect(getResultsByVoteEvent(NON_EXISTENT_ID)).rejects.toThrow();
   });
 });
