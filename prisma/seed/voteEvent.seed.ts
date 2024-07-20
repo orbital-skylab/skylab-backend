@@ -26,13 +26,13 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
 
   const voteEventData = [
     {
-      title: "Newly created incomplete Vote Event",
+      title: "Newly created incomplete Vote Event", // 1
       startTime: tomorrow,
       endTime: nextYear,
       resultsFilter: { create: DEFAULT_RESULTS_FILTER },
     },
     {
-      title: "Vote Event with only voter management set",
+      title: "Vote Event with only voter management set", // 2
       startTime: tomorrow,
       endTime: nextYear,
       voterManagement: {
@@ -41,7 +41,7 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
       resultsFilter: { create: DEFAULT_RESULTS_FILTER },
     },
     {
-      title: "Vote Event with only vote config set",
+      title: "Vote Event with only vote config set", // 3
       startTime: tomorrow,
       endTime: nextYear,
       voteConfig: {
@@ -50,7 +50,7 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
       resultsFilter: { create: DEFAULT_RESULTS_FILTER },
     },
     {
-      title: "vote event with results published",
+      title: "vote event with results published", // 4
       startTime: yesterday,
       endTime: today,
       voterManagement: {
@@ -64,7 +64,7 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
       },
     },
     {
-      title: "vote event with results published (no votes)",
+      title: "vote event with results published (no votes)", // 5
       startTime: yesterday,
       endTime: nextYear,
       voterManagement: {
@@ -78,9 +78,51 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
       },
     },
     {
-      title: "vote event with results not published",
+      title: "vote event with results not published", // 6
       startTime: yesterday,
       endTime: nextYear,
+      voterManagement: {
+        create: voterManagement,
+      },
+      voteConfig: {
+        create: voteConfig,
+      },
+      resultsFilter: {
+        create: DEFAULT_RESULTS_FILTER,
+      },
+    },
+    {
+      title: "vote event with only internal voters", // 7
+      startTime: tomorrow,
+      endTime: nextYear,
+      voterManagement: {
+        create: { ...voterManagement, hasExternalList: false },
+      },
+      voteConfig: {
+        create: voteConfig,
+      },
+      resultsFilter: {
+        create: DEFAULT_RESULTS_FILTER,
+      },
+    },
+    {
+      title: "vote event with only external voters", // 8
+      startTime: tomorrow,
+      endTime: nextYear,
+      voterManagement: {
+        create: { ...voterManagement, hasInternalList: false },
+      },
+      voteConfig: {
+        create: voteConfig,
+      },
+      resultsFilter: {
+        create: DEFAULT_RESULTS_FILTER,
+      },
+    },
+    {
+      title: "vote event that has concluded", // 9
+      startTime: yesterday,
+      endTime: today,
       voterManagement: {
         create: voterManagement,
       },
