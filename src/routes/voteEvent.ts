@@ -27,6 +27,17 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
+import {
+  addCandidateValidator,
+  addExternalVoterValidator,
+  addInternalVoterValidator,
+  addVotesValidator,
+  batchAddCandidatesValidator,
+  createVoteEventValidator,
+  editVoteEventValidator,
+} from "../validators/voteEvent.validator";
+import { validationResult } from "express-validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 
@@ -40,15 +51,24 @@ router.get("/", async (_, res: Response) => {
   }
 });
 
-router.post("/", authorizeAdmin, async (req: Request, res: Response) => {
-  try {
-    const voteEvent = await createVoteEvent(req.body);
+router.post(
+  "/",
+  authorizeAdmin,
+  createVoteEventValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const voteEvent = await createVoteEvent(req.body);
 
-    return apiResponseWrapper(res, { voteEvent });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+      return apiResponseWrapper(res, { voteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.get(
   "/:voteEventId",
@@ -68,7 +88,12 @@ router.get(
 router.put(
   "/:voteEventId",
   authorizeAdmin,
+  editVoteEventValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
     const { voteEventId } = req.params;
     try {
       const editedVoteEvent = await editVoteEvent({
@@ -118,7 +143,13 @@ router.get(
 router.post(
   "/:voteEventId/voter-management/internal-voters",
   authorizeAdmin,
+  addInternalVoterValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+
     const { voteEventId } = req.params;
     try {
       const internalVoter = await addInternalVoter({
@@ -171,7 +202,13 @@ router.get(
 router.post(
   "/:voteEventId/voter-management/external-voters",
   authorizeAdmin,
+  addExternalVoterValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+
     const { voteEventId } = req.params;
     try {
       const externalVoter = await addExternalVoter({
@@ -236,7 +273,13 @@ router.get("/:voteEventId/candidates", async (req: Request, res: Response) => {
 router.post(
   "/:voteEventId/candidates",
   authorizeAdmin,
+  addCandidateValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+
     const { voteEventId } = req.params;
     try {
       const candidate = await addCandidate({
@@ -254,7 +297,13 @@ router.post(
 router.post(
   "/:voteEventId/candidates/batch",
   authorizeAdmin,
+  batchAddCandidatesValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+
     const { voteEventId } = req.params;
     try {
       const candidates = await addManyCandidates({
@@ -320,19 +369,28 @@ router.get(
   }
 );
 
-router.post("/:voteEventId/votes", async (req: Request, res: Response) => {
-  const { voteEventId } = req.params;
-  try {
-    const votes = await addManyVotes({
-      body: req.body,
-      voteEventId: Number(voteEventId),
-    });
+router.post(
+  "/:voteEventId/votes",
+  addVotesValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
 
-    return apiResponseWrapper(res, { votes });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+    const { voteEventId } = req.params;
+    try {
+      const votes = await addManyVotes({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { votes });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.delete(
   "/:voteEventId/votes/:voteId",

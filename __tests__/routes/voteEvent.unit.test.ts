@@ -7,6 +7,7 @@ import {
   it,
   jest,
 } from "@jest/globals";
+import { AchievementLevel } from "@prisma/client";
 import { NextFunction } from "express";
 import supertest from "supertest";
 import {
@@ -24,7 +25,6 @@ import * as voteEventHelpers from "../../src/helpers/voteEvent.helper";
 import authorizeAdmin from "../../src/middleware/authorizeAdmin";
 import app from "../../src/server";
 import * as utils from "../../src/utils/ApiResponseWrapper";
-import { AchievementLevel } from "@prisma/client";
 
 const BASE_URL = "/api/vote-events";
 
@@ -54,7 +54,7 @@ const assertRouteErrorHandler = (calledWith: any) => {
 
 jest.mock("../../src/middleware/authorizeAdmin", () => ({
   __esModule: true,
-  default: jest.fn(async (_1, res, next: NextFunction) => {
+  default: jest.fn(async (_1, _res, next: NextFunction) => {
     next();
   }),
 }));
@@ -347,7 +347,7 @@ describe("GET /:voteEventId/voter-management/internal-voters", () => {
 
 describe("POST /:voteEventId/voter-management/internal-voters", () => {
   let addInternalVoterSpy;
-  const requestBody = { user: MOCK_USER_1 };
+  const requestBody = { email: "admin@skylab.com" };
 
   beforeAll(() => {
     addInternalVoterSpy = jest.spyOn(voteEventHelpers, "addInternalVoter");

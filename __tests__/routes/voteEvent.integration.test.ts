@@ -124,7 +124,7 @@ describe("POST / endpoint", () => {
     expect(dbCheck).toBeDefined();
   });
 
-  it("should return 500 with invalid request body", async () => {
+  it("should return 400 with invalid request body", async () => {
     const invalidVoteEvent = {
       // Missing required properties
     };
@@ -133,8 +133,10 @@ describe("POST / endpoint", () => {
       .post(BASE_URL + "/")
       .send({ voteEvent: invalidVoteEvent });
 
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should handle errors during vote event creation", async () => {
@@ -152,6 +154,8 @@ describe("POST / endpoint", () => {
     createVoteEvent.mockRestore();
   });
 });
+
+// TODO: Add tests for GET /:voteEventId endpoint
 
 describe("PUT /:voteEventId endpoint", () => {
   const updatedVoteEvent = {
@@ -190,17 +194,19 @@ describe("PUT /:voteEventId endpoint", () => {
     expect(response.body).toHaveProperty("message");
   });
 
-  it("should return 500 with invalid request body", async () => {
+  it("should return 400 with invalid request body", async () => {
     const invalidVoteEvent = {
-      invalidProperty: "Invalid property",
+      title: {}, // Invalid type
     };
 
     const response = await request
       .put(`${BASE_URL}/${mockVoteEvent1Id}`)
       .send({ voteEvent: invalidVoteEvent });
 
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should handle errors during vote event update", async () => {
@@ -337,7 +343,7 @@ describe("POST /:voteEventId/voter-management/internal-voters endpoint", () => {
     );
   });
 
-  it("should return 500 with invalid request body", async () => {
+  it("should return 400 with invalid request body", async () => {
     const invalidRequest = {
       // Missing required fields
     };
@@ -346,8 +352,10 @@ describe("POST /:voteEventId/voter-management/internal-voters endpoint", () => {
       .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters`)
       .send(invalidRequest);
 
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should handle errors during internal voter addition", async () => {
@@ -541,7 +549,7 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
     expect(response.body).toHaveProperty("message");
   });
 
-  it("should return 500 with invalid request body", async () => {
+  it("should return 400 with invalid request body", async () => {
     const invalidExternalVoter = {
       // Missing required properties
     };
@@ -550,8 +558,10 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
       .post(`${BASE_URL}/${mockVoteEvent2Id}/voter-management/external-voters`)
       .send(invalidExternalVoter);
 
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should handle errors during external voter creation", async () => {
@@ -795,7 +805,7 @@ describe("POST /:voteEventId/candidates", () => {
     expect(response.body).toEqual({ message: "Project ID does not exist" });
   });
 
-  it("should return 500 with invalid request body", async () => {
+  it("should return 400 with invalid request body", async () => {
     const invalidRequest = {
       // Missing required fields
     };
@@ -804,8 +814,10 @@ describe("POST /:voteEventId/candidates", () => {
       .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates`)
       .send(invalidRequest);
 
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should handle errors during candidate addition", async () => {
@@ -897,7 +909,7 @@ describe("POST /:voteEventId/candidates/batch", () => {
     expect(response.body.candidates).toEqual([]);
   });
 
-  it("should return 500 with invalid request body", async () => {
+  it("should return 400 with invalid request body", async () => {
     const invalidRequest = {
       // Missing required fields
     };
@@ -905,8 +917,10 @@ describe("POST /:voteEventId/candidates/batch", () => {
       .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
       .send(invalidRequest);
 
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should handle errors during candidate addition", async () => {
@@ -915,7 +929,10 @@ describe("POST /:voteEventId/candidates/batch", () => {
       .mockRejectedValueOnce(new Error("Database error"));
     const response = await request
       .post(`${BASE_URL}/${mockVoteEvent2Id}/candidates/batch`)
-      .send(requestBody);
+      .send({
+        ...requestBody,
+        achievement: "Vostok",
+      });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: "Database error" });
@@ -1096,6 +1113,21 @@ describe("POST /:voteEventId/votes", () => {
     expect(response.body).toEqual({
       message: "You are not authorized to vote in this event",
     });
+  });
+
+  it("should return 400 with an invalid request body", async () => {
+    const invalidRequest = {
+      // Missing required fields
+    };
+
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
+      .send(invalidRequest);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Request arguments failed validation checks"
+    );
   });
 
   it("should return 400 if votes are already submitted", async () => {
