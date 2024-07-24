@@ -29,6 +29,8 @@ import {
   updateVoteEvent,
 } from "../../src/models/voteEvent.db";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
+import { SkylabError } from "../../src/errors/SkylabError";
+import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
 
 const PRISMA_CLIENT_KNOWN_REQUEST_ERROR = new PrismaClientKnownRequestError(
   "request error",
@@ -36,10 +38,11 @@ const PRISMA_CLIENT_KNOWN_REQUEST_ERROR = new PrismaClientKnownRequestError(
   "3.0.0"
 );
 
-const assertKnownRequestError = (e) => {
-  expect(e.message).toBe(PRISMA_CLIENT_KNOWN_REQUEST_ERROR.message);
-  expect(e.statusCode).toBe(400);
-};
+const expectedSkylabError = new SkylabError(
+  PRISMA_CLIENT_KNOWN_REQUEST_ERROR.message,
+  HttpStatusCode.BAD_REQUEST,
+  PRISMA_CLIENT_KNOWN_REQUEST_ERROR.meta
+);
 
 afterEach(() => {
   jest.resetAllMocks();
@@ -69,11 +72,9 @@ describe("findManyVoteEvents db unit test", () => {
       PRISMA_CLIENT_KNOWN_REQUEST_ERROR
     );
 
-    try {
-      await findManyVoteEvents(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(findManyVoteEvents(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 
@@ -103,11 +104,9 @@ describe("findUniqueVoteEvents db unit test", () => {
       PRISMA_CLIENT_KNOWN_REQUEST_ERROR
     );
 
-    try {
-      await findUniqueVoteEvent(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(findUniqueVoteEvent(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 
@@ -134,11 +133,9 @@ describe("createOneVoteEvent db unit test", () => {
       PRISMA_CLIENT_KNOWN_REQUEST_ERROR
     );
 
-    try {
-      await createOneVoteEvent(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(createOneVoteEvent(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 
@@ -163,11 +160,7 @@ describe("updateVoteEvent db unit test", () => {
   it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
     updateVoteEventSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
 
-    try {
-      await updateVoteEvent(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(updateVoteEvent(params)).rejects.toEqual(expectedSkylabError);
   });
 });
 
@@ -192,11 +185,7 @@ describe("deleteVoteEvent db unit test", () => {
   it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
     deleteVoteEventSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
 
-    try {
-      await deleteVoteEvent(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(deleteVoteEvent(params)).rejects.toEqual(expectedSkylabError);
   });
 });
 
@@ -224,11 +213,9 @@ describe("findManyExternalVoters db unit test", () => {
       PRISMA_CLIENT_KNOWN_REQUEST_ERROR
     );
 
-    try {
-      await findManyExternalVoters(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(findManyExternalVoters(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 
@@ -255,11 +242,9 @@ describe("createExternalVoter db unit test", () => {
       PRISMA_CLIENT_KNOWN_REQUEST_ERROR
     );
 
-    try {
-      await createExternalVoter(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(createExternalVoter(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 
@@ -293,11 +278,9 @@ describe("deleteExternalVoter db unit test", () => {
       PRISMA_CLIENT_KNOWN_REQUEST_ERROR
     );
 
-    try {
-      await deleteExternalVoter(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(deleteExternalVoter(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 
@@ -323,11 +306,7 @@ describe("findManyVotes db unit test", () => {
   it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
     findManyVotesSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
 
-    try {
-      await findManyVotes(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(findManyVotes(params)).rejects.toEqual(expectedSkylabError);
   });
 });
 
@@ -357,11 +336,9 @@ describe("createManyVotes db unit test", () => {
   it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
     createManyVotesSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
 
-    try {
-      await createManyVotes(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(createManyVotes(params)).rejects.toThrowError(
+      expectedSkylabError
+    );
   });
 });
 
@@ -386,10 +363,6 @@ describe("deleteVote db unit test", () => {
   it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
     deleteVoteSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
 
-    try {
-      await deleteVote(params);
-    } catch (e) {
-      assertKnownRequestError(e);
-    }
+    await expect(deleteVote(params)).rejects.toEqual(expectedSkylabError);
   });
 });

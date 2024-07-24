@@ -241,24 +241,6 @@ router.delete(
   }
 );
 
-router.put(
-  "/:voteEventId/voter-management",
-  authorizeAdmin,
-  async (req: Request, res: Response) => {
-    const { voteEventId } = req.params;
-    try {
-      const editedVoteEvent = await editVoterManagement({
-        body: req.body,
-        voteEventId: Number(voteEventId),
-      });
-
-      return apiResponseWrapper(res, { voteEvent: editedVoteEvent });
-    } catch (e) {
-      return routeErrorHandler(res, e);
-    }
-  }
-);
-
 router.get("/:voteEventId/candidates", async (req: Request, res: Response) => {
   const { voteEventId } = req.params;
   try {

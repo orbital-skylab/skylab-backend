@@ -159,8 +159,7 @@ describe("POST / endpoint", () => {
 
 describe("PUT /:voteEventId endpoint", () => {
   const updatedVoteEvent = {
-    id: mockVoteEvent1Id,
-    title: "Updated Event 1 with voter management",
+    title: "Updated Event",
     startTime: new Date(),
     endTime: new Date(),
     voterManagement: {
@@ -170,19 +169,112 @@ describe("PUT /:voteEventId endpoint", () => {
     },
   };
 
-  it("should update a vote event with valid request body", async () => {
+  it("should set voter management for the first time", async () => {
     const response = await request
-      .put(`${BASE_URL}/${mockVoteEvent1Id}`)
-      .send({ voteEvent: updatedVoteEvent });
+      .put(`${BASE_URL}/${mockVoteEvent2Id}`)
+      .send({ voteEvent: { ...updatedVoteEvent, id: mockVoteEvent2Id } });
+
+    const expectedVoteEvent = {
+      ...updatedVoteEvent,
+      id: mockVoteEvent2Id,
+      resultsFilter: voteEventHelpers.DEFAULT_RESULTS_FILTER,
+      startTime: updatedVoteEvent.startTime.toISOString(),
+      endTime: updatedVoteEvent.endTime.toISOString(),
+      voteConfig: null,
+    };
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("voteEvent");
     const { voteEvent } = response.body;
-    expect(voteEvent.id).toBe(mockVoteEvent1Id);
-    expect(voteEvent.title).toBe(updatedVoteEvent.title);
-    expect(new Date(voteEvent.startTime)).toEqual(updatedVoteEvent.startTime);
-    expect(new Date(voteEvent.endTime)).toEqual(updatedVoteEvent.endTime);
-    expect(voteEvent.voterManagement).toEqual(updatedVoteEvent.voterManagement);
+    expect(voteEvent).toEqual(expectedVoteEvent);
+
+    // Verify the vote event was actually updated in the database
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent2Id },
+      include: voteEventHelpers.VOTE_EVENT_INCLUSION,
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck).toEqual({
+      ...expectedVoteEvent,
+      startTime: new Date(expectedVoteEvent.startTime),
+      endTime: new Date(expectedVoteEvent.endTime),
+    });
+  });
+
+  it("should edit existing voter management for a given vote event and remove all internal and external voters", async () => {
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}`)
+      .send({ voteEvent: updatedVoteEvent });
+
+    const expectedVoteEvent = {
+      ...updatedVoteEvent,
+      id: mockVoteEvent1Id,
+      resultsFilter: {
+        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
+        areResultsPublished: true,
+      },
+      startTime: updatedVoteEvent.startTime.toISOString(),
+      endTime: updatedVoteEvent.endTime.toISOString(),
+      voteConfig: MOCK_VOTE_CONFIG,
+    };
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent).toEqual(expectedVoteEvent);
+
+    // Verify the vote event was actually updated in the database
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent1Id },
+      include: voteEventHelpers.VOTE_EVENT_INCLUSION,
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck).toEqual({
+      ...expectedVoteEvent,
+      startTime: new Date(expectedVoteEvent.startTime),
+      endTime: new Date(expectedVoteEvent.endTime),
+    });
+
+    // Verify all internal and external voters were removed
+    const internalVoters = await prisma.user.findMany({
+      where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
+    });
+    expect(internalVoters).toHaveLength(0);
+
+    const externalVoters = await prisma.externalVoter.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+    expect(externalVoters).toHaveLength(0);
+  });
+
+  it("should be able to edit vote config for a given vote event", async () => {
+    const updatedVoteConfig = {
+      ...MOCK_VOTE_CONFIG,
+      maxVotes: 3,
+    };
+
+    const response = await request.put(`${BASE_URL}/${mockVoteEvent1Id}`).send({
+      voteEvent: { ...MOCK_VOTE_EVENT_1, voteConfig: updatedVoteConfig },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent.voteConfig).toEqual(updatedVoteConfig);
+
+    // Verify the vote event was actually updated in the database
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent1Id },
+      include: { voteConfig: true },
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck.voteConfig).toEqual({
+      ...updatedVoteConfig,
+      voteEventId: mockVoteEvent1Id,
+    });
   });
 
   it("should return 400 if the vote event does not exist", async () => {
@@ -638,95 +730,6 @@ describe("DELETE /:voteEventId/voter-management/external-voters/:externalVoterId
 });
 
 // --- End of external voter API tests ---
-
-// --- Voter management settings API tests ---
-
-describe("PUT /:voteEventId/voter-management endpoint", () => {
-  const updatedVoteEvent = {
-    title: "Updated Event 1",
-    startTime: new Date("2024-05-25"),
-    endTime: new Date("2025-07-25"),
-    voterManagement: {
-      hasInternalList: true,
-      hasExternalList: true,
-      isRegistrationOpen: false,
-    },
-  };
-
-  it("should edit voter management settings for a given vote event and remove all internal and external voters", async () => {
-    const response = await request
-      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
-      .send({ voteEvent: updatedVoteEvent });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("voteEvent");
-    const { voteEvent } = response.body;
-    expect(voteEvent).toEqual({
-      ...updatedVoteEvent,
-      id: mockVoteEvent1Id,
-      resultsFilter: {
-        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
-        areResultsPublished: true,
-      },
-      startTime: updatedVoteEvent.startTime.toISOString(),
-      endTime: updatedVoteEvent.endTime.toISOString(),
-      voteConfig: MOCK_VOTE_CONFIG,
-    });
-    expect(voteEvent.voterManagement).toEqual(updatedVoteEvent.voterManagement);
-
-    // Verify the vote event was actually updated in the database
-    const dbCheck = await prisma.voteEvent.findUnique({
-      where: { id: mockVoteEvent1Id },
-      include: voteEventHelpers.VOTE_EVENT_INCLUSION,
-    });
-    expect(dbCheck).not.toBeNull();
-    if (!dbCheck) return;
-    expect(dbCheck.id).toBe(mockVoteEvent1Id);
-    expect(dbCheck.title).toBe(updatedVoteEvent.title);
-    expect(dbCheck.startTime).toEqual(updatedVoteEvent.startTime);
-    expect(dbCheck.endTime).toEqual(updatedVoteEvent.endTime);
-    expect(dbCheck.voterManagement).toEqual(updatedVoteEvent.voterManagement);
-
-    // Verify all internal and external voters were removed
-    const internalVoters = await prisma.user.findMany({
-      where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
-    });
-    expect(internalVoters).toHaveLength(0);
-
-    const externalVoters = await prisma.externalVoter.findMany({
-      where: { voteEventId: mockVoteEvent1Id },
-    });
-    expect(externalVoters).toHaveLength(0);
-  });
-
-  it("should return 500 with invalid request body", async () => {
-    const invalidVoteEvent = {
-      invalidProperty: "Invalid property",
-    };
-
-    const response = await request
-      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
-      .send({ voteEvent: invalidVoteEvent });
-
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty("message");
-  });
-
-  it("should handle errors during voter management editing", async () => {
-    const editVoterManagementMock = jest
-      .spyOn(voteEventHelpers, "editVoterManagement")
-      .mockRejectedValueOnce(new Error("Database error"));
-
-    const response = await request
-      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
-      .send({ voteEvent: updatedVoteEvent });
-
-    expect(response.status).toBe(500);
-    expect(response.body).toEqual({ message: "Database error" });
-
-    editVoterManagementMock.mockRestore();
-  });
-});
 
 describe("GET /:voteEventId/candidates", () => {
   it("should return all candidates for a given vote event", async () => {

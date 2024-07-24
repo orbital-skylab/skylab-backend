@@ -46,6 +46,8 @@ import {
   voteEventTestSetUp,
   voteEventTestTearDown,
 } from "../../src/utils/testUtils";
+import { SkylabError } from "../../src/errors/SkylabError";
+import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
 
 let mockVoteEvent1Id: number;
 let mockVoteEvent2Id: number;
@@ -116,11 +118,9 @@ describe("getOneVoteEventById helper integration test", () => {
   });
 
   it("should throw an error if vote event not found", async () => {
-    try {
-      await getOneVoteEventById(NON_EXISTENT_ID);
-    } catch (e) {
-      expect(e.message).toBe("Vote event was not found");
-    }
+    await expect(getOneVoteEventById(NON_EXISTENT_ID)).rejects.toThrow(
+      new SkylabError("Vote event was not found", HttpStatusCode.BAD_REQUEST)
+    );
   });
 });
 
@@ -174,7 +174,9 @@ describe("editVoteEvent helper integration test", () => {
           voteEvent: { ...MOCK_VOTE_EVENT_1, title: "Updated Vote Event" },
         },
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(
+      new SkylabError("Vote event was not found", HttpStatusCode.BAD_REQUEST)
+    );
   });
 });
 
@@ -565,7 +567,14 @@ describe("getAllVotesByVoteEvent helper integration test", () => {
     const votesInDb = await prisma.vote.findMany({
       where: { voteEventId: mockVoteEvent1Id },
       include: {
-        internalVoter: true,
+        internalVoter: {
+          include: {
+            student: true,
+            mentor: true,
+            administrator: true,
+            adviser: true,
+          },
+        },
         project: true,
       },
     });

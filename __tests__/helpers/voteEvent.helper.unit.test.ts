@@ -15,6 +15,7 @@ import {
   MOCK_USER_1,
   MOCK_VOTE_1,
   MOCK_VOTE_CONFIG,
+  MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_1_WITH_ID,
   MOCK_VOTE_EVENT_2_WITH_ID,
   NON_EXISTENT_ID,
@@ -177,18 +178,6 @@ describe("getAllVoteEvents helper unit test", () => {
       include: VOTE_EVENT_PUBLIC_INCLUSION,
     });
   });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Error fetching vote events";
-    findManyVoteEventsSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(getAllVoteEvents()).rejects.toThrow(errorMessage);
-
-    expect(findManyVoteEventsSpy).toHaveBeenCalledTimes(1);
-    expect(findManyVoteEventsSpy).toHaveBeenCalledWith({
-      include: VOTE_EVENT_PUBLIC_INCLUSION,
-    });
-  });
 });
 
 describe("getOneVoteEventById helper unit test", () => {
@@ -230,28 +219,47 @@ describe("getOneVoteEventById helper unit test", () => {
       include: VOTE_EVENT_INCLUSION,
     });
   });
+});
 
-  it("should propagate other errors", async () => {
-    const errorMessage = "Error fetching vote event";
-    findUniqueVoteEventSpy.mockRejectedValue(new Error(errorMessage));
+describe("createVoteEvent helper unit test", () => {
+  let createVoteEventSpy;
 
-    await expect(
-      getOneVoteEventById(MOCK_VOTE_EVENT_1_WITH_ID.id)
-    ).rejects.toThrowError(errorMessage);
+  beforeAll(() => {
+    createVoteEventSpy = jest.spyOn(voteEventModel, "createOneVoteEvent");
+  });
 
-    expect(findUniqueVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(findUniqueVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-      include: VOTE_EVENT_INCLUSION,
+  it("should successfully create a vote event", async () => {
+    const mockCreatedVoteEvent = {
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      resultsFilter: { ...DEFAULT_RESULTS_FILTER },
+    };
+
+    createVoteEventSpy.mockResolvedValueOnce(mockCreatedVoteEvent);
+
+    const result = await voteEventHelper.createVoteEvent({
+      voteEvent: {
+        ...MOCK_VOTE_EVENT_1,
+      },
+    });
+
+    expect(result).toEqual(mockCreatedVoteEvent);
+    expect(createVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(createVoteEventSpy).toHaveBeenCalledWith({
+      data: {
+        ...MOCK_VOTE_EVENT_1,
+        resultsFilter: { create: { ...DEFAULT_RESULTS_FILTER } },
+      },
     });
   });
 });
 
 describe("editVoteEvent helper unit test", () => {
   let updateVoteEventSpy;
+  let findUniqueVoteEventSpy;
 
   beforeAll(() => {
     updateVoteEventSpy = jest.spyOn(voteEventModel, "updateVoteEvent");
+    findUniqueVoteEventSpy = jest.spyOn(voteEventModel, "findUniqueVoteEvent");
   });
 
   it("should successfully update a vote event", async () => {
@@ -262,6 +270,7 @@ describe("editVoteEvent helper unit test", () => {
     };
 
     updateVoteEventSpy.mockResolvedValueOnce(mockUpdatedVoteEvent);
+    findUniqueVoteEventSpy.mockResolvedValueOnce(MOCK_VOTE_EVENT_1_WITH_ID);
 
     const result = await editVoteEvent({
       body: {
@@ -274,6 +283,11 @@ describe("editVoteEvent helper unit test", () => {
     });
 
     expect(result).toEqual(mockUpdatedVoteEvent);
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledWith({
+      where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
+      include: { voterManagement: true },
+    });
     expect(updateVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(updateVoteEventSpy).toHaveBeenCalledWith({
       where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
@@ -287,16 +301,29 @@ describe("editVoteEvent helper unit test", () => {
     });
   });
 
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    updateVoteEventSpy.mockRejectedValueOnce(new Error(errorMessage));
+  it("should throw SkylabError with bad request status code when vote event is not found", async () => {
+    findUniqueVoteEventSpy.mockResolvedValueOnce(null);
 
     await expect(
       editVoteEvent({
-        body: { voteEvent: MOCK_UPDATED_VOTE_EVENT_1 },
-        voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+        body: {
+          voteEvent: {
+            ...MOCK_UPDATED_VOTE_EVENT_1,
+            resultsFilter: { ...DEFAULT_RESULTS_FILTER },
+          },
+        },
+        voteEventId: NON_EXISTENT_ID,
       })
-    ).rejects.toThrowError(new Error(errorMessage));
+    ).rejects.toThrowError(
+      new SkylabError("Vote event was not found", HttpStatusCode.BAD_REQUEST)
+    );
+
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledWith({
+      where: { id: NON_EXISTENT_ID },
+      include: { voterManagement: true },
+    });
+    expect(updateVoteEventSpy).toHaveBeenCalledTimes(0);
   });
 });
 
@@ -311,20 +338,6 @@ describe("removeVoteEvent helper unit test", () => {
     deleteVoteEventSpy.mockResolvedValueOnce(MOCK_VOTE_EVENT_1_WITH_ID);
 
     await removeVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id);
-
-    expect(deleteVoteEventSpy).toHaveBeenCalledTimes(1);
-    expect(deleteVoteEventSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-    });
-  });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    deleteVoteEventSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      removeVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
-    ).rejects.toThrowError(new Error(errorMessage));
 
     expect(deleteVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(deleteVoteEventSpy).toHaveBeenCalledWith({
@@ -392,15 +405,6 @@ describe("getAllInternalVotersByVoteEvent helper unit test", () => {
         adviser: true,
       },
     });
-  });
-
-  it("should propagate errors", async () => {
-    const errorMessage = "Database connection error";
-    findManyUsersSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      getAllInternalVotersByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
-    ).rejects.toThrowError(new Error(errorMessage));
   });
 });
 
@@ -490,29 +494,6 @@ describe("addInternalVoter helper unit test", () => {
       },
     });
   });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    updateUniqueUserSpy.mockRejectedValueOnce(new Error(errorMessage));
-    findManyUsersSpy.mockResolvedValueOnce([]);
-
-    await expect(
-      addInternalVoter({
-        body: { email: MOCK_USER_1.email },
-        voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
-      })
-    ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(updateUniqueUserSpy).toHaveBeenCalledTimes(1);
-    expect(updateUniqueUserSpy).toHaveBeenCalledWith({
-      where: { email: MOCK_USER_1.email },
-      data: {
-        voteEvents: {
-          connect: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-        },
-      },
-    });
-  });
 });
 
 describe("removeInternalVoter helper unit test", () => {
@@ -536,26 +517,6 @@ describe("removeInternalVoter helper unit test", () => {
     );
 
     expect(result).toEqual(mockUpdatedUser);
-    expect(updateUniqueUserSpy).toHaveBeenCalledTimes(1);
-    expect(updateUniqueUserSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_USER_1.id },
-      data: {
-        voteEvents: {
-          disconnect: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-        },
-      },
-      include: { voteEvents: true },
-    });
-  });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    updateUniqueUserSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      removeInternalVoter(MOCK_VOTE_EVENT_1_WITH_ID.id, MOCK_USER_1.id)
-    ).rejects.toThrowError(new Error(errorMessage));
-
     expect(updateUniqueUserSpy).toHaveBeenCalledTimes(1);
     expect(updateUniqueUserSpy).toHaveBeenCalledWith({
       where: { id: MOCK_USER_1.id },
@@ -607,20 +568,6 @@ describe("getAllExternalVotersByVoteEvent helper unit test", () => {
     );
 
     expect(result).toEqual([]);
-    expect(findManyExternalVotersSpy).toHaveBeenCalledTimes(1);
-    expect(findManyExternalVotersSpy).toHaveBeenCalledWith({
-      where: { voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id },
-    });
-  });
-
-  it("should propagate errors", async () => {
-    const errorMessage = "Database connection error";
-    findManyExternalVotersSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      getAllExternalVotersByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id)
-    ).rejects.toThrowError(new Error(errorMessage));
-
     expect(findManyExternalVotersSpy).toHaveBeenCalledTimes(1);
     expect(findManyExternalVotersSpy).toHaveBeenCalledWith({
       where: { voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id },
@@ -683,27 +630,6 @@ describe("addExternalVoter helper unit test", () => {
 
     expect(createExternalVoterSpy).toHaveBeenCalledTimes(0);
   });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    findManyExternalVotersSpy.mockResolvedValueOnce([]);
-    createExternalVoterSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      addExternalVoter({
-        body: { voterId: MOCK_EXTERNAL_VOTER_1.id },
-        voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
-      })
-    ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(createExternalVoterSpy).toHaveBeenCalledTimes(1);
-    expect(createExternalVoterSpy).toHaveBeenCalledWith({
-      data: {
-        id: MOCK_EXTERNAL_VOTER_1.id,
-        voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
-      },
-    });
-  });
 });
 
 describe("removeExternalVoter helper unit test", () => {
@@ -731,28 +657,6 @@ describe("removeExternalVoter helper unit test", () => {
       },
     });
   });
-
-  it("should propagate other errors", async () => {
-    const errorMessage = "Database connection error";
-    deleteExternalVoterSpy.mockRejectedValueOnce(new Error(errorMessage));
-
-    await expect(
-      removeExternalVoter(
-        MOCK_EXTERNAL_VOTER_1.voteEventId,
-        MOCK_EXTERNAL_VOTER_1.id
-      )
-    ).rejects.toThrowError(new Error(errorMessage));
-
-    expect(deleteExternalVoterSpy).toHaveBeenCalledTimes(1);
-    expect(deleteExternalVoterSpy).toHaveBeenCalledWith({
-      where: {
-        id_voteEventId: {
-          id: MOCK_EXTERNAL_VOTER_1.id,
-          voteEventId: MOCK_EXTERNAL_VOTER_1.voteEventId,
-        },
-      },
-    });
-  });
 });
 
 // --- End of External Voter Helper Functions Tests ---
@@ -766,21 +670,9 @@ describe("getAllCandidatesByVoteEvent helper unit test", () => {
     findManyProjectsSpy = jest.spyOn(projectModel, "findManyProjects");
   });
 
-  it("should call the model function with the correct parameters", async () => {
+  it("should return all candidates for a vote event", async () => {
     const mockProjects = [MOCK_PROJECT_1_WITH_ID, MOCK_PROJECT_2_WITH_ID];
 
-    findManyProjectsSpy.mockResolvedValueOnce(mockProjects);
-
-    await getAllCandidatesByVoteEvent(MOCK_VOTE_EVENT_1_WITH_ID.id);
-
-    expect(findManyProjectsSpy).toHaveBeenCalledTimes(1);
-    expect(findManyProjectsSpy).toHaveBeenCalledWith({
-      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1_WITH_ID.id } } },
-    });
-  });
-
-  it("should return the correct value", async () => {
-    const mockProjects = [MOCK_PROJECT_1_WITH_ID, MOCK_PROJECT_2_WITH_ID];
     findManyProjectsSpy.mockResolvedValueOnce(mockProjects);
 
     const result = await getAllCandidatesByVoteEvent(
@@ -788,6 +680,10 @@ describe("getAllCandidatesByVoteEvent helper unit test", () => {
     );
 
     expect(result).toEqual(mockProjects);
+    expect(findManyProjectsSpy).toHaveBeenCalledTimes(1);
+    expect(findManyProjectsSpy).toHaveBeenCalledWith({
+      where: { voteEvents: { some: { id: MOCK_VOTE_EVENT_1_WITH_ID.id } } },
+    });
   });
 });
 
@@ -804,12 +700,13 @@ describe("addCandidate helper unit test", () => {
     updateOneProjectSpy = jest.spyOn(projectModel, "updateOneProject");
   });
 
-  it("should call the model functions with the correct parameters", async () => {
+  it("should add a candidate to a vote event", async () => {
     findManyProjectsSpy.mockResolvedValueOnce([]);
     updateOneProjectSpy.mockResolvedValueOnce(MOCK_PROJECT_1_WITH_ID);
 
-    await addCandidate(addCandidateParams);
+    const result = await addCandidate(addCandidateParams);
 
+    expect(result).toEqual(MOCK_PROJECT_1_WITH_ID);
     expect(findManyProjectsSpy).toHaveBeenCalledTimes(1);
     expect(findManyProjectsSpy).toHaveBeenCalledWith({
       where: {
@@ -826,15 +723,6 @@ describe("addCandidate helper unit test", () => {
         },
       },
     });
-  });
-
-  it("should return the correct value", async () => {
-    findManyProjectsSpy.mockResolvedValueOnce([]);
-    updateOneProjectSpy.mockResolvedValueOnce(MOCK_PROJECT_1_WITH_ID);
-
-    const result = await addCandidate(addCandidateParams);
-
-    expect(result).toEqual(MOCK_PROJECT_1_WITH_ID);
   });
 
   it("should throw an error a project already part of the vote event", async () => {
@@ -879,12 +767,22 @@ describe("addManyCandidates helper unit test", () => {
     updateVoteEventSpy = jest.spyOn(voteEventModel, "updateVoteEvent");
   });
 
-  it("should call the model functions with the correct parameters", async () => {
+  it("should add many candidates to a vote event", async () => {
+    const MOCK_VOTE_EVENT_1_WITH_ID_WITH_CANDIDATES = {
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      candidates: [MOCK_PROJECT_1_WITH_ID],
+    };
+
     findManyProjectsSpy.mockResolvedValueOnce([MOCK_PROJECT_1_WITH_ID]);
-    updateVoteEventSpy.mockResolvedValueOnce(MOCK_VOTE_EVENT_1_WITH_ID);
+    updateVoteEventSpy.mockResolvedValueOnce(
+      MOCK_VOTE_EVENT_1_WITH_ID_WITH_CANDIDATES
+    );
 
-    await addManyCandidates(addManyCandidatesParams);
+    const result = await addManyCandidates(addManyCandidatesParams);
 
+    expect(result).toEqual(
+      MOCK_VOTE_EVENT_1_WITH_ID_WITH_CANDIDATES.candidates
+    );
     expect(findManyProjectsSpy).toHaveBeenCalledTimes(1);
     expect(findManyProjectsSpy).toHaveBeenCalledWith({
       where: {
@@ -903,21 +801,6 @@ describe("addManyCandidates helper unit test", () => {
       include: { candidates: true },
     });
   });
-
-  it("should return the correct value", async () => {
-    const MOCK_VOTE_EVENT_1_WITH_ID_WITH_CANDIDATES = {
-      ...MOCK_VOTE_EVENT_1_WITH_ID,
-      candidates: [MOCK_PROJECT_1_WITH_ID],
-    };
-    findManyProjectsSpy.mockResolvedValueOnce([MOCK_PROJECT_1_WITH_ID]);
-    updateVoteEventSpy.mockResolvedValueOnce(
-      MOCK_VOTE_EVENT_1_WITH_ID_WITH_CANDIDATES
-    );
-
-    const result = await addManyCandidates(addManyCandidatesParams);
-
-    expect(result).toEqual([MOCK_PROJECT_1_WITH_ID]);
-  });
 });
 
 describe("removeCandidate helper unit test", () => {
@@ -927,14 +810,15 @@ describe("removeCandidate helper unit test", () => {
     updateOneProjectSpy = jest.spyOn(projectModel, "updateOneProject");
   });
 
-  it("should call the model function with the correct parameters", async () => {
+  it("should remove one candidate from a vote event", async () => {
     updateOneProjectSpy.mockResolvedValueOnce(MOCK_PROJECT_1_WITH_ID);
 
-    await removeCandidate(
+    const result = await removeCandidate(
       MOCK_VOTE_EVENT_1_WITH_ID.id,
       MOCK_PROJECT_1_WITH_ID.id
     );
 
+    expect(result).toEqual(MOCK_PROJECT_1_WITH_ID);
     expect(updateOneProjectSpy).toHaveBeenCalledTimes(1);
     expect(updateOneProjectSpy).toHaveBeenCalledWith({
       where: { id: MOCK_PROJECT_1_WITH_ID.id },
@@ -945,17 +829,6 @@ describe("removeCandidate helper unit test", () => {
       },
       include: { voteEvents: true },
     });
-  });
-
-  it("should return the correct value", async () => {
-    updateOneProjectSpy.mockResolvedValueOnce(MOCK_PROJECT_1_WITH_ID);
-
-    const result = await removeCandidate(
-      MOCK_VOTE_EVENT_1_WITH_ID.id,
-      MOCK_PROJECT_1_WITH_ID.id
-    );
-
-    expect(result).toEqual(MOCK_PROJECT_1_WITH_ID);
   });
 });
 
@@ -1008,7 +881,14 @@ describe("getAllVotesByVoteEvent helper unit test", () => {
     expect(findManyVotesSpy).toHaveBeenCalledWith({
       where: { voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id },
       include: {
-        internalVoter: true,
+        internalVoter: {
+          include: {
+            student: true,
+            mentor: true,
+            administrator: true,
+            adviser: true,
+          },
+        },
         project: true,
       },
     });

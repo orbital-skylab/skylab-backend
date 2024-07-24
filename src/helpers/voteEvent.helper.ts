@@ -9,6 +9,8 @@ import {
   Student,
   User,
   Vote,
+  VoteEvent,
+  VoterManagement,
 } from "@prisma/client";
 import { removePasswordFromUser } from "../helpers/users.helper";
 import { prisma } from "../client";
@@ -185,6 +187,8 @@ export const calculateResults = (
   resultsFilter: ResultsFilter
 ) => {
   let totalPoints = 0;
+
+  // Calculate the total points and votes for each project
   const results = votes.reduce(
     (acc, vote) => {
       const { projectId, project, internalVoter } = vote;
@@ -219,6 +223,7 @@ export const calculateResults = (
     >
   );
 
+  // Sort the results and calculate the rank and percentage
   const fullResults = Object.values(results)
     .sort((a, b) => b.points - a.points)
     .map((result, idx) => {
@@ -231,6 +236,7 @@ export const calculateResults = (
       };
     });
 
+  // Filter the results based on the results filter
   let filteredResults: {
     rank: number | null;
     percentage: number | null;
@@ -360,6 +366,25 @@ export async function editVoteEvent({
   voteEventId: number;
 }) {
   const { voteEvent } = body;
+
+  const voteEventToUpdate:
+    | (VoteEvent & { voterManagement?: VoterManagement })
+    | null = await findUniqueVoteEvent({
+    where: { id: voteEventId },
+    include: { voterManagement: true },
+  });
+
+  if (!voteEventToUpdate) {
+    throw new SkylabError(
+      "Vote event was not found",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  // If voter management is exist, we need to clear all voters as well
+  if (voteEventToUpdate.voterManagement) {
+    return await editVoterManagement({ body, voteEventId });
+  }
 
   const updatedVoteEvent = await updateVoteEvent({
     where: { id: voteEventId },
@@ -595,13 +620,6 @@ export async function addManyCandidates({
 }) {
   const { cohort, achievement } = body;
 
-  if (!cohort || !achievement) {
-    throw new SkylabError(
-      "Invalid request body",
-      HttpStatusCode.INTERNAL_SERVER_ERROR
-    );
-  }
-
   const whereQuery =
     achievement === "All"
       ? { cohortYear: cohort }
@@ -673,7 +691,14 @@ export async function getAllVotesByVoteEvent(voteEventId: number) {
       voteEventId: voteEventId,
     },
     include: {
-      internalVoter: true,
+      internalVoter: {
+        include: {
+          student: true,
+          mentor: true,
+          administrator: true,
+          adviser: true,
+        },
+      },
       project: true,
     },
   });

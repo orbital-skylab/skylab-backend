@@ -67,36 +67,36 @@ describe("createOneVoteEvent db integration test", () => {
       data: MOCK_VOTE_EVENT_1,
     });
 
-    expect(newVoteEvent).toEqual({ ...MOCK_VOTE_EVENT_1, id: newVoteEvent.id });
+    const expectedResult = { ...MOCK_VOTE_EVENT_1, id: newVoteEvent.id };
+
+    expect(newVoteEvent).toEqual(expectedResult);
 
     const dbCheck = await prisma.voteEvent.findUnique({
       where: { id: newVoteEvent.id },
     });
-    expect(dbCheck).toEqual({ ...MOCK_VOTE_EVENT_1, id: newVoteEvent.id });
+    expect(dbCheck).toEqual(expectedResult);
   });
 });
 
 describe("updateVoteEvent db integration test", () => {
   it("should update a vote event", async () => {
+    const expectedResult = {
+      ...MOCK_VOTE_EVENT_1,
+      id: mockVoteEvent1Id,
+      title: "Updated Vote Event",
+    };
+
     const updatedVoteEvent = await updateVoteEvent({
       where: { id: mockVoteEvent1Id },
       data: { ...MOCK_VOTE_EVENT_1, title: "Updated Vote Event" },
     });
 
-    expect(updatedVoteEvent).toEqual({
-      ...MOCK_VOTE_EVENT_1,
-      id: mockVoteEvent1Id,
-      title: "Updated Vote Event",
-    });
+    expect(updatedVoteEvent).toEqual(expectedResult);
 
     const dbCheck = await prisma.voteEvent.findUnique({
       where: { id: mockVoteEvent1Id },
     });
-    expect(dbCheck).toEqual({
-      ...MOCK_VOTE_EVENT_1,
-      id: mockVoteEvent1Id,
-      title: "Updated Vote Event",
-    });
+    expect(dbCheck).toEqual(expectedResult);
   });
 });
 
@@ -174,22 +174,25 @@ describe("deleteExternalVoter db integration test", () => {
 
 describe("findManyVotes db integration test", () => {
   it("should return all votes", async () => {
+    const partialVote = {
+      voteEventId: mockVoteEvent1Id,
+      projectId: mockProject1Id,
+      externalVoterId: null,
+      userId: null,
+    };
+
     const votes = await prisma.vote.findMany({
       where: { voteEventId: mockVoteEvent1Id },
     });
 
     expect(votes).toEqual([
       expect.objectContaining({
+        ...partialVote,
         userId: userIds[0],
-        projectId: mockProject1Id,
-        voteEventId: mockVoteEvent1Id,
-        externalVoterId: null,
       }),
       expect.objectContaining({
+        ...partialVote,
         externalVoterId: VOTER_ID_1,
-        projectId: mockProject1Id,
-        voteEventId: mockVoteEvent1Id,
-        userId: null,
       }),
     ]);
   });
@@ -233,15 +236,11 @@ describe("createManyVotes db integration test", () => {
         userId: null,
       }),
       expect.objectContaining({
-        userId: userIds[1],
-        projectId: mockProject1Id,
-        voteEventId: mockVoteEvent1Id,
+        ...newVotes[0],
         externalVoterId: null,
       }),
       expect.objectContaining({
-        externalVoterId: VOTER_ID_2,
-        projectId: mockProject1Id,
-        voteEventId: mockVoteEvent1Id,
+        ...newVotes[1],
         userId: null,
       }),
     ]);
@@ -255,6 +254,7 @@ describe("deleteVote db integration test", () => {
       projectId: mockProject1Id,
       voteEventId: mockVoteEvent1Id,
     };
+
     const toDelete = await prisma.vote.create({
       data: voteToDelete,
     });

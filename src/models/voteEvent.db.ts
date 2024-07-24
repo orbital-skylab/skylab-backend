@@ -52,7 +52,8 @@ export async function createOneVoteEvent(query: Prisma.VoteEventCreateArgs) {
 
 export async function updateVoteEvent(query: Prisma.VoteEventUpdateArgs) {
   try {
-    return await prisma.voteEvent.update(query);
+    const updatedVoteEvent = await prisma.voteEvent.update(query);
+    return updatedVoteEvent;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -64,7 +65,8 @@ export async function updateVoteEvent(query: Prisma.VoteEventUpdateArgs) {
 
 export async function deleteVoteEvent(query: Prisma.VoteEventDeleteArgs) {
   try {
-    return await prisma.voteEvent.delete(query);
+    const deletedVoteEvent = await prisma.voteEvent.delete(query);
+    return deletedVoteEvent;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -93,7 +95,8 @@ export async function createExternalVoter(
   query: Prisma.ExternalVoterCreateArgs
 ) {
   try {
-    return await prisma.externalVoter.create(query);
+    const newExternalVoter = await prisma.externalVoter.create(query);
+    return newExternalVoter;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -107,7 +110,8 @@ export async function deleteExternalVoter(
   query: Prisma.ExternalVoterDeleteArgs
 ) {
   try {
-    return await prisma.externalVoter.delete(query);
+    const deletedExternalVoter = await prisma.externalVoter.delete(query);
+    return deletedExternalVoter;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -132,7 +136,8 @@ export async function findManyVotes(query: Prisma.VoteFindManyArgs) {
 
 export async function createManyVotes(query: Prisma.VoteCreateManyArgs) {
   try {
-    return await prisma.vote.createMany(query);
+    const countObject = await prisma.vote.createMany(query);
+    return countObject;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
@@ -143,7 +148,8 @@ export async function createManyVotes(query: Prisma.VoteCreateManyArgs) {
 
 export async function deleteVote(query: Prisma.VoteDeleteArgs) {
   try {
-    return await prisma.vote.delete(query);
+    const deletedVote = await prisma.vote.delete(query);
+    return deletedVote;
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
       throw e;
