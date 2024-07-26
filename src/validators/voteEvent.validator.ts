@@ -25,8 +25,8 @@ export const editVoteEventValidator = [
   body("voteEvent.endTime").optional().isISO8601(),
 
   body("voteEvent.resultsFilter").optional().isObject(),
-  body("voteEvent.voterManagement").optional().isObject(),
-  body("voteEvent.voteConfig").optional().isObject(),
+  body("voteEvent.voterManagement").optional({ nullable: true }).isObject(),
+  body("voteEvent.voteConfig").optional({ nullable: true }).isObject(),
 ];
 
 export const addInternalVoterValidator = [body("email").isEmail().exists()];

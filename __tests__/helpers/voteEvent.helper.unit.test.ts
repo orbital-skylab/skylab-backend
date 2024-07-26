@@ -423,6 +423,7 @@ describe("addInternalVoter helper unit test", () => {
 
   it("should successfully add a voter to a vote event", async () => {
     updateUniqueUserSpy.mockResolvedValueOnce(mockUpdatedUser);
+    findManyUsersSpy.mockResolvedValueOnce([mockUpdatedUser]);
     findManyUsersSpy.mockResolvedValueOnce([]);
 
     const result = await addInternalVoter({
@@ -430,7 +431,13 @@ describe("addInternalVoter helper unit test", () => {
       voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
     });
 
-    expect(result).toEqual(mockUpdatedUser);
+    expect(result).toEqual({
+      ...removePasswordFromUser(mockUpdatedUser),
+      administrator: {},
+      mentor: {},
+      adviser: {},
+      student: {},
+    });
     expect(updateUniqueUserSpy).toHaveBeenCalledTimes(1);
     expect(updateUniqueUserSpy).toHaveBeenCalledWith({
       where: { email: MOCK_USER_1.email },
@@ -439,8 +446,14 @@ describe("addInternalVoter helper unit test", () => {
           connect: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
         },
       },
+      include: {
+        student: true,
+        mentor: true,
+        administrator: true,
+        adviser: true,
+      },
     });
-    expect(findManyUsersSpy).toHaveBeenCalledTimes(1);
+    expect(findManyUsersSpy).toHaveBeenCalledTimes(2);
     expect(findManyUsersSpy).toHaveBeenCalledWith({
       where: {
         email: MOCK_USER_1.email,
@@ -451,6 +464,7 @@ describe("addInternalVoter helper unit test", () => {
 
   it("should throw SkylabError when the user is already part of the vote event", async () => {
     const mockUser = mockUpdatedUser;
+    findManyUsersSpy.mockResolvedValueOnce([mockUser]);
     findManyUsersSpy.mockResolvedValueOnce([mockUser]);
 
     await expect(
@@ -478,21 +492,10 @@ describe("addInternalVoter helper unit test", () => {
         voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
       })
     ).rejects.toThrowError(
-      new SkylabError(
-        "There is no user with that email address",
-        HttpStatusCode.BAD_REQUEST
-      )
+      new SkylabError("User does not exist", HttpStatusCode.BAD_REQUEST)
     );
 
-    expect(updateUniqueUserSpy).toHaveBeenCalledTimes(1);
-    expect(updateUniqueUserSpy).toHaveBeenCalledWith({
-      where: { email: NON_EXISTENT_USER_EMAIL },
-      data: {
-        voteEvents: {
-          connect: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-        },
-      },
-    });
+    expect(updateUniqueUserSpy).toHaveBeenCalledTimes(0);
   });
 });
 

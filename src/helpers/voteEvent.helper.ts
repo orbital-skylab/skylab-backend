@@ -12,9 +12,9 @@ import {
   VoteEvent,
   VoterManagement,
 } from "@prisma/client";
-import { removePasswordFromUser } from "../helpers/users.helper";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
+import { formatUserWithRoleData } from "../helpers/users.helper";
 import { findManyProjects, updateOneProject } from "../models/projects.db";
 import { findManyUsers, updateUniqueUser } from "../models/users.db";
 import {
@@ -418,15 +418,7 @@ export async function getAllInternalVotersByVoteEvent(voteEventId: number) {
 
   /* Parse Users Objects */
   const parsedUsers = users.map((user) => {
-    const { student, mentor, administrator, adviser, ...userInfo } = user;
-    const userInfoWithoutPassword = removePasswordFromUser(userInfo);
-    return {
-      ...userInfoWithoutPassword,
-      student: student ? student[0] ?? {} : {},
-      mentor: mentor ? mentor[0] ?? {} : {},
-      adviser: adviser ? adviser[0] ?? {} : undefined,
-      administrator: administrator ? administrator[0] ?? {} : undefined,
-    };
+    return formatUserWithRoleData(user);
   });
 
   return parsedUsers;
@@ -443,41 +435,43 @@ export async function addInternalVoter({
 }) {
   const { email } = body;
 
-  // check if user is already part of vote event
+  // check if user exists
   const user = await findManyUsers({
+    where: { email },
+  });
+
+  if (user.length === 0) {
+    throw new SkylabError("User does not exist", HttpStatusCode.BAD_REQUEST);
+  }
+
+  // check if user is already part of vote event
+  const users = await findManyUsers({
     where: { email, voteEvents: { some: { id: voteEventId } } },
   });
 
-  if (user.length > 0) {
+  if (users.length > 0) {
     throw new SkylabError(
       "User is already part of the vote event",
       HttpStatusCode.BAD_REQUEST
     );
   }
 
-  let updatedUser: User;
-
-  try {
-    updatedUser = await updateUniqueUser({
-      where: { email: email },
-      data: {
-        voteEvents: {
-          connect: { id: voteEventId },
-        },
+  const updatedUser = await updateUniqueUser({
+    where: { email: email },
+    data: {
+      voteEvents: {
+        connect: { id: voteEventId },
       },
-    });
-  } catch (e) {
-    if (e.code === "P2016") {
-      throw new SkylabError(
-        "There is no user with that email address",
-        HttpStatusCode.BAD_REQUEST
-      );
-    } else {
-      throw e;
-    }
-  }
+    },
+    include: {
+      student: true,
+      mentor: true,
+      administrator: true,
+      adviser: true,
+    },
+  });
 
-  return updatedUser;
+  return formatUserWithRoleData(updatedUser);
 }
 
 export async function removeInternalVoter(
@@ -686,7 +680,7 @@ export async function getVotesByVoteEventAndVoter(
 }
 
 export async function getAllVotesByVoteEvent(voteEventId: number) {
-  const votes = await findManyVotes({
+  const votes: any = await findManyVotes({
     where: {
       voteEventId: voteEventId,
     },
@@ -703,7 +697,16 @@ export async function getAllVotesByVoteEvent(voteEventId: number) {
     },
   });
 
-  return votes;
+  const formattedVotes = votes.map((vote) => {
+    return {
+      ...vote,
+      internalVoter: vote.internalVoter
+        ? formatUserWithRoleData(vote.internalVoter)
+        : null,
+    };
+  });
+
+  return formattedVotes;
 }
 
 export async function addManyVotes({

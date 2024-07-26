@@ -20,6 +20,8 @@ import {
   VOTER_ID_2,
 } from "../../__mocks__/voteEvent.mocks";
 import { prisma } from "../../src/client";
+import { SkylabError } from "../../src/errors/SkylabError";
+import { formatUserWithRoleData } from "../../src/helpers/users.helper";
 import {
   addCandidate,
   addExternalVoter,
@@ -41,13 +43,12 @@ import {
   removeVote,
   removeVoteEvent,
 } from "../../src/helpers/voteEvent.helper";
+import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
 import {
   KNOWN_EMAILS,
   voteEventTestSetUp,
   voteEventTestTearDown,
 } from "../../src/utils/testUtils";
-import { SkylabError } from "../../src/errors/SkylabError";
-import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
 
 let mockVoteEvent1Id: number;
 let mockVoteEvent2Id: number;
@@ -581,7 +582,16 @@ describe("getAllVotesByVoteEvent helper integration test", () => {
     const votes = await getAllVotesByVoteEvent(mockVoteEvent1Id);
 
     expect(votes).toHaveLength(votesInDb.length);
-    expect(votes).toEqual(votesInDb);
+    expect(votes).toEqual(
+      votesInDb.map((vote) => {
+        return {
+          ...vote,
+          internalVoter: vote.internalVoter
+            ? formatUserWithRoleData(vote.internalVoter)
+            : null,
+        };
+      })
+    );
   });
 
   it("should return an empty array if no votes found", async () => {
