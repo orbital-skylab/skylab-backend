@@ -1,4 +1,5 @@
 import { Request, Response, Router } from "express";
+import { validationResult } from "express-validator";
 import {
   addCandidate,
   addExternalVoter,
@@ -7,7 +8,6 @@ import {
   addManyVotes,
   createVoteEvent,
   editVoteEvent,
-  editVoterManagement,
   getAllCandidatesByVoteEvent,
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
@@ -27,6 +27,7 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 import {
   addCandidateValidator,
   addExternalVoterValidator,
@@ -36,8 +37,6 @@ import {
   createVoteEventValidator,
   editVoteEventValidator,
 } from "../validators/voteEvent.validator";
-import { validationResult } from "express-validator";
-import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
 
