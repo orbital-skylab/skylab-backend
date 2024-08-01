@@ -39,6 +39,7 @@ import {
   getResultsByVoteEvent,
   getVotesByVoteEventAndVoter,
   removeCandidate,
+  removeExternalVoter,
   removeInternalVoter,
   removeVote,
   removeVoteEvent,
@@ -246,14 +247,12 @@ describe("addInternalVoter helper integration test", () => {
   });
 
   it("should throw an error if user is already part of vote event", async () => {
-    try {
-      await addInternalVoter({
+    await expect(
+      addInternalVoter({
         body: { email: KNOWN_EMAILS[0] },
         voteEventId: mockVoteEvent1Id,
-      });
-    } catch (e) {
-      expect(e.message).toBe("User is already part of the vote event");
-    }
+      })
+    ).rejects.toThrow("User is already part of the vote event");
   });
 
   it("should throw an error if user is not found", async () => {
@@ -262,7 +261,7 @@ describe("addInternalVoter helper integration test", () => {
         body: { email: NON_EXISTENT_USER_EMAIL },
         voteEventId: mockVoteEvent2Id,
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow("User does not exist");
   });
 });
 
@@ -303,11 +302,9 @@ describe("removeInternalVoter helper integration test", () => {
   });
 
   it("should throw an error if internal voter not found", async () => {
-    try {
-      await removeInternalVoter(mockVoteEvent2Id, NON_EXISTENT_ID);
-    } catch (e) {
-      expect(e).toBeDefined();
-    }
+    await expect(
+      removeInternalVoter(mockVoteEvent2Id, NON_EXISTENT_ID)
+    ).rejects.toThrow();
   });
 });
 
@@ -350,16 +347,12 @@ describe("addExternalVoter helper integration test", () => {
   });
 
   it("should throw an error if external voter is already part of vote event", async () => {
-    try {
-      await addExternalVoter({
+    await expect(
+      addExternalVoter({
         body: { voterId: VOTER_ID_1 },
         voteEventId: mockVoteEvent1Id,
-      });
-    } catch (e) {
-      expect(e.message).toBe(
-        "External voter is already part of the vote event"
-      );
-    }
+      })
+    ).rejects.toThrow("External voter is already part of the vote event");
   });
 });
 
@@ -367,35 +360,35 @@ describe("removeExternalVoter helper integration test", () => {
   it("should remove an external voter from a vote event", async () => {
     const toDelete = { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id };
 
-    const deletedExternalVoter = await prisma.externalVoter.delete({
+    const externalVoterToDelete = await prisma.externalVoter.findUnique({
       where: {
         id_voteEventId: toDelete,
       },
     });
 
-    expect(deletedExternalVoter).toEqual(toDelete);
+    expect(externalVoterToDelete).toBeDefined();
 
-    const dbCheck = await prisma.externalVoter.findUnique({
-      where: {
-        id_voteEventId: toDelete,
-      },
-    });
-    expect(dbCheck).toBeNull();
+    if (externalVoterToDelete) {
+      const deletedExternalVoter = await removeExternalVoter(
+        externalVoterToDelete.voteEventId,
+        externalVoterToDelete.id
+      );
+
+      expect(deletedExternalVoter).toEqual(toDelete);
+
+      const dbCheck = await prisma.externalVoter.findUnique({
+        where: {
+          id_voteEventId: toDelete,
+        },
+      });
+      expect(dbCheck).toBeNull();
+    }
   });
 
   it("should throw an error if external voter not found", async () => {
-    try {
-      await prisma.externalVoter.delete({
-        where: {
-          id_voteEventId: {
-            id: "non existent voter id",
-            voteEventId: mockVoteEvent1Id,
-          },
-        },
-      });
-    } catch (e) {
-      expect(e).toBeDefined();
-    }
+    await expect(
+      removeExternalVoter(mockVoteEvent1Id, "non existent voter id")
+    ).rejects.toThrow();
   });
 });
 
@@ -438,25 +431,21 @@ describe("addCandidate helper integration test", () => {
   });
 
   it("should throw an error if candidate is already part of vote event", async () => {
-    try {
-      await addCandidate({
+    await expect(
+      addCandidate({
         body: { projectId: mockProject1Id },
         voteEventId: mockVoteEvent1Id,
-      });
-    } catch (e) {
-      expect(e.message).toBe("Project is already part of the vote event");
-    }
+      })
+    ).rejects.toThrow("Project is already part of the vote event");
   });
 
   it("should throw an error if project is not found", async () => {
-    try {
-      await addCandidate({
+    await expect(
+      addCandidate({
         body: { projectId: NON_EXISTENT_ID },
         voteEventId: mockVoteEvent2Id,
-      });
-    } catch (e) {
-      expect(e.message).toBe("Project ID does not exist");
-    }
+      })
+    ).rejects.toThrow("Project ID does not exist");
   });
 });
 

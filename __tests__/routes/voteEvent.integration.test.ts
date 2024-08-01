@@ -155,7 +155,49 @@ describe("POST / endpoint", () => {
   });
 });
 
-// TODO: Add tests for GET /:voteEventId endpoint
+describe("GET /:voteEventId endpoint", () => {
+  it("should return a vote event for a given vote event ID", async () => {
+    const response = await request.get(`${BASE_URL}/${mockVoteEvent1Id}`);
+
+    const expectedVoteEvent = {
+      ...MOCK_VOTE_EVENT_1,
+      id: mockVoteEvent1Id,
+      voteConfig: MOCK_VOTE_CONFIG,
+      voterManagement: MOCK_VOTER_MANAGEMENT,
+      resultsFilter: {
+        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
+        areResultsPublished: true,
+      },
+      startTime: MOCK_VOTE_EVENT_1.startTime.toISOString(),
+      endTime: MOCK_VOTE_EVENT_1.endTime.toISOString(),
+    };
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent).toEqual(expectedVoteEvent);
+  });
+
+  it("should return 400 if the vote event does not exist", async () => {
+    const response = await request.get(`${BASE_URL}/${NON_EXISTENT_ID}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ message: "Vote event was not found" });
+  });
+
+  it("should handle errors during vote event retrieval", async () => {
+    const getVoteEventByIdMock = jest
+      .spyOn(voteEventHelpers, "getOneVoteEventById")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request.get(`${BASE_URL}/${mockVoteEvent1Id}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    getVoteEventByIdMock.mockRestore();
+  });
+});
 
 describe("PUT /:voteEventId endpoint", () => {
   const updatedVoteEvent = {
@@ -1351,7 +1393,7 @@ describe("GET /:voteEventId/results", () => {
     expect(response.body).toEqual({ message: "Vote event does not exist" });
   });
 
-  it("should return 400 if vote evnt has not started", async () => {
+  it("should return 400 if vote event has not started", async () => {
     const voteEvent = await prisma.voteEvent.create({
       data: {
         title: "Vote Event 3",

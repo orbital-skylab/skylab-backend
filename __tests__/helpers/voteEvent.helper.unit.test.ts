@@ -6,6 +6,7 @@ import {
   it,
   jest,
 } from "@jest/globals";
+import { AchievementLevel } from "@prisma/client";
 import {
   MOCK_EXTERNAL_VOTER_1,
   MOCK_EXTERNAL_VOTER_2,
@@ -23,6 +24,8 @@ import {
   VOTER_ID_1,
 } from "../../__mocks__/voteEvent.mocks";
 import { SkylabError } from "../../src/errors/SkylabError";
+import { removePasswordFromUser } from "../../src/helpers/users.helper";
+import * as voteEventHelper from "../../src/helpers/voteEvent.helper";
 import {
   DEFAULT_RESULTS_FILTER,
   VOTE_EVENT_INCLUSION,
@@ -51,10 +54,7 @@ import {
 import * as projectModel from "../../src/models/projects.db";
 import * as userModel from "../../src/models/users.db";
 import * as voteEventModel from "../../src/models/voteEvent.db";
-import * as voteEventHelper from "../../src/helpers/voteEvent.helper";
 import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
-import { AchievementLevel } from "@prisma/client";
-import { removePasswordFromUser } from "../../src/helpers/users.helper";
 
 afterEach(() => {
   jest.resetAllMocks();

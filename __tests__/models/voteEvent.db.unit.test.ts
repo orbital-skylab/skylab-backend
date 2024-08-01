@@ -6,7 +6,7 @@ import {
   it,
   jest,
 } from "@jest/globals";
-import { prisma } from "../../src/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import {
   MOCK_EXTERNAL_VOTER_1,
   MOCK_EXTERNAL_VOTER_2,
@@ -15,6 +15,8 @@ import {
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
 } from "../../__mocks__/voteEvent.mocks";
+import { prisma } from "../../src/client";
+import { SkylabError } from "../../src/errors/SkylabError";
 import {
   createExternalVoter,
   createManyVotes,
@@ -28,8 +30,6 @@ import {
   findUniqueVoteEvent,
   updateVoteEvent,
 } from "../../src/models/voteEvent.db";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
-import { SkylabError } from "../../src/errors/SkylabError";
 import { HttpStatusCode } from "../../src/utils/HTTP_Status_Codes";
 
 const PRISMA_CLIENT_KNOWN_REQUEST_ERROR = new PrismaClientKnownRequestError(
