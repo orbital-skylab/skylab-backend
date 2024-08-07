@@ -5,9 +5,12 @@ import {
   addExternalVoter,
   addInternalVoter,
   addManyCandidates,
+  addManyExternalVoters,
+  addManyInternalVoters,
   addManyVotes,
   createVoteEvent,
   editVoteEvent,
+  editVoterManagement,
   getAllCandidatesByVoteEvent,
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
@@ -107,6 +110,24 @@ router.put(
   }
 );
 
+router.put(
+  "/:voteEventId/voter-management",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const editedVoteEvent = await editVoterManagement({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { voteEvent: editedVoteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
 router.delete(
   "/:voteEventId",
   authorizeAdmin,
@@ -157,6 +178,24 @@ router.post(
       });
 
       return apiResponseWrapper(res, { internalVoter });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post(
+  "/:voteEventId/voter-management/internal-voters/batch",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const internalVoters = await addManyInternalVoters({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { internalVoters });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -216,6 +255,24 @@ router.post(
       });
 
       return apiResponseWrapper(res, { externalVoter });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post(
+  "/:voteEventId/voter-management/external-voters/batch",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const externalVoters = await addManyExternalVoters({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { externalVoters });
     } catch (e) {
       return routeErrorHandler(res, e);
     }

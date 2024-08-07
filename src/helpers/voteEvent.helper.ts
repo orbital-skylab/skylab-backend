@@ -19,6 +19,7 @@ import { findManyProjects, updateOneProject } from "../models/projects.db";
 import { findManyUsers, updateUniqueUser } from "../models/users.db";
 import {
   createExternalVoter,
+  createManyExternalVoters,
   createManyVotes,
   createOneVoteEvent,
   deleteExternalVoter,
@@ -381,11 +382,6 @@ export async function editVoteEvent({
     );
   }
 
-  // If voter management is exist, we need to clear all voters as well
-  if (voteEventToUpdate.voterManagement) {
-    return await editVoterManagement({ body, voteEventId });
-  }
-
   const updatedVoteEvent = await updateVoteEvent({
     where: { id: voteEventId },
     data: processEditVoteEventData(voteEvent),
@@ -474,6 +470,53 @@ export async function addInternalVoter({
   return formatUserWithRoleData(updatedUser);
 }
 
+export async function addManyInternalVoters({
+  body,
+  voteEventId,
+}: {
+  body: { emails: string[] };
+  voteEventId: number;
+}) {
+  const { emails } = body;
+
+  // filter duplicate emails
+  const uniqueEmails = Array.from(new Set(emails));
+
+  const users = await findManyUsers({
+    where: { email: { in: uniqueEmails } },
+  });
+
+  if (users.length !== uniqueEmails.length) {
+    throw new SkylabError(
+      "One or more users do not exist",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  const voteEvent: any = await updateVoteEvent({
+    where: { id: voteEventId },
+    data: {
+      internalVoters: {
+        connect: users.map((user) => ({ id: user.id })),
+      },
+    },
+    include: {
+      internalVoters: {
+        include: {
+          student: true,
+          mentor: true,
+          administrator: true,
+          adviser: true,
+        },
+      },
+    },
+  });
+
+  return voteEvent.internalVoters.map((user: UserWithRoles) =>
+    formatUserWithRoleData(user)
+  );
+}
+
 export async function removeInternalVoter(
   voteEventId: number,
   internalVoterId: number
@@ -532,6 +575,42 @@ export async function addExternalVoter({
   });
 
   return newExternalVoter;
+}
+
+export async function addManyExternalVoters({
+  body,
+  voteEventId,
+}: {
+  body: { voterIds: string[] };
+  voteEventId: number;
+}) {
+  const { voterIds } = body;
+
+  // filter duplicate voterIds
+  const uniqueVoterIds = Array.from(new Set(voterIds));
+
+  const externalVoters = await findManyExternalVoters({
+    where: { id: { in: uniqueVoterIds }, voteEventId: voteEventId },
+  });
+
+  // filter out external voters that are already part of the vote event
+  const newVoterIds = uniqueVoterIds.filter(
+    (voterId) =>
+      externalVoters.findIndex((voter) => voter.id === voterId) === -1
+  );
+
+  await createManyExternalVoters({
+    data: newVoterIds.map((voterId) => ({
+      id: voterId,
+      voteEventId: voteEventId,
+    })),
+  });
+
+  const allExternalVoters = await findManyExternalVoters({
+    where: { voteEventId: voteEventId },
+  });
+
+  return allExternalVoters;
 }
 
 export async function removeExternalVoter(
@@ -875,16 +954,34 @@ export async function editVoterManagement({
   voteEventId,
 }: {
   body: {
-    voteEvent: any;
+    voterManagement: Omit<VoterManagement, "voteEventId"> & {
+      copyInternalVoteEventId?: number;
+      copyExternalVoteEventId?: number;
+    };
   };
   voteEventId: number;
 }) {
-  const { voteEvent } = body;
+  const { voterManagement } = body;
 
   return await prisma.$transaction(async (tx) => {
     const updatedVoteEvent = await tx.voteEvent.update({
       where: { id: voteEventId },
-      data: processEditVoteEventData(voteEvent),
+      data: {
+        voterManagement: {
+          upsert: {
+            create: {
+              hasInternalList: voterManagement.hasInternalList,
+              hasExternalList: voterManagement.hasExternalList,
+              isRegistrationOpen: voterManagement.isRegistrationOpen,
+            },
+            update: {
+              hasInternalList: voterManagement.hasInternalList,
+              hasExternalList: voterManagement.hasExternalList,
+              isRegistrationOpen: voterManagement.isRegistrationOpen,
+            },
+          },
+        },
+      },
       include: VOTE_EVENT_INCLUSION,
     });
     await tx.voteEvent.update({
@@ -895,6 +992,21 @@ export async function editVoterManagement({
         },
       },
     });
+    if (voterManagement.copyInternalVoteEventId) {
+      const internalVoters = await tx.voteEvent
+        .findUnique({
+          where: { id: voterManagement.copyInternalVoteEventId },
+        })
+        .internalVoters();
+      await tx.voteEvent.update({
+        where: { id: voteEventId },
+        data: {
+          internalVoters: {
+            set: internalVoters,
+          },
+        },
+      });
+    }
     await tx.voteEvent.update({
       where: { id: voteEventId },
       data: {
@@ -903,6 +1015,21 @@ export async function editVoterManagement({
         },
       },
     });
+    if (voterManagement.copyExternalVoteEventId) {
+      const externalVoters = await tx.voteEvent
+        .findUnique({
+          where: { id: voterManagement.copyExternalVoteEventId },
+        })
+        .externalVoters();
+      await tx.voteEvent.update({
+        where: { id: voteEventId },
+        data: {
+          externalVoters: {
+            createMany: { data: externalVoters },
+          },
+        },
+      });
+    }
     return updatedVoteEvent;
   });
 }

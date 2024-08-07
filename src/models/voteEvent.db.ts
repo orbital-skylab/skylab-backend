@@ -106,6 +106,21 @@ export async function createExternalVoter(
   }
 }
 
+export async function createManyExternalVoters(
+  query: Prisma.ExternalVoterCreateManyArgs
+) {
+  try {
+    const countObject = await prisma.externalVoter.createMany(query);
+    return countObject;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
 export async function deleteExternalVoter(
   query: Prisma.ExternalVoterDeleteArgs
 ) {
