@@ -7,11 +7,14 @@ import { SUBJECT, SENDER, GET_HTML_CONTENT } from "../utils/Emails";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 import { Request, Response } from "express";
+import { findFirstExternalVoter } from "src/models/voteEvent.db";
 
 const PASSWORD_HASH_SALT_ROUNDS = 10;
 const RANDOM_PASSWORD_LENGTH = 16;
 const RANDOM_PASSWORD_CHARACTERS =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$";
+
+export const EXTERNAL_VOTER_TOKEN = "external_voter_token";
 
 export async function userLogin(email: string, passwordInput: string) {
   const user = await findUniqueUserWithRoleData({ where: { email: email } });
@@ -36,6 +39,20 @@ export async function userLogin(email: string, passwordInput: string) {
       token: jwt.sign(userData, process.env.JWT_SECRET ?? "jwt_secret"),
     };
   }
+}
+
+export async function externalVoterLogin(voterId: string) {
+  const externalVoter = await findFirstExternalVoter({
+    where: { id: voterId },
+  });
+
+  if (!externalVoter) {
+    throw new SkylabError("Voter ID not found", HttpStatusCode.NOT_FOUND);
+  }
+
+  return {
+    token: jwt.sign({ voterId }, process.env.JWT_SECRET ?? "jwt_secret"),
+  };
 }
 
 export async function hashPassword(plainTextPassword: string) {
