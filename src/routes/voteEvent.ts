@@ -1,5 +1,8 @@
+import { VoteEvent } from "@prisma/client";
 import { Request, Response, Router } from "express";
 import { validationResult } from "express-validator";
+import authorizeVoter from "../middleware/authorizeVoter";
+import authorizeVoterOfVoteEvent from "../middleware/authorizeVoterOfVoteEvent";
 import {
   addCandidate,
   addExternalVoter,
@@ -11,11 +14,14 @@ import {
   createVoteEvent,
   editVoteEvent,
   editVoterManagement,
+  generateExternalVoters,
   getAllCandidatesByVoteEvent,
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getAllVotesByVoteEvent,
+  getExternalVoterVoteEvents,
+  getInternalVoterVoteEvents,
   getOneVoteEventById,
   getResultsByVoteEvent,
   getVotesByVoteEventAndVoter,
@@ -40,12 +46,27 @@ import {
   createVoteEventValidator,
   editVoteEventValidator,
 } from "../validators/voteEvent.validator";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+import { findUniqueVoteEvent } from "../models/voteEvent.db";
 
 const router = Router();
 
-router.get("/", async (_, res: Response) => {
+router.get("/", authorizeVoter, async (_, res: Response) => {
   try {
-    const voteEvents = await getAllVoteEvents();
+    let voteEvents: VoteEvent[] = [];
+
+    if (res.locals.userData) {
+      const isUserAdmin = !!res.locals.userData.administrator?.id;
+
+      voteEvents = isUserAdmin
+        ? await getAllVoteEvents()
+        : await getInternalVoterVoteEvents(res.locals.userData.id);
+    }
+
+    if (res.locals.voterId) {
+      voteEvents = await getExternalVoterVoteEvents(res.locals.voterId);
+    }
 
     return apiResponseWrapper(res, { voteEvents });
   } catch (e) {
@@ -137,6 +158,39 @@ router.delete(
       const deletedVoteEvent = await removeVoteEvent(Number(voteEventId));
 
       return apiResponseWrapper(res, { voteEvent: deletedVoteEvent });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.post(
+  "/:voteEventId/register",
+  authorizeVoter,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    const { userData } = res.locals;
+
+    if (!userData) {
+      return routeErrorHandler(
+        res,
+        new SkylabError("Authentication failed", HttpStatusCode.UNAUTHORIZED)
+      );
+    }
+
+    try {
+      await addInternalVoter({
+        body: {
+          email: userData.email,
+        },
+        voteEventId: Number(voteEventId),
+      });
+
+      const voteEvent = await findUniqueVoteEvent({
+        where: { id: Number(voteEventId) },
+      });
+
+      return apiResponseWrapper(res, { voteEvent });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
@@ -279,6 +333,24 @@ router.post(
   }
 );
 
+router.post(
+  "/:voteEventId/voter-management/external-voters/generate",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const externalVoters = await generateExternalVoters({
+        body: req.body,
+        voteEventId: Number(voteEventId),
+      });
+
+      return apiResponseWrapper(res, { externalVoters });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
 router.delete(
   "/:voteEventId/voter-management/external-voters/:externalVoterId",
   authorizeAdmin,
@@ -297,16 +369,21 @@ router.delete(
   }
 );
 
-router.get("/:voteEventId/candidates", async (req: Request, res: Response) => {
-  const { voteEventId } = req.params;
-  try {
-    const candidates = await getAllCandidatesByVoteEvent(Number(voteEventId));
+router.get(
+  "/:voteEventId/candidates",
+  authorizeVoter,
+  authorizeVoterOfVoteEvent,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    try {
+      const candidates = await getAllCandidatesByVoteEvent(Number(voteEventId));
 
-    return apiResponseWrapper(res, { candidates });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+      return apiResponseWrapper(res, { candidates });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.post(
   "/:voteEventId/candidates",
@@ -374,22 +451,27 @@ router.delete(
   }
 );
 
-router.get("/:voteEventId/votes", async (req: Request, res: Response) => {
-  const { voteEventId } = req.params;
-  const { userId, externalVoterId } = req.query;
+router.get(
+  "/:voteEventId/votes",
+  authorizeVoter,
+  authorizeVoterOfVoteEvent,
+  async (req: Request, res: Response) => {
+    const { voteEventId } = req.params;
+    const { userData, voterId } = res.locals;
 
-  try {
-    const votes = await getVotesByVoteEventAndVoter(
-      Number(voteEventId),
-      userId ? Number(userId) : undefined,
-      externalVoterId ? externalVoterId.toString() : undefined
-    );
+    try {
+      const votes = await getVotesByVoteEventAndVoter(
+        Number(voteEventId),
+        userData ? userData.id : undefined,
+        voterId
+      );
 
-    return apiResponseWrapper(res, { votes });
-  } catch (e) {
-    return routeErrorHandler(res, e);
+      return apiResponseWrapper(res, { votes });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
   }
-});
+);
 
 router.get(
   "/:voteEventId/votes/all",
@@ -409,6 +491,8 @@ router.get(
 
 router.post(
   "/:voteEventId/votes",
+  authorizeVoter,
+  authorizeVoterOfVoteEvent,
   addVotesValidator,
   async (req: Request, res: Response) => {
     const errors = validationResult(req).formatWith(errorFormatter);
@@ -419,7 +503,11 @@ router.post(
     const { voteEventId } = req.params;
     try {
       const votes = await addManyVotes({
-        body: req.body,
+        body: {
+          projectIds: req.body.projectIds,
+          userId: res.locals.userData?.id ?? undefined,
+          externalVoterId: res.locals.voterId,
+        },
         voteEventId: Number(voteEventId),
       });
 
@@ -447,7 +535,8 @@ router.delete(
 
 router.get(
   "/:voteEventId/results",
-  authorizeAdmin,
+  authorizeVoter,
+  authorizeVoterOfVoteEvent,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
 

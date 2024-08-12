@@ -12,6 +12,7 @@ import {
   VoteEvent,
   VoterManagement,
 } from "@prisma/client";
+import ShortUniqueId from "short-unique-id";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
 import { formatUserWithRoleData } from "../helpers/users.helper";
@@ -47,6 +48,7 @@ type UserWithRoles = User & {
   adviser?: Adviser[];
 };
 
+// Fields avaialable for administartors
 export const VOTE_EVENT_INCLUSION = {
   voterManagement: {
     select: {
@@ -81,6 +83,7 @@ export const VOTE_EVENT_INCLUSION = {
   },
 };
 
+// Fields available for internal and external voters
 export const VOTE_EVENT_PUBLIC_INCLUSION = {
   voterManagement: {
     select: {
@@ -322,6 +325,51 @@ export async function getAllVoteEvents() {
   });
 
   return voteEvents;
+}
+
+export async function getInternalVoterVoteEvents(internalVoterId: number) {
+  // Get all vote events that the internal voter is part of
+  const voteEvents = await findManyVoteEvents({
+    where: { internalVoters: { some: { id: internalVoterId } } },
+    include: VOTE_EVENT_PUBLIC_INCLUSION,
+  });
+
+  // Get other vote events with registration open
+  const openVoteEvents = await findManyVoteEvents({
+    where: {
+      id: { notIn: voteEvents.map((v) => v.id) },
+      voterManagement: { isRegistrationOpen: true },
+    },
+    include: VOTE_EVENT_PUBLIC_INCLUSION,
+  });
+
+  return [
+    ...voteEvents.map((voteEvent) => {
+      return {
+        ...voteEvent,
+        voterManagement: {
+          isRegistrationOpen: false,
+        },
+      };
+    }),
+    ...openVoteEvents,
+  ];
+}
+
+export async function getExternalVoterVoteEvents(externalVoterId: string) {
+  const voteEvents = await findManyVoteEvents({
+    where: { externalVoters: { some: { id: externalVoterId } } },
+    include: VOTE_EVENT_PUBLIC_INCLUSION,
+  });
+
+  return voteEvents.map((voteEvent) => {
+    return {
+      ...voteEvent,
+      voterManagement: {
+        isRegistrationOpen: false,
+      },
+    };
+  });
 }
 
 export async function getOneVoteEventById(voteEventId: number) {
@@ -613,6 +661,64 @@ export async function addManyExternalVoters({
   return allExternalVoters;
 }
 
+export async function generateExternalVoters({
+  body,
+  voteEventId,
+}: {
+  body: {
+    amount: number;
+    length: number;
+  };
+  voteEventId: number;
+}) {
+  const { amount, length } = body;
+
+  const externalVoters = await findManyExternalVoters({
+    where: { voteEventId: voteEventId },
+  });
+
+  const existingVoterIds = externalVoters.map((voter) => voter.id);
+  const uid = new ShortUniqueId();
+
+  const newVoterIds: string[] = [];
+
+  // generate unique voterIds
+  for (let i = 0; i < amount; i++) {
+    let newVoterId = (uid as any).rnd(length);
+    let attempts = 0;
+
+    // check if voterId is unique
+    while (existingVoterIds.includes(newVoterId)) {
+      newVoterId = (uid as any).rnd(length);
+      attempts++;
+
+      // throw error if unique voterId cannot be generated after 10 attempts
+      if (attempts > 10) {
+        throw new SkylabError(
+          "Could not generate unique voter IDs",
+          HttpStatusCode.INTERNAL_SERVER_ERROR
+        );
+      }
+    }
+
+    newVoterIds.push(newVoterId);
+    existingVoterIds.push(newVoterId);
+  }
+
+  await createManyExternalVoters({
+    data: newVoterIds.map((voterId) => ({
+      id: voterId,
+      voteEventId: voteEventId,
+    })),
+  });
+
+  const allExternalVoters = await findManyExternalVoters({
+    where: { voteEventId: voteEventId },
+  });
+
+  return allExternalVoters;
+}
+
 export async function removeExternalVoter(
   voteEventId: number,
   externalVoterId: string
@@ -739,13 +845,6 @@ export async function getVotesByVoteEventAndVoter(
   userId?: number,
   externalVoterId?: string
 ) {
-  if (!userId && !externalVoterId) {
-    throw new SkylabError(
-      "You are not authorized to vote in this event",
-      HttpStatusCode.UNAUTHORIZED
-    );
-  }
-
   const votes = await findManyVotes({
     where: {
       voteEventId: voteEventId,

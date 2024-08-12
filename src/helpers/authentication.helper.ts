@@ -7,7 +7,7 @@ import { SUBJECT, SENDER, GET_HTML_CONTENT } from "../utils/Emails";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
 import { Request, Response } from "express";
-import { findFirstExternalVoter } from "src/models/voteEvent.db";
+import { findFirstExternalVoter } from "../models/voteEvent.db";
 
 const PASSWORD_HASH_SALT_ROUNDS = 10;
 const RANDOM_PASSWORD_LENGTH = 16;

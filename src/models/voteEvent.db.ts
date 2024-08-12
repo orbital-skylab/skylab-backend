@@ -77,6 +77,20 @@ export async function deleteVoteEvent(query: Prisma.VoteEventDeleteArgs) {
 
 // --- External Voter DB Functions ---
 
+export async function findFirstExternalVoter(
+  query: Prisma.ExternalVoterFindFirstArgs
+) {
+  try {
+    const firstExternalVoter = await prisma.externalVoter.findFirst(query);
+    return firstExternalVoter;
+  } catch (e) {
+    if (!(e instanceof PrismaClientKnownRequestError)) {
+      throw e;
+    }
+    throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST, e.meta);
+  }
+}
+
 export async function findManyExternalVoters(
   query: Prisma.ExternalVoterFindManyArgs
 ) {
