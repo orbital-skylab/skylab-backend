@@ -24,6 +24,7 @@ import {
   deleteExternalVoter,
   deleteVote,
   deleteVoteEvent,
+  findFirstExternalVoter,
   findManyExternalVoters,
   findManyVoteEvents,
   findManyVotes,
@@ -186,6 +187,35 @@ describe("deleteVoteEvent db unit test", () => {
     deleteVoteEventSpy.mockRejectedValueOnce(PRISMA_CLIENT_KNOWN_REQUEST_ERROR);
 
     await expect(deleteVoteEvent(params)).rejects.toEqual(expectedSkylabError);
+  });
+});
+
+describe("findFirstExternalVoter db unit test", () => {
+  let findFirstExternalVoterSpy;
+  const params = {};
+
+  beforeAll(() => {
+    findFirstExternalVoterSpy = jest.spyOn(prisma.externalVoter, "findFirst");
+  });
+
+  it("should call prisma function with the correct args and return the correct values", async () => {
+    findFirstExternalVoterSpy.mockResolvedValueOnce(MOCK_EXTERNAL_VOTER_1);
+
+    const result = await findFirstExternalVoter(params);
+
+    expect(result).toEqual(MOCK_EXTERNAL_VOTER_1);
+    expect(findFirstExternalVoterSpy).toHaveBeenCalledTimes(1);
+    expect(findFirstExternalVoterSpy).toHaveBeenCalledWith(params);
+  });
+
+  it("should return an error with http status code 400 if the prisma function throws a known request error", async () => {
+    findFirstExternalVoterSpy.mockRejectedValueOnce(
+      PRISMA_CLIENT_KNOWN_REQUEST_ERROR
+    );
+
+    await expect(findFirstExternalVoter(params)).rejects.toEqual(
+      expectedSkylabError
+    );
   });
 });
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { VoteEvent } from "@prisma/client";
 import { Request, Response, Router } from "express";
 import { validationResult } from "express-validator";
@@ -30,6 +31,7 @@ import {
   removeInternalVoter,
   removeVote,
   removeVoteEvent,
+  VOTE_EVENT_PUBLIC_INCLUSION,
 } from "../helpers/voteEvent.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
@@ -95,11 +97,24 @@ router.post(
 
 router.get(
   "/:voteEventId",
-  authorizeAdmin,
+  authorizeVoter,
+  authorizeVoterOfVoteEvent,
   async (req: Request, res: Response) => {
     const { voteEventId } = req.params;
     try {
-      const voteEvent = await getOneVoteEventById(Number(voteEventId));
+      let voteEvent: any = await getOneVoteEventById(Number(voteEventId));
+
+      if (!res.locals.userData?.administrator?.id) {
+        voteEvent = {
+          ...voteEvent,
+          voterManagement: {
+            isRegistrationOpen: false,
+          },
+          resultsFilter: {
+            areResultsPublished: voteEvent.resultsFilter?.areResultsPublished,
+          },
+        };
+      }
 
       return apiResponseWrapper(res, { voteEvent });
     } catch (e) {
@@ -188,6 +203,7 @@ router.post(
 
       const voteEvent = await findUniqueVoteEvent({
         where: { id: Number(voteEventId) },
+        include: VOTE_EVENT_PUBLIC_INCLUSION,
       });
 
       return apiResponseWrapper(res, { voteEvent });

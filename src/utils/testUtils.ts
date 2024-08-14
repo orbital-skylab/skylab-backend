@@ -1,6 +1,10 @@
 import { AchievementLevel } from "@prisma/client";
 import { prisma } from "../client";
-import { userLogin } from "../helpers/authentication.helper";
+import {
+  EXTERNAL_VOTER_TOKEN,
+  externalVoterLogin,
+  userLogin,
+} from "../helpers/authentication.helper";
 import app from "../server";
 import supertest from "supertest";
 import {
@@ -136,6 +140,24 @@ export async function setUpRequestWithAdminAuth() {
   );
 
   return supertest.agent(app).set("Cookie", `token=${token}`);
+}
+
+export async function setUpRequestWithStudentAuth() {
+  if (!process.env.ADMIN_PASSWORD) {
+    throw new Error("ADMIN_PASSWORD environment variable not set");
+  }
+  const { token } = await userLogin(
+    "student@skylab.com",
+    process.env.ADMIN_PASSWORD
+  );
+
+  return supertest.agent(app).set("Cookie", `token=${token}`);
+}
+
+export async function setUpRequestWithExternalVoterAuth() {
+  const { token } = await externalVoterLogin(VOTER_ID_1);
+
+  return supertest.agent(app).set("Cookie", `${EXTERNAL_VOTER_TOKEN}=${token}`);
 }
 
 export const voteEventTestTearDown = async () => {

@@ -27,14 +27,20 @@ import {
   addExternalVoter,
   addInternalVoter,
   addManyCandidates,
+  addManyExternalVoters,
+  addManyInternalVoters,
   addManyVotes,
   createVoteEvent,
   editVoteEvent,
+  editVoterManagement,
+  generateExternalVoters,
   getAllCandidatesByVoteEvent,
   getAllExternalVotersByVoteEvent,
   getAllInternalVotersByVoteEvent,
   getAllVoteEvents,
   getAllVotesByVoteEvent,
+  getExternalVoterVoteEvents,
+  getInternalVoterVoteEvents,
   getOneVoteEventById,
   getResultsByVoteEvent,
   getVotesByVoteEventAndVoter,
@@ -105,6 +111,68 @@ describe("getAllVoteEvents helper integration test", () => {
     await voteEventTestTearDown();
 
     const voteEvents = await getAllVoteEvents();
+
+    expect(voteEvents).toEqual([]);
+  });
+});
+
+describe("getInternalVoterVoteEvent helper integration test", () => {
+  it("should return all vote events that the internal voter is part of", async () => {
+    const voteEvents = await getInternalVoterVoteEvents(userIds[0]);
+
+    expect(voteEvents).toEqual([
+      {
+        ...MOCK_VOTE_EVENT_1,
+        id: mockVoteEvent1Id,
+        voteConfig: MOCK_VOTE_CONFIG,
+        voterManagement: {
+          isRegistrationOpen: false,
+        },
+        resultsFilter: {
+          areResultsPublished: true,
+        },
+      },
+    ]);
+  });
+
+  it("should return an empty array if internal voter is not part of any vote events", async () => {
+    const internalVoter = await prisma.user.findFirst({
+      where: { email: { notIn: KNOWN_EMAILS } },
+    });
+
+    if (!internalVoter) {
+      throw new Error("Internal voter not found");
+    }
+
+    const voteEvents = await getInternalVoterVoteEvents(internalVoter?.id);
+
+    expect(voteEvents).toEqual([]);
+  });
+});
+
+describe("getExternalVoterVoteEvents helper integration test", () => {
+  it("should return all vote events that the external voter is part of", async () => {
+    const voteEvents = await getExternalVoterVoteEvents(VOTER_ID_1);
+
+    expect(voteEvents).toEqual([
+      {
+        ...MOCK_VOTE_EVENT_1,
+        id: mockVoteEvent1Id,
+        voteConfig: MOCK_VOTE_CONFIG,
+        voterManagement: {
+          isRegistrationOpen: false,
+        },
+        resultsFilter: {
+          areResultsPublished: true,
+        },
+      },
+    ]);
+  });
+
+  it("should return an empty array if external voter is not part of any vote events", async () => {
+    const voteEvents = await getExternalVoterVoteEvents(
+      "non existent voter id"
+    );
 
     expect(voteEvents).toEqual([]);
   });
@@ -265,6 +333,42 @@ describe("addInternalVoter helper integration test", () => {
   });
 });
 
+describe("addManyInternalVoters helper integration test", () => {
+  it("should add multiple internal voters to a vote event", async () => {
+    const newInternalVoters = await addManyInternalVoters({
+      body: { emails: KNOWN_EMAILS },
+      voteEventId: mockVoteEvent2Id,
+    });
+
+    expect(newInternalVoters).toHaveLength(KNOWN_EMAILS.length);
+    expect(newInternalVoters).toEqual(
+      expect.arrayContaining([
+        ...KNOWN_EMAILS.map((email) =>
+          expect.objectContaining({ email: email })
+        ),
+      ])
+    );
+  });
+
+  it("should throw an error if some emails do not exist", async () => {
+    await expect(
+      addManyInternalVoters({
+        body: { emails: [KNOWN_EMAILS[0], NON_EXISTENT_USER_EMAIL] },
+        voteEventId: mockVoteEvent2Id,
+      })
+    ).rejects.toThrow("One or more users do not exist");
+  });
+
+  it("should throw an error if vote event not found", async () => {
+    await expect(
+      addManyInternalVoters({
+        body: { emails: KNOWN_EMAILS },
+        voteEventId: NON_EXISTENT_ID,
+      })
+    ).rejects.toThrow();
+  });
+});
+
 describe("removeInternalVoter helper integration test", () => {
   let idToDelete;
 
@@ -353,6 +457,73 @@ describe("addExternalVoter helper integration test", () => {
         voteEventId: mockVoteEvent1Id,
       })
     ).rejects.toThrow("External voter is already part of the vote event");
+  });
+});
+
+describe("addManyExternalVoters helper integration test", () => {
+  it("should add multiple external voters to a vote event", async () => {
+    const voterIds = ["newVoter1", "newVoter2"];
+    const newExternalVoters = await addManyExternalVoters({
+      body: { voterIds: voterIds },
+      voteEventId: mockVoteEvent1Id,
+    });
+
+    expect(newExternalVoters).toHaveLength(4);
+    expect(newExternalVoters).toEqual(
+      expect.arrayContaining([
+        { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id },
+        { id: VOTER_ID_2, voteEventId: mockVoteEvent1Id },
+        { id: voterIds[0], voteEventId: mockVoteEvent1Id },
+        { id: voterIds[1], voteEventId: mockVoteEvent1Id },
+      ])
+    );
+  });
+
+  it("should handle duplicate voter ids", async () => {
+    const voterIds = ["newVoter1", "newVoter1"];
+    const newExternalVoters = await addManyExternalVoters({
+      body: { voterIds },
+      voteEventId: mockVoteEvent2Id,
+    });
+
+    expect(newExternalVoters).toEqual([
+      { id: "newVoter1", voteEventId: mockVoteEvent2Id },
+    ]);
+  });
+
+  it("should throw an error if vote event not found", async () => {
+    await expect(
+      addManyExternalVoters({
+        body: { voterIds: [VOTER_ID_2] },
+        voteEventId: NON_EXISTENT_ID,
+      })
+    ).rejects.toThrow();
+  });
+});
+
+describe("generateExternalVoters helper integration test", () => {
+  it("should generate external voters for a vote event", async () => {
+    const externalVoters = await generateExternalVoters({
+      body: { amount: 3, length: 5 },
+      voteEventId: mockVoteEvent1Id,
+    });
+
+    expect(externalVoters).toHaveLength(5);
+    expect(externalVoters).toEqual(
+      expect.arrayContaining([
+        { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id },
+        { id: VOTER_ID_2, voteEventId: mockVoteEvent1Id },
+      ])
+    );
+  });
+
+  it("should throw an error if unique voterId cannot be generated", async () => {
+    await expect(
+      generateExternalVoters({
+        body: { amount: 100, length: 1 },
+        voteEventId: mockVoteEvent1Id,
+      })
+    ).rejects.toThrow();
   });
 });
 
@@ -703,5 +874,125 @@ describe("getResultsByVoteEvent helper integration test", () => {
 
   it("should throw an error if vote event not found", async () => {
     await expect(getResultsByVoteEvent(NON_EXISTENT_ID)).rejects.toThrow();
+  });
+});
+
+describe("editVoterManagement helper integration test", () => {
+  it("should update voter management of a vote event and clear voters", async () => {
+    const updatedVoteEvent = await editVoterManagement({
+      body: {
+        voterManagement: {
+          hasInternalList: true,
+          hasExternalList: true,
+          isRegistrationOpen: true,
+        },
+      },
+      voteEventId: mockVoteEvent1Id,
+    });
+
+    expect(updatedVoteEvent.voterManagement).toEqual({
+      hasInternalList: true,
+      hasExternalList: true,
+      isRegistrationOpen: true,
+    });
+
+    // check voter management in db
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent1Id },
+      include: { voterManagement: true },
+    });
+    expect(dbCheck?.voterManagement).toEqual(
+      expect.objectContaining({
+        hasInternalList: true,
+        hasExternalList: true,
+        isRegistrationOpen: true,
+      })
+    );
+
+    // check internal voters in db
+    const internalVoters = await prisma.user.findMany({
+      where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
+    });
+    expect(internalVoters).toEqual([]);
+
+    // check external voters in db
+    const externalVoters = await prisma.externalVoter.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+    expect(externalVoters).toEqual([]);
+  });
+
+  it("should update voter management and copy voters", async () => {
+    // add internal voters to vote event 2
+    await prisma.user.update({
+      where: { email: KNOWN_EMAILS[0] },
+      data: { voteEvents: { connect: { id: mockVoteEvent2Id } } },
+    });
+
+    // add external voters to vote event 2
+    await prisma.externalVoter.create({
+      data: { id: VOTER_ID_1, voteEventId: mockVoteEvent2Id },
+    });
+
+    const updatedVoteEvent = await editVoterManagement({
+      body: {
+        voterManagement: {
+          hasInternalList: true,
+          hasExternalList: true,
+          isRegistrationOpen: true,
+          copyInternalVoteEventId: mockVoteEvent2Id,
+          copyExternalVoteEventId: mockVoteEvent2Id,
+        },
+      },
+      voteEventId: mockVoteEvent1Id,
+    });
+
+    expect(updatedVoteEvent.voterManagement).toEqual({
+      hasInternalList: true,
+      hasExternalList: true,
+      isRegistrationOpen: true,
+    });
+
+    // check voter management in db
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent1Id },
+      include: { voterManagement: true },
+    });
+    expect(dbCheck?.voterManagement).toEqual(
+      expect.objectContaining({
+        hasInternalList: true,
+        hasExternalList: true,
+        isRegistrationOpen: true,
+      })
+    );
+
+    // check internal voters in db
+    const internalVoters = await prisma.user.findMany({
+      where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
+    });
+    expect(internalVoters).toHaveLength(1);
+
+    // check external voters in db
+    const externalVoters = await prisma.externalVoter.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+    expect(externalVoters).toEqual([
+      { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id },
+    ]);
+  });
+
+  it("should throw an error if vote event not found", async () => {
+    await expect(
+      editVoterManagement({
+        body: {
+          voterManagement: {
+            hasInternalList: true,
+            hasExternalList: true,
+            isRegistrationOpen: true,
+          },
+        },
+        voteEventId: NON_EXISTENT_ID,
+      })
+    ).rejects.toThrow();
   });
 });

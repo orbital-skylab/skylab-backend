@@ -10,6 +10,7 @@ import {
   createOneVoteEvent,
   deleteVote,
   deleteVoteEvent,
+  findFirstExternalVoter,
   findManyExternalVoters,
   findManyVoteEvents,
   findUniqueVoteEvent,
@@ -115,6 +116,19 @@ describe("deleteVoteEvent db integration test", () => {
       where: { id: mockVoteEvent1Id },
     });
     expect(dbCheck).toBeNull();
+  });
+});
+
+describe("findFirstExternalVoter db integration test", () => {
+  it("should return a single external voter", async () => {
+    const externalVoter = await findFirstExternalVoter({
+      where: { voteEventId: mockVoteEvent1Id, id: VOTER_ID_1 },
+    });
+
+    expect(externalVoter).toEqual({
+      id: VOTER_ID_1,
+      voteEventId: mockVoteEvent1Id,
+    });
   });
 });
 

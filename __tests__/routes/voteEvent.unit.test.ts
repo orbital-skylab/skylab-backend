@@ -8,7 +8,7 @@ import {
   jest,
 } from "@jest/globals";
 import { AchievementLevel } from "@prisma/client";
-import { NextFunction } from "express";
+import { NextFunction, Response } from "express";
 import supertest from "supertest";
 import {
   MOCK_EXTERNAL_VOTER_1,
@@ -22,9 +22,13 @@ import {
   MOCK_VOTE_EVENT_1_WITH_ID,
 } from "../../__mocks__/voteEvent.mocks";
 import * as voteEventHelpers from "../../src/helpers/voteEvent.helper";
+import * as voteEventModels from "../../src/models/voteEvent.db";
 import authorizeAdmin from "../../src/middleware/authorizeAdmin";
+import authorizeVoter from "../../src/middleware/authorizeVoter";
+import authorizeVoterOfVoteEvent from "../../src/middleware/authorizeVoterOfVoteEvent";
 import app from "../../src/server";
 import * as utils from "../../src/utils/ApiResponseWrapper";
+import { KNOWN_EMAILS } from "../../src/utils/testUtils";
 
 const BASE_URL = "/api/vote-events";
 
@@ -52,7 +56,25 @@ const assertRouteErrorHandler = (calledWith: any) => {
   );
 };
 
+const expectVoterOfVoteEventAuth = () => {
+  expect(authorizeVoter).toHaveBeenCalledTimes(1);
+  expect(authorizeVoterOfVoteEvent).toHaveBeenCalledTimes(1);
+};
+
 jest.mock("../../src/middleware/authorizeAdmin", () => ({
+  __esModule: true,
+  default: jest.fn(async (_1, _res, next: NextFunction) => {
+    next();
+  }),
+}));
+
+jest.mock("../../src/middleware/authorizeVoter", () => ({
+  __esModule: true,
+  default: jest.fn(async (_1, _res, next: NextFunction) => {
+    next();
+  }),
+}));
+jest.mock("../../src/middleware/authorizeVoterOfVoteEvent", () => ({
   __esModule: true,
   default: jest.fn(async (_1, _res, next: NextFunction) => {
     next();
@@ -70,22 +92,87 @@ afterEach(() => {
 
 describe("GET / route unit test", () => {
   let getAllVoteEventsSpy;
+  let getInternalVoterVoteEventsSpy;
+  let getExternalVoterVoteEventsSpy;
+
   beforeAll(() => {
     getAllVoteEventsSpy = jest.spyOn(voteEventHelpers, "getAllVoteEvents");
+    getInternalVoterVoteEventsSpy = jest.spyOn(
+      voteEventHelpers,
+      "getInternalVoterVoteEvents"
+    );
+    getExternalVoterVoteEventsSpy = jest.spyOn(
+      voteEventHelpers,
+      "getExternalVoterVoteEvents"
+    );
   });
 
-  it("should call the helper function correctly", async () => {
-    getAllVoteEventsSpy.mockResolvedValueOnce([]);
+  it("should call helper function to get all vote events", async () => {
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = { administrator: { id: 1 } };
+        next();
+      }
+    );
 
+    getAllVoteEventsSpy.mockResolvedValueOnce([]);
     await supertest(app).get(BASE_URL + "/");
 
+    expect(authorizeVoter).toHaveBeenCalledTimes(1);
     expect(getAllVoteEventsSpy).toHaveBeenCalledTimes(1);
     expect(getAllVoteEventsSpy).toHaveBeenCalledWith();
 
     assertApiResponse({ voteEvents: [] });
   });
 
+  it("should call helper function to get internal voter's vote events", async () => {
+    const userId = 1;
+
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = { id: userId };
+        next();
+      }
+    );
+
+    getInternalVoterVoteEventsSpy.mockResolvedValueOnce([]);
+    await supertest(app).get(BASE_URL + "/");
+
+    expect(authorizeVoter).toHaveBeenCalledTimes(1);
+    expect(getInternalVoterVoteEventsSpy).toHaveBeenCalledTimes(1);
+    expect(getInternalVoterVoteEventsSpy).toHaveBeenCalledWith(userId);
+
+    assertApiResponse({ voteEvents: [] });
+  });
+
+  it("should call helper function to get external voter's vote events", async () => {
+    const voterId = "voter1";
+
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.voterId = voterId;
+        next();
+      }
+    );
+
+    getExternalVoterVoteEventsSpy.mockResolvedValueOnce([]);
+    await supertest(app).get(BASE_URL + "/");
+
+    expect(authorizeVoter).toHaveBeenCalledTimes(1);
+    expect(getExternalVoterVoteEventsSpy).toHaveBeenCalledTimes(1);
+    expect(getExternalVoterVoteEventsSpy).toHaveBeenCalledWith(voterId);
+
+    assertApiResponse({ voteEvents: [] });
+  });
+
   it("should call the error handler if an error is thrown", async () => {
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = { administrator: { id: 1 } };
+        next();
+      }
+    );
+
     getAllVoteEventsSpy.mockRejectedValueOnce(new Error("Test Error"));
 
     await supertest(app).get(BASE_URL + "/");
@@ -176,11 +263,21 @@ describe("GET /:voteEventId route unit test", () => {
 
     await supertest(app).get(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id);
 
-    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expectVoterOfVoteEventAuth();
     expect(getOneVoteEventByIdSpy).toHaveBeenCalledTimes(1);
     expect(getOneVoteEventByIdSpy).toHaveBeenCalledWith(1);
 
-    assertApiResponse({ voteEvent: returnValue });
+    assertApiResponse({
+      voteEvent: {
+        ...returnValue,
+        voterManagement: {
+          isRegistrationOpen: false,
+        },
+        resultsFilter: {
+          areResultsPublished: undefined,
+        },
+      },
+    });
   });
 
   it("should call the error handler if an error is thrown", async () => {
@@ -188,7 +285,6 @@ describe("GET /:voteEventId route unit test", () => {
 
     await supertest(app).get(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id);
 
-    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
     expect(getOneVoteEventByIdSpy).toHaveBeenCalledTimes(1);
     expect(getOneVoteEventByIdSpy).toHaveBeenCalledWith(1);
 
@@ -261,6 +357,68 @@ describe("PUT /:voteEventId route unit test", () => {
   });
 });
 
+describe("PUT /:voteEventId/voter-management route unit test", () => {
+  let editVoterManagementSpy;
+  const requestBody = {
+    voterManagement: {
+      isRegistrationOpen: false,
+      hasInternalList: false,
+      hasExternalList: true,
+    },
+  };
+
+  beforeAll(() => {
+    editVoterManagementSpy = jest.spyOn(
+      voteEventHelpers,
+      "editVoterManagement"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    editVoterManagementSpy.mockResolvedValueOnce({
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      startTime,
+      endTime,
+    });
+
+    await supertest(app)
+      .put(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/voter-management")
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(editVoterManagementSpy).toHaveBeenCalledTimes(1);
+    expect(editVoterManagementSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertApiResponse({
+      voteEvent: {
+        ...MOCK_VOTE_EVENT_1_WITH_ID,
+        startTime,
+        endTime,
+      },
+    });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    editVoterManagementSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app)
+      .put(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/voter-management")
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(editVoterManagementSpy).toHaveBeenCalledTimes(1);
+    expect(editVoterManagementSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
 describe("DELETE /:voteEventId route unit test", () => {
   let removeVoteEventSpy;
 
@@ -292,6 +450,68 @@ describe("DELETE /:voteEventId route unit test", () => {
     expect(removeVoteEventSpy).toHaveBeenCalledWith(
       MOCK_VOTE_EVENT_1_WITH_ID.id
     );
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("POST /:voteEventId/register route unit test", () => {
+  const userData = { email: KNOWN_EMAILS[0] };
+  let addInternalVoterSpy;
+  let findUniqueVoteEventSpy;
+
+  beforeAll(() => {
+    addInternalVoterSpy = jest.spyOn(voteEventHelpers, "addInternalVoter");
+    findUniqueVoteEventSpy = jest.spyOn(voteEventModels, "findUniqueVoteEvent");
+  });
+
+  it("should call the helper function correctly", async () => {
+    const voteEventId = 1;
+
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = userData;
+        next();
+      }
+    );
+
+    addInternalVoterSpy.mockResolvedValueOnce(MOCK_USER_1);
+    findUniqueVoteEventSpy.mockResolvedValueOnce(MOCK_VOTE_EVENT_1_WITH_ID);
+
+    await supertest(app).post(BASE_URL + "/" + voteEventId + "/register");
+
+    expect(authorizeVoter).toHaveBeenCalledTimes(1);
+    expect(addInternalVoterSpy).toHaveBeenCalledTimes(1);
+    expect(addInternalVoterSpy).toHaveBeenCalledWith({
+      body: { email: userData.email },
+      voteEventId,
+    });
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledTimes(1);
+    expect(findUniqueVoteEventSpy).toHaveBeenCalledWith({
+      where: { id: voteEventId },
+      include: voteEventHelpers.VOTE_EVENT_PUBLIC_INCLUSION,
+    });
+
+    assertApiResponse({ voteEvent: MOCK_VOTE_EVENT_1_WITH_ID });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = userData;
+        next();
+      }
+    );
+
+    addInternalVoterSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app).post(BASE_URL + "/1/register");
+
+    expect(addInternalVoterSpy).toHaveBeenCalledTimes(1);
+    expect(addInternalVoterSpy).toHaveBeenCalledWith({
+      body: { email: userData.email },
+      voteEventId: 1,
+    });
 
     assertRouteErrorHandler(new Error("Test Error"));
   });
@@ -390,6 +610,64 @@ describe("POST /:voteEventId/voter-management/internal-voters", () => {
     expect(authorizeAdmin).toHaveBeenCalledTimes(1);
     expect(addInternalVoterSpy).toHaveBeenCalledTimes(1);
     expect(addInternalVoterSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("POST /:voteEventId/voter-management/internal-voters/batch", () => {
+  let addManyInternalVotersSpy;
+  const requestBody = {
+    emails: KNOWN_EMAILS,
+  };
+
+  beforeAll(() => {
+    addManyInternalVotersSpy = jest.spyOn(
+      voteEventHelpers,
+      "addManyInternalVoters"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    addManyInternalVotersSpy.mockResolvedValueOnce([MOCK_USER_1]);
+
+    await supertest(app)
+      .post(
+        BASE_URL +
+          "/" +
+          MOCK_VOTE_EVENT_1_WITH_ID.id +
+          "/voter-management/internal-voters/batch"
+      )
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(addManyInternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(addManyInternalVotersSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertApiResponse({ internalVoters: [MOCK_USER_1] });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    addManyInternalVotersSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app)
+      .post(
+        BASE_URL +
+          "/" +
+          MOCK_VOTE_EVENT_1_WITH_ID.id +
+          "/voter-management/internal-voters/batch"
+      )
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(addManyInternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(addManyInternalVotersSpy).toHaveBeenCalledWith({
       body: requestBody,
       voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
     });
@@ -550,6 +828,129 @@ describe("POST /:voteEventId/voter-management/external-voters", () => {
   });
 });
 
+describe("POST /:voteEventId/voter-management/external-voters/batch", () => {
+  let addManyExternalVotersSpy;
+  const requestBody = {
+    voterIds: ["voter1", "voter2"],
+  };
+
+  beforeAll(() => {
+    addManyExternalVotersSpy = jest.spyOn(
+      voteEventHelpers,
+      "addManyExternalVoters"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    addManyExternalVotersSpy.mockResolvedValueOnce([
+      MOCK_EXTERNAL_VOTER_1,
+      MOCK_EXTERNAL_VOTER_2,
+    ]);
+
+    await supertest(app)
+      .post(
+        BASE_URL +
+          "/" +
+          MOCK_VOTE_EVENT_1_WITH_ID.id +
+          "/voter-management/external-voters/batch"
+      )
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(addManyExternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(addManyExternalVotersSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertApiResponse({
+      externalVoters: [MOCK_EXTERNAL_VOTER_1, MOCK_EXTERNAL_VOTER_2],
+    });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    addManyExternalVotersSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app)
+      .post(
+        BASE_URL +
+          "/" +
+          MOCK_VOTE_EVENT_1_WITH_ID.id +
+          "/voter-management/external-voters/batch"
+      )
+      .send(requestBody);
+
+    expect(addManyExternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(addManyExternalVotersSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
+describe("POST /:voteEventId/voter-management/external-voters/generate", () => {
+  let generateExternalVotersSpy;
+  const requestBody = { amount: 2, length: 6 };
+
+  beforeAll(() => {
+    generateExternalVotersSpy = jest.spyOn(
+      voteEventHelpers,
+      "generateExternalVoters"
+    );
+  });
+
+  it("should call the helper function correctly", async () => {
+    generateExternalVotersSpy.mockResolvedValueOnce([
+      MOCK_EXTERNAL_VOTER_1,
+      MOCK_EXTERNAL_VOTER_2,
+    ]);
+
+    await supertest(app)
+      .post(
+        BASE_URL +
+          "/" +
+          MOCK_VOTE_EVENT_1_WITH_ID.id +
+          "/voter-management/external-voters/generate"
+      )
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(generateExternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(generateExternalVotersSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertApiResponse({
+      externalVoters: [MOCK_EXTERNAL_VOTER_1, MOCK_EXTERNAL_VOTER_2],
+    });
+  });
+
+  it("should call the error handler if an error is thrown", async () => {
+    generateExternalVotersSpy.mockRejectedValueOnce(new Error("Test Error"));
+
+    await supertest(app)
+      .post(
+        BASE_URL +
+          "/" +
+          MOCK_VOTE_EVENT_1_WITH_ID.id +
+          "/voter-management/external-voters/generate"
+      )
+      .send(requestBody);
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(generateExternalVotersSpy).toHaveBeenCalledTimes(1);
+    expect(generateExternalVotersSpy).toHaveBeenCalledWith({
+      body: requestBody,
+      voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
+    });
+
+    assertRouteErrorHandler(new Error("Test Error"));
+  });
+});
+
 describe("DELETE /:voteEventId/voter-management/external-voters/:externalVoterId", () => {
   let removeExternalVoterSpy;
 
@@ -621,6 +1022,7 @@ describe("GET /:voteEventId/candidates", () => {
       BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/candidates"
     );
 
+    expectVoterOfVoteEventAuth();
     expect(getAllCandidatesByVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(getAllCandidatesByVoteEventSpy).toHaveBeenCalledWith(1);
 
@@ -799,10 +1201,18 @@ describe("GET /:voteEventId/votes", () => {
       { projectId: MOCK_PROJECT_1_WITH_ID.id },
     ]);
 
-    await supertest(app).get(
-      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes?userId=1"
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = { id: 1 };
+        next();
+      }
     );
 
+    await supertest(app).get(
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes"
+    );
+
+    expectVoterOfVoteEventAuth();
     expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledTimes(1);
     expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledWith(
       1,
@@ -821,13 +1231,13 @@ describe("GET /:voteEventId/votes", () => {
     );
 
     await supertest(app).get(
-      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes?userId=1"
+      BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes"
     );
 
     expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledTimes(1);
     expect(getVotesByVoteEventAndVoterSpy).toHaveBeenCalledWith(
       1,
-      1,
+      undefined,
       undefined
     );
 
@@ -882,7 +1292,7 @@ describe("GET /:voteEventId/votes/all", () => {
 
 describe("POST /:voteEventId/votes", () => {
   let addManyVotesSpy;
-  const requestBody = { userId: 1, projectIds: [1, 2] };
+  const requestBody = { projectIds: [1, 2] };
   const response = [{ projectId: 1 }, { projectId: 2 }];
 
   beforeAll(() => {
@@ -890,15 +1300,26 @@ describe("POST /:voteEventId/votes", () => {
   });
 
   it("should call the helper function correctly", async () => {
+    (authorizeVoter as any).mockImplementationOnce(
+      async (_1, res: Response, next: NextFunction) => {
+        res.locals.userData = { id: 1 };
+        next();
+      }
+    );
+
     addManyVotesSpy.mockResolvedValueOnce(response);
 
     await supertest(app)
       .post(BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/votes")
       .send(requestBody);
 
+    expectVoterOfVoteEventAuth();
     expect(addManyVotesSpy).toHaveBeenCalledTimes(1);
     expect(addManyVotesSpy).toHaveBeenCalledWith({
-      body: requestBody,
+      body: {
+        ...requestBody,
+        userId: 1,
+      },
       voteEventId: MOCK_VOTE_EVENT_1_WITH_ID.id,
     });
 
@@ -985,7 +1406,7 @@ describe("GET /:voteEventId/results", () => {
       BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/results"
     );
 
-    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expectVoterOfVoteEventAuth();
     expect(getResultsByVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(getResultsByVoteEventSpy).toHaveBeenCalledWith(
       MOCK_VOTE_EVENT_1_WITH_ID.id
@@ -1001,7 +1422,6 @@ describe("GET /:voteEventId/results", () => {
       BASE_URL + "/" + MOCK_VOTE_EVENT_1_WITH_ID.id + "/results"
     );
 
-    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
     expect(getResultsByVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(getResultsByVoteEventSpy).toHaveBeenCalledWith(
       MOCK_VOTE_EVENT_1_WITH_ID.id

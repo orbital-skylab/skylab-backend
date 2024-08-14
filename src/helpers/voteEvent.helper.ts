@@ -320,25 +320,39 @@ const processEditVoteEventData = (voteEvent: any) => {
 // --- Vote Event Helper Functions ---
 
 export async function getAllVoteEvents() {
-  const voteEvents = await findManyVoteEvents({
+  const voteEvents: any = await findManyVoteEvents({
     include: VOTE_EVENT_PUBLIC_INCLUSION,
   });
 
-  return voteEvents;
+  return voteEvents.map((voteEvent) => {
+    return voteEvent.voterManagement
+      ? {
+          ...voteEvent,
+          voterManagement: {
+            isRegistrationOpen: false,
+          },
+        }
+      : voteEvent;
+  });
 }
 
 export async function getInternalVoterVoteEvents(internalVoterId: number) {
-  // Get all vote events that the internal voter is part of
+  // Get all set up vote events that the internal voter is part of
   const voteEvents = await findManyVoteEvents({
-    where: { internalVoters: { some: { id: internalVoterId } } },
+    where: {
+      internalVoters: { some: { id: internalVoterId } },
+      voterManagement: { isNot: null },
+      voteConfig: { isNot: null },
+    },
     include: VOTE_EVENT_PUBLIC_INCLUSION,
   });
 
-  // Get other vote events with registration open
+  // Get other set up vote events with registration open
   const openVoteEvents = await findManyVoteEvents({
     where: {
       id: { notIn: voteEvents.map((v) => v.id) },
       voterManagement: { isRegistrationOpen: true },
+      voteConfig: { isNot: null },
     },
     include: VOTE_EVENT_PUBLIC_INCLUSION,
   });
@@ -358,7 +372,11 @@ export async function getInternalVoterVoteEvents(internalVoterId: number) {
 
 export async function getExternalVoterVoteEvents(externalVoterId: string) {
   const voteEvents = await findManyVoteEvents({
-    where: { externalVoters: { some: { id: externalVoterId } } },
+    where: {
+      externalVoters: { some: { id: externalVoterId } },
+      voterManagement: { isNot: null },
+      voteConfig: { isNot: null },
+    },
     include: VOTE_EVENT_PUBLIC_INCLUSION,
   });
 
@@ -1096,7 +1114,9 @@ export async function editVoterManagement({
         .findUnique({
           where: { id: voterManagement.copyInternalVoteEventId },
         })
-        .internalVoters();
+        .internalVoters({
+          select: { id: true },
+        });
       await tx.voteEvent.update({
         where: { id: voteEventId },
         data: {
@@ -1119,7 +1139,9 @@ export async function editVoterManagement({
         .findUnique({
           where: { id: voterManagement.copyExternalVoteEventId },
         })
-        .externalVoters();
+        .externalVoters({
+          select: { id: true },
+        });
       await tx.voteEvent.update({
         where: { id: voteEventId },
         data: {

@@ -27,7 +27,7 @@ const authorizeAdmin = async (
     });
 
     // only allow admins
-    if (userData.administrator) return next();
+    if (userData.administrator?.id) return next();
 
     return res
       .status(HttpStatusCode.UNAUTHORIZED)

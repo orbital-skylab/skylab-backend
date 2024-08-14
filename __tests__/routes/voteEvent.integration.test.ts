@@ -8,7 +8,7 @@ import {
   it,
   jest,
 } from "@jest/globals";
-import { AchievementLevel } from "@prisma/client";
+import { AchievementLevel, ExternalVoter } from "@prisma/client";
 import {
   MOCK_PROJECT_1,
   MOCK_VOTER_MANAGEMENT,
@@ -16,6 +16,7 @@ import {
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
   NON_EXISTENT_ID,
+  NON_EXISTENT_USER_EMAIL,
   VOTER_ID_1,
   VOTER_ID_2,
 } from "../../__mocks__/voteEvent.mocks";
@@ -24,6 +25,8 @@ import * as voteEventHelpers from "../../src/helpers/voteEvent.helper";
 import {
   KNOWN_EMAILS,
   setUpRequestWithAdminAuth,
+  setUpRequestWithExternalVoterAuth,
+  setUpRequestWithStudentAuth,
   voteEventTestSetUp,
   voteEventTestTearDown,
 } from "../../src/utils/testUtils";
@@ -36,9 +39,15 @@ let mockProject1Id;
 let mockProject2Id;
 let userIds;
 let request;
+let requestWithStudentAuth;
+let requestWithExternalVoterAuth;
 
 beforeAll(async () => {
+  await voteEventTestSetUp(); // need to run once before you can get the external voter auth
   request = await setUpRequestWithAdminAuth();
+  requestWithStudentAuth = await setUpRequestWithStudentAuth();
+  requestWithExternalVoterAuth = await setUpRequestWithExternalVoterAuth();
+  await voteEventTestTearDown();
 
   return request;
 });
@@ -62,10 +71,10 @@ afterEach(async () => {
 // --- Vote event API tests ---
 
 describe("GET / endpoint", () => {
-  it("should return all vote events", async () => {
-    const response = await request.get(BASE_URL + "/");
+  let voteEventsWithISOStrings: any[] = [];
 
-    const voteEventsWithISOStrings = [
+  beforeEach(async () => {
+    voteEventsWithISOStrings = [
       {
         ...MOCK_VOTE_EVENT_1,
         id: mockVoteEvent1Id,
@@ -91,9 +100,49 @@ describe("GET / endpoint", () => {
       startTime: event.startTime.toISOString(),
       endTime: event.endTime.toISOString(),
     }));
+  });
+
+  it("should return all vote events for an administrator", async () => {
+    const response = await request.get(BASE_URL + "/");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ voteEvents: voteEventsWithISOStrings });
+  });
+
+  it("should return all vote events for an internal voter", async () => {
+    const response = await requestWithStudentAuth.get(BASE_URL + "/");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      voteEvents: [
+        voteEventsWithISOStrings.map((voteEvent) => {
+          return {
+            ...voteEvent,
+            voterManagement: {
+              isRegistrationOpen: expect.any(Boolean),
+            },
+          };
+        })[0],
+      ],
+    });
+  });
+
+  it("should return all vote events for an external voter", async () => {
+    const response = await requestWithExternalVoterAuth.get(BASE_URL + "/");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      voteEvents: [
+        voteEventsWithISOStrings.map((voteEvent) => {
+          return {
+            ...voteEvent,
+            voterManagement: {
+              isRegistrationOpen: false,
+            },
+          };
+        })[0],
+      ],
+    });
   });
 });
 
@@ -178,6 +227,31 @@ describe("GET /:voteEventId endpoint", () => {
     expect(voteEvent).toEqual(expectedVoteEvent);
   });
 
+  it("should only return public fields for non administartors", async () => {
+    const response = await requestWithStudentAuth.get(
+      `${BASE_URL}/${mockVoteEvent1Id}`
+    );
+
+    const expectedVoteEvent = {
+      ...MOCK_VOTE_EVENT_1,
+      id: mockVoteEvent1Id,
+      voteConfig: MOCK_VOTE_CONFIG,
+      voterManagement: {
+        isRegistrationOpen: false,
+      },
+      resultsFilter: {
+        areResultsPublished: true,
+      },
+      startTime: MOCK_VOTE_EVENT_1.startTime.toISOString(),
+      endTime: MOCK_VOTE_EVENT_1.endTime.toISOString(),
+    };
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent).toEqual(expectedVoteEvent);
+  });
+
   it("should return 400 if the vote event does not exist", async () => {
     const response = await request.get(`${BASE_URL}/${NON_EXISTENT_ID}`);
 
@@ -204,17 +278,12 @@ describe("PUT /:voteEventId endpoint", () => {
     title: "Updated Event",
     startTime: new Date(),
     endTime: new Date(),
-    voterManagement: {
-      hasInternalList: true,
-      hasExternalList: true,
-      isRegistrationOpen: true,
-    },
   };
 
-  it("should set voter management for the first time", async () => {
+  it("should edit existing general settings for a given vote event", async () => {
     const response = await request
       .put(`${BASE_URL}/${mockVoteEvent2Id}`)
-      .send({ voteEvent: { ...updatedVoteEvent, id: mockVoteEvent2Id } });
+      .send({ voteEvent: updatedVoteEvent });
 
     const expectedVoteEvent = {
       ...updatedVoteEvent,
@@ -223,6 +292,7 @@ describe("PUT /:voteEventId endpoint", () => {
       startTime: updatedVoteEvent.startTime.toISOString(),
       endTime: updatedVoteEvent.endTime.toISOString(),
       voteConfig: null,
+      voterManagement: null,
     };
 
     expect(response.status).toBe(200);
@@ -244,51 +314,47 @@ describe("PUT /:voteEventId endpoint", () => {
     });
   });
 
-  it("should edit existing voter management for a given vote event and remove all internal and external voters", async () => {
-    const response = await request
-      .put(`${BASE_URL}/${mockVoteEvent1Id}`)
-      .send({ voteEvent: updatedVoteEvent });
-
-    const expectedVoteEvent = {
-      ...updatedVoteEvent,
-      id: mockVoteEvent1Id,
-      resultsFilter: {
-        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
-        areResultsPublished: true,
-      },
-      startTime: updatedVoteEvent.startTime.toISOString(),
-      endTime: updatedVoteEvent.endTime.toISOString(),
-      voteConfig: MOCK_VOTE_CONFIG,
+  it("should edit existing voter management for a given vote event", async () => {
+    const updatedVoterManagement = {
+      hasInternalList: true,
+      hasExternalList: true,
+      isRegistrationOpen: true,
     };
+
+    const response = await request.put(`${BASE_URL}/${mockVoteEvent1Id}`).send({
+      voteEvent: {
+        ...MOCK_VOTE_EVENT_1,
+        voterManagement: updatedVoterManagement,
+      },
+    });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("voteEvent");
     const { voteEvent } = response.body;
-    expect(voteEvent).toEqual(expectedVoteEvent);
+    expect(voteEvent.voterManagement).toEqual(updatedVoterManagement);
 
-    // Verify the vote event was actually updated in the database
+    // Verify the voter management was actually updated in the database
     const dbCheck = await prisma.voteEvent.findUnique({
       where: { id: mockVoteEvent1Id },
-      include: voteEventHelpers.VOTE_EVENT_INCLUSION,
+      include: { voterManagement: true },
     });
     expect(dbCheck).not.toBeNull();
     if (!dbCheck) return;
-    expect(dbCheck).toEqual({
-      ...expectedVoteEvent,
-      startTime: new Date(expectedVoteEvent.startTime),
-      endTime: new Date(expectedVoteEvent.endTime),
+    expect(dbCheck.voterManagement).toEqual({
+      ...updatedVoterManagement,
+      voteEventId: mockVoteEvent1Id,
     });
 
-    // Verify all internal and external voters were removed
+    // Verify all internal and external voters were not removed
     const internalVoters = await prisma.user.findMany({
       where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
     });
-    expect(internalVoters).toHaveLength(0);
+    expect(internalVoters).toHaveLength(KNOWN_EMAILS.length);
 
     const externalVoters = await prisma.externalVoter.findMany({
       where: { voteEventId: mockVoteEvent1Id },
     });
-    expect(externalVoters).toHaveLength(0);
+    expect(externalVoters).toHaveLength(2);
   });
 
   it("should be able to edit vote config for a given vote event", async () => {
@@ -359,6 +425,99 @@ describe("PUT /:voteEventId endpoint", () => {
   });
 });
 
+describe("PUT /:voteEventId/voter-management endpoint", () => {
+  const updatedVoterManagement = {
+    hasInternalList: true,
+    hasExternalList: true,
+    isRegistrationOpen: true,
+  };
+
+  it("should set voter management for the first time", async () => {
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent2Id}/voter-management`)
+      .send({ voterManagement: updatedVoterManagement });
+
+    const expectedVoteEvent = {
+      ...MOCK_VOTE_EVENT_2,
+      id: mockVoteEvent2Id,
+      voterManagement: updatedVoterManagement,
+      resultsFilter: {
+        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
+        areResultsPublished: false,
+      },
+      startTime: MOCK_VOTE_EVENT_2.startTime.toISOString(),
+      endTime: MOCK_VOTE_EVENT_2.endTime.toISOString(),
+      voteConfig: null,
+    };
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent).toEqual(expectedVoteEvent);
+
+    // Verify the vote event was actually updated in the database
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent2Id },
+      include: voteEventHelpers.VOTE_EVENT_INCLUSION,
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck).toEqual({
+      ...expectedVoteEvent,
+      startTime: new Date(expectedVoteEvent.startTime),
+      endTime: new Date(expectedVoteEvent.endTime),
+    });
+  });
+
+  it("should edit existing voter management for a given vote event and remove all old voters", async () => {
+    const response = await request
+      .put(`${BASE_URL}/${mockVoteEvent1Id}/voter-management`)
+      .send({ voterManagement: updatedVoterManagement });
+
+    const expectedVoteEvent = {
+      ...MOCK_VOTE_EVENT_1,
+      id: mockVoteEvent1Id,
+      voterManagement: updatedVoterManagement,
+      resultsFilter: {
+        ...voteEventHelpers.DEFAULT_RESULTS_FILTER,
+        areResultsPublished: true,
+      },
+      startTime: MOCK_VOTE_EVENT_1.startTime.toISOString(),
+      endTime: MOCK_VOTE_EVENT_1.endTime.toISOString(),
+      voteConfig: MOCK_VOTE_CONFIG,
+    };
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent).toEqual(expectedVoteEvent);
+
+    // Verify the vote event was actually updated in the database
+    const dbCheck = await prisma.voteEvent.findUnique({
+      where: { id: mockVoteEvent1Id },
+      include: voteEventHelpers.VOTE_EVENT_INCLUSION,
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck).toEqual({
+      ...expectedVoteEvent,
+      startTime: new Date(expectedVoteEvent.startTime),
+      endTime: new Date(expectedVoteEvent.endTime),
+    });
+
+    // Verify all internal and external voters were removed
+    const internalVoters = await prisma.user.findMany({
+      where: { voteEvents: { some: { id: mockVoteEvent1Id } } },
+    });
+    expect(internalVoters).toHaveLength(0);
+
+    const externalVoters = await prisma.externalVoter.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+    expect(externalVoters).toHaveLength(0);
+  });
+});
+
 describe("DELETE /:voteEventId endpoint", () => {
   it("should delete an existing vote event", async () => {
     const response = await request.delete(`${BASE_URL}/${mockVoteEvent1Id}`);
@@ -402,6 +561,57 @@ describe("DELETE /:voteEventId endpoint", () => {
 // --- End of vote event API tests ---
 
 // --- Internal voter API tests ---
+
+describe("POST /:voteEventId/register endpoint", () => {
+  it("should register an internal voter for a given vote event", async () => {
+    const response = await requestWithStudentAuth.post(
+      `${BASE_URL}/${mockVoteEvent2Id}/register`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("voteEvent");
+    const { voteEvent } = response.body;
+    expect(voteEvent.id).toBe(mockVoteEvent2Id);
+    expect(voteEvent.title).toBe(MOCK_VOTE_EVENT_2.title);
+    expect(new Date(voteEvent.startTime)).toEqual(MOCK_VOTE_EVENT_2.startTime);
+    expect(new Date(voteEvent.endTime)).toEqual(MOCK_VOTE_EVENT_2.endTime);
+
+    // Verify the internal voter was actually added to the database
+    const dbCheck = await prisma.user.findUnique({
+      where: { email: KNOWN_EMAILS[0] },
+      include: { voteEvents: true },
+    });
+    expect(dbCheck).not.toBeNull();
+    if (!dbCheck) return;
+    expect(dbCheck.voteEvents).toContainEqual(
+      expect.objectContaining({ id: mockVoteEvent2Id })
+    );
+  });
+
+  it("should return 400 if the internal voter is already registered", async () => {
+    const response = await requestWithStudentAuth.post(
+      `${BASE_URL}/${mockVoteEvent1Id}/register`
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty("message");
+  });
+
+  it("should handle errors during internal voter registration", async () => {
+    const addInternalVoterMock = jest
+      .spyOn(voteEventHelpers, "addInternalVoter")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await requestWithStudentAuth.post(
+      `${BASE_URL}/${mockVoteEvent2Id}/register`
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    addInternalVoterMock.mockRestore();
+  });
+});
 
 describe("GET /:voteEventId/voter-management/internal-voters endpoint", () => {
   it("should return all internal voters for a given vote event", async () => {
@@ -505,6 +715,83 @@ describe("POST /:voteEventId/voter-management/internal-voters endpoint", () => {
     expect(response.body).toEqual({ message: "Database error" });
 
     addInternalVoterMock.mockRestore();
+  });
+});
+
+describe("POST /:voteEventId/voter-management/internal-voters/batch endpoint", () => {
+  it("should add multiple internal voters to a given vote event", async () => {
+    const body = {
+      emails: [KNOWN_EMAILS[0], KNOWN_EMAILS[1]],
+    };
+
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters/batch`
+      )
+      .send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("internalVoters");
+    const { internalVoters: addedInternalVoters } = response.body;
+    expect(addedInternalVoters).toHaveLength(2);
+    expect(addedInternalVoters).toEqual(
+      expect.arrayContaining(
+        body.emails.map((email) => expect.objectContaining({ email }))
+      )
+    );
+
+    // Verify the internal voters were actually added to the database
+    const dbCheck = await prisma.user.findMany({
+      where: {
+        email: { in: KNOWN_EMAILS },
+        voteEvents: { some: { id: mockVoteEvent2Id } },
+      },
+    });
+    expect(dbCheck).toHaveLength(2);
+    expect(dbCheck).toEqual(
+      expect.arrayContaining(
+        body.emails.map((email) => expect.objectContaining({ email }))
+      )
+    );
+  });
+
+  it("should return 400 if one or more user do not exist", async () => {
+    const body = {
+      emails: [KNOWN_EMAILS[0], NON_EXISTENT_USER_EMAIL],
+    };
+
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters/batch`
+      )
+      .send(body);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "One or more users do not exist",
+    });
+  });
+
+  it("should handle errors during internal voter addition", async () => {
+    const addManyInternalVotersMock = jest
+      .spyOn(voteEventHelpers, "addManyInternalVoters")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const internalVoters = [
+      { email: KNOWN_EMAILS[0] },
+      { email: KNOWN_EMAILS[1] },
+    ];
+
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent2Id}/voter-management/internal-voters/batch`
+      )
+      .send(internalVoters);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    addManyInternalVotersMock.mockRestore();
   });
 });
 
@@ -713,6 +1000,127 @@ describe("POST /:voteEventId/voter-management/external-voters endpoint", () => {
     expect(response.body).toEqual({ message: "Database error" });
 
     addExternalVoterMock.mockRestore();
+  });
+});
+
+describe("POST /:voteEventId/voter-management/external-voters/batch endpoint", () => {
+  const externalVoters = [
+    { id: VOTER_ID_1, voteEventId: mockVoteEvent1Id },
+    { id: VOTER_ID_2, voteEventId: mockVoteEvent1Id },
+    { id: "newID", voteEventId: mockVoteEvent1Id },
+  ];
+
+  it("should add multiple external voters to a given vote event", async () => {
+    const body = {
+      voterIds: [
+        externalVoters[0].id,
+        externalVoters[1].id,
+        externalVoters[2].id,
+      ],
+    };
+
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters/batch`
+      )
+      .send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("externalVoters");
+    const { externalVoters: addedExternalVoters } = response.body;
+    expect(addedExternalVoters).toHaveLength(3);
+    addedExternalVoters.forEach((voter: ExternalVoter) => {
+      expect(voter.voteEventId).toBe(mockVoteEvent1Id);
+    });
+    expect(addedExternalVoters.map((voter) => voter.id)).toEqual(
+      expect.arrayContaining(externalVoters.map((voter) => voter.id))
+    );
+
+    // Verify the external voters were actually added to the database
+    const dbCheck = await prisma.externalVoter.findMany({
+      where: { voteEventId: mockVoteEvent1Id },
+    });
+    expect(dbCheck).toHaveLength(3);
+    dbCheck.forEach((voter: ExternalVoter) => {
+      expect(voter.voteEventId).toBe(mockVoteEvent1Id);
+    });
+    expect(dbCheck.map((voter) => voter.id)).toEqual(
+      expect.arrayContaining(externalVoters.map((voter) => voter.id))
+    );
+  });
+
+  it("should handle errors during external voter addition", async () => {
+    const addManyExternalVotersMock = jest
+      .spyOn(voteEventHelpers, "addManyExternalVoters")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const body = {
+      voterIds: [
+        externalVoters[0].id,
+        externalVoters[1].id,
+        externalVoters[2].id,
+      ],
+    };
+
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent2Id}/voter-management/external-voters/batch`
+      )
+      .send(body);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    addManyExternalVotersMock.mockRestore();
+  });
+});
+
+describe("POST /:voteEventId/voter-management/external-voters/generate endpoint", () => {
+  const body = { amount: 10, length: 8 };
+
+  it("should generate external voters for a given vote event", async () => {
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent2Id}/voter-management/external-voters/generate`
+      )
+      .send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("externalVoters");
+    const { externalVoters } = response.body;
+    expect(externalVoters).toHaveLength(body.amount);
+    //expect each external voter object to have id field of length 8
+    externalVoters.forEach((voter: ExternalVoter) => {
+      expect(voter.id).toHaveLength(body.length);
+      expect(voter.voteEventId).toBe(mockVoteEvent2Id);
+    });
+
+    // Verify the external voters were actually added to the database
+    const dbCheck = await prisma.externalVoter.findMany({
+      where: { voteEventId: mockVoteEvent2Id },
+    });
+    expect(dbCheck).toHaveLength(body.amount);
+    externalVoters.forEach((voter: ExternalVoter) => {
+      expect(voter.id).toHaveLength(body.length);
+      expect(voter.voteEventId).toBe(mockVoteEvent2Id);
+    });
+  });
+
+  it("should handle errors during external voter generation", async () => {
+    const generateExternalVotersMock = jest
+      .spyOn(voteEventHelpers, "generateExternalVoters")
+      .mockRejectedValueOnce(new Error("Database error"));
+
+    const response = await request
+      .post(
+        `${BASE_URL}/${mockVoteEvent1Id}/voter-management/external-voters/generate`
+      )
+      .send(body);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: "Database error" });
+
+    generateExternalVotersMock.mockRestore();
   });
 });
 
@@ -1026,8 +1434,8 @@ describe("DELETE /:voteEventId/candidates/:candidateId", () => {
 
 describe("GET /:voteEventId/votes", () => {
   it("should return all votes for a given vote event and voter", async () => {
-    const response = await request.get(
-      `${BASE_URL}/${mockVoteEvent1Id}/votes?userId=${userIds[0]}`
+    const response = await requestWithStudentAuth.get(
+      `${BASE_URL}/${mockVoteEvent1Id}/votes`
     );
 
     expect(response.status).toBe(200);
@@ -1036,9 +1444,7 @@ describe("GET /:voteEventId/votes", () => {
   });
 
   it("should return an empty array if the vote event does not exist", async () => {
-    const response = await request.get(
-      `${BASE_URL}/${NON_EXISTENT_ID}/votes?userId=${userIds[0]}`
-    );
+    const response = await request.get(`${BASE_URL}/${NON_EXISTENT_ID}/votes`);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ votes: [] });
@@ -1096,10 +1502,10 @@ describe("GET /:voteEventId/votes/all", () => {
 
 describe("POST /:voteEventId/votes", () => {
   it("should add votes for a given vote event and internal voter", async () => {
-    const response = await request
+    await prisma.vote.deleteMany();
+    const response = await requestWithStudentAuth
       .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id],
       });
 
@@ -1109,12 +1515,16 @@ describe("POST /:voteEventId/votes", () => {
 
     // Verify the votes were actually added to the database
     const dbCheck = await prisma.vote.findMany({
-      where: { userId: userIds[1], projectId: mockProject1Id },
+      where: {
+        userId: userIds[0],
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+      },
     });
     expect(dbCheck).toHaveLength(1);
     expect(dbCheck[0]).toEqual(
       expect.objectContaining({
-        userId: userIds[1],
+        userId: userIds[0],
         projectId: mockProject1Id,
         voteEventId: mockVoteEvent1Id,
       })
@@ -1122,10 +1532,10 @@ describe("POST /:voteEventId/votes", () => {
   });
 
   it("should add votes for a given vote event and external voter", async () => {
-    const response = await request
+    await prisma.vote.deleteMany();
+    const response = await requestWithExternalVoterAuth
       .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
       .send({
-        externalVoterId: VOTER_ID_2,
         projectIds: [mockProject1Id],
       });
 
@@ -1135,29 +1545,20 @@ describe("POST /:voteEventId/votes", () => {
 
     // Verify the votes were actually added to the database
     const dbCheck = await prisma.vote.findMany({
-      where: { externalVoterId: VOTER_ID_2, projectId: mockProject1Id },
+      where: {
+        externalVoterId: VOTER_ID_1,
+        projectId: mockProject1Id,
+        voteEventId: mockVoteEvent1Id,
+      },
     });
     expect(dbCheck).toHaveLength(1);
     expect(dbCheck[0]).toEqual(
       expect.objectContaining({
-        externalVoterId: VOTER_ID_2,
+        externalVoterId: VOTER_ID_1,
         projectId: mockProject1Id,
         voteEventId: mockVoteEvent1Id,
       })
     );
-  });
-
-  it("should return 401 if no IDs are provided", async () => {
-    const response = await request
-      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
-      .send({
-        projectIds: [mockProject1Id],
-      });
-
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({
-      message: "You are not authorized to vote in this event",
-    });
   });
 
   it("should return 400 with an invalid request body", async () => {
@@ -1176,10 +1577,9 @@ describe("POST /:voteEventId/votes", () => {
   });
 
   it("should return 400 if votes are already submitted", async () => {
-    const response = await request
+    const response = await requestWithStudentAuth
       .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
       .send({
-        userId: userIds[0],
         projectIds: [mockProject1Id],
       });
 
@@ -1193,7 +1593,6 @@ describe("POST /:voteEventId/votes", () => {
     const response = await request
       .post(`${BASE_URL}/${NON_EXISTENT_ID}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id],
       });
 
@@ -1215,7 +1614,6 @@ describe("POST /:voteEventId/votes", () => {
     const response = await request
       .post(`${BASE_URL}/${mockVoteEvent2Id}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id],
       });
 
@@ -1237,7 +1635,6 @@ describe("POST /:voteEventId/votes", () => {
     const response = await request
       .post(`${BASE_URL}/${voteEvent.id}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id],
       });
 
@@ -1259,7 +1656,6 @@ describe("POST /:voteEventId/votes", () => {
     const response = await request
       .post(`${BASE_URL}/${voteEvent.id}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id],
       });
 
@@ -1286,7 +1682,6 @@ describe("POST /:voteEventId/votes", () => {
     const response = await request
       .post(`${BASE_URL}/${voteEvent.id}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id, mockProject2Id],
       });
 
@@ -1313,7 +1708,6 @@ describe("POST /:voteEventId/votes", () => {
     const response = await request
       .post(`${BASE_URL}/${voteEvent.id}/votes`)
       .send({
-        userId: userIds[1],
         projectIds: [mockProject1Id],
       });
 

@@ -132,6 +132,13 @@ router.get("/info", authorizeSignedIn, async (req: Request, res: Response) => {
 router.get("/external-voter", async (req: Request, res: Response) => {
   try {
     const externalVoterToken = req.cookies[EXTERNAL_VOTER_TOKEN];
+
+    if (!externalVoterToken) {
+      throw new SkylabError(
+        "Authentication failed",
+        HttpStatusCode.UNAUTHORIZED
+      );
+    }
     jwt.verify(externalVoterToken, process.env.JWT_SECRET ?? "jwt_secret");
 
     return apiResponseWrapper(res, { isExternalVoter: true });
