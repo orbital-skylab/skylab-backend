@@ -133,6 +133,27 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
         create: DEFAULT_RESULTS_FILTER,
       },
     },
+    {
+      title:
+        "vote event that has started, has results published and registration open, but no voters yet", // 10
+      startTime: yesterday,
+      endTime: nextYear,
+      voterManagement: {
+        create: {
+          ...voterManagement,
+          isRegistrationOpen: true,
+        },
+      },
+      voteConfig: {
+        create: voteConfig,
+      },
+      resultsFilter: {
+        create: {
+          ...DEFAULT_RESULTS_FILTER,
+          areResultsPublished: true,
+        },
+      },
+    },
   ];
 
   const voteEventsWithVoters = [
@@ -145,6 +166,7 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
     "vote event with results published",
     "vote event with results published (no votes)",
     "vote event with results not published",
+    "vote event that has started, has results published and registration open, but no voters yet",
   ];
 
   const voteEventWithVotes = [
