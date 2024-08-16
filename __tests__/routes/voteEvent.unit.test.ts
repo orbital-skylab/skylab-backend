@@ -492,7 +492,14 @@ describe("POST /:voteEventId/register route unit test", () => {
       include: voteEventHelpers.VOTE_EVENT_PUBLIC_INCLUSION,
     });
 
-    assertApiResponse({ voteEvent: MOCK_VOTE_EVENT_1_WITH_ID });
+    assertApiResponse({
+      voteEvent: {
+        ...MOCK_VOTE_EVENT_1_WITH_ID,
+        voterManagement: {
+          isRegistrationOpen: false,
+        },
+      },
+    });
   });
 
   it("should call the error handler if an error is thrown", async () => {

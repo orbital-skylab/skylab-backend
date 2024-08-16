@@ -575,6 +575,7 @@ describe("POST /:voteEventId/register endpoint", () => {
     expect(voteEvent.title).toBe(MOCK_VOTE_EVENT_2.title);
     expect(new Date(voteEvent.startTime)).toEqual(MOCK_VOTE_EVENT_2.startTime);
     expect(new Date(voteEvent.endTime)).toEqual(MOCK_VOTE_EVENT_2.endTime);
+    expect(voteEvent.voterManagement.isRegistrationOpen).toEqual(false);
 
     // Verify the internal voter was actually added to the database
     const dbCheck = await prisma.user.findUnique({
@@ -594,7 +595,9 @@ describe("POST /:voteEventId/register endpoint", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty("message");
+    expect(response.body).toEqual({
+      message: "User is already part of the vote event",
+    });
   });
 
   it("should handle errors during internal voter registration", async () => {

@@ -206,7 +206,14 @@ router.post(
         include: VOTE_EVENT_PUBLIC_INCLUSION,
       });
 
-      return apiResponseWrapper(res, { voteEvent });
+      return apiResponseWrapper(res, {
+        voteEvent: {
+          ...voteEvent,
+          voterManagement: {
+            isRegistrationOpen: false,
+          },
+        },
+      });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
