@@ -266,7 +266,10 @@ export const calculateResults = (
   return filteredResults;
 };
 
-const processEditVoteEventData = (voteEvent: any) => {
+const processEditVoteEventData = async (
+  voteEvent: any,
+  voteEventId: number
+) => {
   let data = {
     ...voteEvent,
     voterManagement: undefined,
@@ -293,6 +296,21 @@ const processEditVoteEventData = (voteEvent: any) => {
   }
 
   if (voteEvent.voteConfig) {
+    const currentVoteEvent: any = await findUniqueVoteEvent({
+      where: { id: voteEventId },
+      include: { _count: { select: { candidates: true } } },
+    });
+
+    // cannot set min votes greater than number of candidates
+    if (
+      currentVoteEvent._count.candidates < Number(voteEvent.voteConfig.minVotes)
+    ) {
+      throw new SkylabError(
+        "Minimum votes cannot be greater than the number of candidates",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
     const voteConfig = {
       ...voteEvent.voteConfig,
       minVotes: Number(voteEvent.voteConfig.minVotes),
@@ -450,7 +468,7 @@ export async function editVoteEvent({
 
   const updatedVoteEvent = await updateVoteEvent({
     where: { id: voteEventId },
-    data: processEditVoteEventData(voteEvent),
+    data: await processEditVoteEventData(voteEvent, voteEventId),
     include: VOTE_EVENT_INCLUSION,
   });
 
@@ -587,17 +605,25 @@ export async function removeInternalVoter(
   voteEventId: number,
   internalVoterId: number
 ) {
-  const updatedUser = await updateUniqueUser({
-    where: { id: internalVoterId },
-    data: {
-      voteEvents: {
-        disconnect: { id: voteEventId },
-      },
-    },
-    include: { voteEvents: true },
-  });
+  return await prisma.$transaction(async (tx) => {
+    // remove votes for internal voter
+    await tx.vote.deleteMany({
+      where: { userId: internalVoterId, voteEventId: voteEventId },
+    });
 
-  return updatedUser;
+    // remove internal voter from vote event
+    const updatedUser = await tx.user.update({
+      where: { id: internalVoterId },
+      data: {
+        voteEvents: {
+          disconnect: { id: voteEventId },
+        },
+      },
+      include: { voteEvents: true },
+    });
+
+    return updatedUser;
+  });
 }
 
 // --- External Voter Helper Functions ---
@@ -843,17 +869,48 @@ export async function removeCandidate(
   voteEventId: number,
   candidateId: number
 ) {
-  const deletedCandidate = await updateOneProject({
-    where: { id: candidateId },
-    data: {
-      voteEvents: {
-        disconnect: { id: voteEventId },
-      },
-    },
-    include: { voteEvents: true },
+  const voteEvent: any = await findUniqueVoteEvent({
+    where: { id: voteEventId },
+    include: { voteConfig: true, _count: { select: { candidates: true } } },
   });
 
-  return deletedCandidate;
+  if (!voteEvent) {
+    throw new SkylabError(
+      "Vote event does not exist",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  // check if number of candidates is less than or equal to minimum votes
+  if (
+    voteEvent.voteConfig &&
+    voteEvent._count.candidates <= voteEvent.voteConfig.minVotes
+  ) {
+    throw new SkylabError(
+      "Cannot remove candidate from vote event as number of candidates will be less than minimum votes",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // remove votes for candidate
+    await tx.vote.deleteMany({
+      where: { projectId: candidateId, voteEventId: voteEventId },
+    });
+
+    // remove candidate from vote event
+    const updatedCandidate = await tx.project.update({
+      where: { id: candidateId },
+      data: {
+        voteEvents: {
+          disconnect: { id: voteEventId },
+        },
+      },
+      include: { voteEvents: true },
+    });
+
+    return updatedCandidate;
+  });
 }
 
 // --- Vote Helper Functions ---
