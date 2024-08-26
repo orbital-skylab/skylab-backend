@@ -1000,7 +1000,12 @@ export async function addManyVotes({
 
   const voteEvent: any = await findUniqueVoteEvent({
     where: { id: voteEventId },
-    include: { voteConfig: true },
+    include: {
+      voteConfig: true,
+      candidates: {
+        select: { id: true },
+      },
+    },
   });
 
   // check if vote event exists
@@ -1031,6 +1036,21 @@ export async function addManyVotes({
   ) {
     throw new SkylabError(
       "Number of votes is not within the minimum and maximum limit",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+
+  // check if project ids are candidates
+  const invalidProjects = projectIds.filter(
+    (projectId) =>
+      voteEvent.candidates.findIndex(
+        (candidate) => candidate.id === projectId
+      ) === -1
+  );
+
+  if (invalidProjects.length > 0) {
+    throw new SkylabError(
+      "The following ids are not valid: " + invalidProjects.join(", "),
       HttpStatusCode.BAD_REQUEST
     );
   }
