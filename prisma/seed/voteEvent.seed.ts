@@ -64,7 +64,7 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
       },
     },
     {
-      title: "vote event with results published (no votes)", // 5
+      title: "vote event with results published (no votes) (table display)", // 5
       startTime: yesterday,
       endTime: nextYear,
       voterManagement: {
@@ -154,17 +154,55 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
         },
       },
     },
+    {
+      title: "vote event with results published (no votes) (gallery display)", // 11
+      startTime: yesterday,
+      endTime: nextYear,
+      voterManagement: {
+        create: voterManagement,
+      },
+      voteConfig: {
+        create: {
+          ...voteConfig,
+          displayType: "Gallery" as DisplayType,
+        },
+      },
+      resultsFilter: {
+        create: { ...DEFAULT_RESULTS_FILTER, areResultsPublished: true },
+      },
+    },
+    {
+      title: "vote event with results published (no votes) (no display)", // 12
+      startTime: yesterday,
+      endTime: nextYear,
+      voterManagement: {
+        create: voterManagement,
+      },
+      voteConfig: {
+        create: {
+          ...voteConfig,
+          displayType: "None" as DisplayType,
+        },
+      },
+      resultsFilter: {
+        create: { ...DEFAULT_RESULTS_FILTER, areResultsPublished: true },
+      },
+    },
   ];
 
   const voteEventsWithVoters = [
     "vote event with results published",
-    "vote event with results published (no votes)",
+    "vote event with results published (no votes) (table display)",
+    "vote event with results published (no votes) (gallery display)",
+    "vote event with results published (no votes) (no display)",
     "vote event with results not published",
   ];
 
   const voteEventWithCandidates = [
     "vote event with results published",
-    "vote event with results published (no votes)",
+    "vote event with results published (no votes) (table display)",
+    "vote event with results published (no votes) (gallery display)",
+    "vote event with results published (no votes) (no display)",
     "vote event with results not published",
     "vote event that has started, has results published and registration open, but no voters yet",
   ];
