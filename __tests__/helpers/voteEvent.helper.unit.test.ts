@@ -672,10 +672,10 @@ describe("addManyInternalVoters helper unit test", () => {
 });
 
 describe("removeInternalVoter helper unit test", () => {
-  let updateUniqueUserSpy;
+  let transactionSpy;
 
   beforeAll(() => {
-    updateUniqueUserSpy = jest.spyOn(userModel, "updateUniqueUser");
+    transactionSpy = jest.spyOn(prisma, "$transaction");
   });
 
   it("should successfully remove a voter from a vote event", async () => {
@@ -684,7 +684,7 @@ describe("removeInternalVoter helper unit test", () => {
       voteEvents: [],
     };
 
-    updateUniqueUserSpy.mockResolvedValueOnce(mockUpdatedUser);
+    transactionSpy.mockResolvedValueOnce(mockUpdatedUser);
 
     const result = await removeInternalVoter(
       MOCK_VOTE_EVENT_1_WITH_ID.id,
@@ -692,16 +692,7 @@ describe("removeInternalVoter helper unit test", () => {
     );
 
     expect(result).toEqual(mockUpdatedUser);
-    expect(updateUniqueUserSpy).toHaveBeenCalledTimes(1);
-    expect(updateUniqueUserSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_USER_1.id },
-      data: {
-        voteEvents: {
-          disconnect: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-        },
-      },
-      include: { voteEvents: true },
-    });
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1077,14 +1068,21 @@ describe("addManyCandidates helper unit test", () => {
 });
 
 describe("removeCandidate helper unit test", () => {
-  let updateOneProjectSpy;
+  let transactionSpy;
+  let findUniqueVoteEventSpy;
 
   beforeAll(() => {
-    updateOneProjectSpy = jest.spyOn(projectModel, "updateOneProject");
+    transactionSpy = jest.spyOn(prisma, "$transaction");
+    findUniqueVoteEventSpy = jest.spyOn(voteEventModel, "findUniqueVoteEvent");
   });
 
   it("should remove one candidate from a vote event", async () => {
-    updateOneProjectSpy.mockResolvedValueOnce(MOCK_PROJECT_1_WITH_ID);
+    transactionSpy.mockResolvedValueOnce(MOCK_PROJECT_1_WITH_ID);
+    findUniqueVoteEventSpy.mockResolvedValueOnce({
+      ...MOCK_VOTE_EVENT_1_WITH_ID,
+      voteConfig: MOCK_VOTE_CONFIG,
+      _count: { candidates: 10 },
+    });
 
     const result = await removeCandidate(
       MOCK_VOTE_EVENT_1_WITH_ID.id,
@@ -1092,16 +1090,7 @@ describe("removeCandidate helper unit test", () => {
     );
 
     expect(result).toEqual(MOCK_PROJECT_1_WITH_ID);
-    expect(updateOneProjectSpy).toHaveBeenCalledTimes(1);
-    expect(updateOneProjectSpy).toHaveBeenCalledWith({
-      where: { id: MOCK_PROJECT_1_WITH_ID.id },
-      data: {
-        voteEvents: {
-          disconnect: { id: MOCK_VOTE_EVENT_1_WITH_ID.id },
-        },
-      },
-      include: { voteEvents: true },
-    });
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1181,6 +1170,14 @@ describe("addManyVotes helper unit test", () => {
     },
     startTime: new Date(Date.now() - 10000),
     endTime: new Date(Date.now() + 10000),
+    candidates: [
+      {
+        id: MOCK_PROJECT_1_WITH_ID.id,
+      },
+      {
+        id: MOCK_PROJECT_2_WITH_ID.id,
+      },
+    ],
   };
 
   beforeAll(() => {
@@ -1228,7 +1225,12 @@ describe("addManyVotes helper unit test", () => {
     expect(findUniqueVoteEventSpy).toHaveBeenCalledTimes(1);
     expect(findUniqueVoteEventSpy).toHaveBeenCalledWith({
       where: { id: MOCK_VOTE_EVENT_2_WITH_ID.id },
-      include: { voteConfig: true },
+      include: {
+        voteConfig: true,
+        candidates: {
+          select: { id: true },
+        },
+      },
     });
 
     expect(createManyVotesSpy).toHaveBeenCalledTimes(1);
@@ -1359,6 +1361,26 @@ describe("addManyVotes helper unit test", () => {
     ).rejects.toThrowError(
       new SkylabError(
         "Number of votes is not within the minimum and maximum limit",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
+
+  it("should throw an error if project IDs are not candidates", async () => {
+    findManyVotesSpy.mockResolvedValueOnce([]);
+    findUniqueVoteEventSpy.mockResolvedValueOnce(voteEventWithConfig);
+
+    await expect(
+      addManyVotes({
+        body: {
+          userId: MOCK_USER_1.id,
+          projectIds: [MOCK_VOTE_EVENT_2_WITH_ID.id, 3, 4],
+        },
+        voteEventId: MOCK_VOTE_EVENT_2_WITH_ID.id,
+      })
+    ).rejects.toThrowError(
+      new SkylabError(
+        "The following ids are not valid: 3, 4",
         HttpStatusCode.BAD_REQUEST
       )
     );

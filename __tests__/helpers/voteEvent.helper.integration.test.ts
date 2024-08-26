@@ -236,6 +236,28 @@ describe("editVoteEvent helper integration test", () => {
     });
   });
 
+  it("should throw an error if minimum votes greater than number of candidates", async () => {
+    await expect(
+      editVoteEvent({
+        voteEventId: mockVoteEvent2Id,
+        body: {
+          voteEvent: {
+            ...MOCK_VOTE_EVENT_2,
+            voteConfig: {
+              ...MOCK_VOTE_CONFIG,
+              minVotes: 10,
+            },
+          },
+        },
+      })
+    ).rejects.toThrow(
+      new SkylabError(
+        "Minimum votes cannot be greater than the number of candidates",
+        HttpStatusCode.BAD_REQUEST
+      )
+    );
+  });
+
   it("should throw an error if vote event not found", async () => {
     await expect(
       editVoteEvent({
@@ -387,12 +409,13 @@ describe("removeInternalVoter helper integration test", () => {
 
   it("should remove an internal voter from a vote event", async () => {
     const removedInternalVoter = await removeInternalVoter(
-      mockVoteEvent2Id,
+      mockVoteEvent1Id,
       idToDelete
     );
 
     expect(removedInternalVoter.email).toBe(KNOWN_EMAILS[0]);
 
+    // check if internal voter is removed from vote event
     const dbCheck = await prisma.user.findUnique({
       where: { email: KNOWN_EMAILS[0] },
       include: { voteEvents: true },
@@ -400,9 +423,15 @@ describe("removeInternalVoter helper integration test", () => {
     expect(dbCheck).toBeDefined();
     expect(dbCheck?.voteEvents).not.toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: mockVoteEvent2Id }),
+        expect.objectContaining({ id: mockVoteEvent1Id }),
       ])
     );
+
+    // check if related votes are removed
+    const votes = await prisma.vote.findMany({
+      where: { userId: idToDelete, voteEventId: mockVoteEvent1Id },
+    });
+    expect(votes).toEqual([]);
   });
 
   it("should throw an error if internal voter not found", async () => {
@@ -547,12 +576,22 @@ describe("removeExternalVoter helper integration test", () => {
 
       expect(deletedExternalVoter).toEqual(toDelete);
 
+      // check if external voter is removed from vote event
       const dbCheck = await prisma.externalVoter.findUnique({
         where: {
           id_voteEventId: toDelete,
         },
       });
       expect(dbCheck).toBeNull();
+
+      // check if related votes are removed
+      const votes = await prisma.vote.findMany({
+        where: {
+          externalVoterId: toDelete.id,
+          voteEventId: toDelete.voteEventId,
+        },
+      });
+      expect(votes).toEqual([]);
     }
   });
 
@@ -682,6 +721,7 @@ describe("removeCandidate helper integration test", () => {
       expect.objectContaining({ ...MOCK_PROJECT_1, id: mockProject1Id })
     );
 
+    // check if candidate is removed from vote event
     const dbCheck = await prisma.project.findUnique({
       where: { id: mockProject1Id },
       include: { voteEvents: true },
@@ -691,6 +731,29 @@ describe("removeCandidate helper integration test", () => {
       expect.arrayContaining([
         expect.objectContaining({ id: mockVoteEvent1Id }),
       ])
+    );
+
+    // check if related votes are removed
+    const votes = await prisma.vote.findMany({
+      where: { projectId: mockProject1Id, voteEventId: mockVoteEvent1Id },
+    });
+    expect(votes).toEqual([]);
+  });
+
+  it("should throw an error if number of candidates is less than or equal to minimum votes", async () => {
+    // update minimum votes to 2
+    await prisma.voteEvent.update({
+      where: { id: mockVoteEvent1Id },
+      data: { voteConfig: { update: { minVotes: 2 } } },
+    });
+
+    await expect(
+      removeCandidate(mockVoteEvent1Id, mockProject2Id)
+    ).rejects.toThrow(
+      new SkylabError(
+        "Cannot remove candidate from vote event as number of candidates will be less than minimum votes",
+        HttpStatusCode.BAD_REQUEST
+      )
     );
   });
 

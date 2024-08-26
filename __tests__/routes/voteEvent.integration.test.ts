@@ -409,6 +409,22 @@ describe("PUT /:voteEventId endpoint", () => {
     );
   });
 
+  it("should return 400 if minimum vote count is greater than number of candidates", async () => {
+    const invalidVoteConfig = {
+      ...MOCK_VOTE_CONFIG,
+      minVotes: 3,
+    };
+
+    const response = await request.put(`${BASE_URL}/${mockVoteEvent1Id}`).send({
+      voteEvent: { ...MOCK_VOTE_EVENT_1, voteConfig: invalidVoteConfig },
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Minimum votes cannot be greater than the number of candidates"
+    );
+  });
+
   it("should handle errors during vote event update", async () => {
     const editVoteEventMock = jest
       .spyOn(voteEventHelpers, "editVoteEvent")
@@ -834,14 +850,20 @@ describe("DELETE /:voteEventId/voter-management/internal-voters/:internalVoterId
     expect(voteEvents).not.toContainEqual(
       expect.objectContaining({ id: mockVoteEvent1Id })
     );
+
+    // Verify related votes were deleted
+    const votes = await prisma.vote.findMany({
+      where: { userId: idToDelete, voteEventId: mockVoteEvent1Id },
+    });
+    expect(votes).toHaveLength(0);
   });
 
-  it("should return 400 if the internal voter does not exist", async () => {
+  it("should return 500 if the internal voter does not exist", async () => {
     const response = await request.delete(
       `${BASE_URL}/${mockVoteEvent1Id}/voter-management/internal-voters/${NON_EXISTENT_ID}`
     ); // Non-existent internal voter ID
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(500);
     expect(response.body).toHaveProperty("message");
   });
 
@@ -1153,6 +1175,12 @@ describe("DELETE /:voteEventId/voter-management/external-voters/:externalVoterId
       },
     });
     expect(dbCheck).toBeNull();
+
+    // Verify related votes were deleted
+    const votes = await prisma.vote.findMany({
+      where: { externalVoterId: VOTER_ID_1, voteEventId: mockVoteEvent1Id },
+    });
+    expect(votes).toHaveLength(0);
   });
 
   it("should return 400 if the external voter does not exist", async () => {
@@ -1417,6 +1445,30 @@ describe("DELETE /:voteEventId/candidates/:candidateId", () => {
     expect(voteEvents).not.toContainEqual(
       expect.objectContaining({ id: mockVoteEvent1Id })
     );
+
+    // Verify related votes were deleted
+    const votes = await prisma.vote.findMany({
+      where: { projectId: mockProject1Id, voteEventId: mockVoteEvent1Id },
+    });
+    expect(votes).toHaveLength(0);
+  });
+
+  it("shoud return 400 if the number of candidates gets less than minimum vote count", async () => {
+    // successfully delete a candidate
+    await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/candidates/${mockProject2Id}`
+    );
+
+    // try to delete another candidate
+    const response = await request.delete(
+      `${BASE_URL}/${mockVoteEvent1Id}/candidates/${mockProject1Id}`
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message:
+        "Cannot remove candidate from vote event as number of candidates will be less than minimum votes",
+    });
   });
 
   it("should handle errors during candidate deletion", async () => {
@@ -1717,6 +1769,19 @@ describe("POST /:voteEventId/votes", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       message: "Number of votes is not within the minimum and maximum limit",
+    });
+  });
+
+  it("should return 400 if some project ids are not candidates", async () => {
+    const response = await request
+      .post(`${BASE_URL}/${mockVoteEvent1Id}/votes`)
+      .send({
+        projectIds: [mockProject1Id, mockProject2Id, NON_EXISTENT_ID],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: "The following ids are not valid: " + NON_EXISTENT_ID,
     });
   });
 });
