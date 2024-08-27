@@ -6,6 +6,21 @@ on: [push]
 jobs:
   Lint-Test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+          env:
+            POSTGRES_DB: skylab
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+        --health-cmd pg_isready 
+        --health-interval 10s 
+        --health-timeout 5s 
+        --health-retries 5
+
     steps:
       # Check Out Repository
       - uses: actions/checkout@v1
@@ -27,7 +42,22 @@ jobs:
       - name: Prettier Check
         run: npx prettier --check "src/**/*.ts"
 
-      ## TODO: Add test scripts when Jest is configured
+      # Create .env file
+      - name: Create .env file
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skylab" > .env
+          echo "JWT_SECRET=secret" >> .env
+          echo "ADMIN_PASSWORD=Password123" >> .env
+          echo "SALT_ROUNDS=5" >> .env
+
+      # Set up database with seed data
+      - name: Set up database
+        run: npx prisma migrate dev --name init
+
+      # Run test cases with Jest
+      - name: Jest tests
+        run: npm run test
+        
 #   Deploy:
 #     needs: [Lint-Test]
 #     runs-on: ubuntu-latest
