@@ -50,9 +50,13 @@ jobs:
           echo "ADMIN_PASSWORD=Password123" >> .env
           echo "SALT_ROUNDS=5" >> .env
 
-      # Set up database with seed data
+      # Set up database with prisma
       - name: Set up database
         run: npx prisma migrate dev --name init
+
+      # Seed database with prisma
+      - name: Seed database
+        run: npx prisma db seed
 
       # Run test cases with Jest
       - name: Jest tests
