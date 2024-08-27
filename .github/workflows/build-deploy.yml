@@ -16,10 +16,10 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-        --health-cmd pg_isready 
-        --health-interval 10s 
-        --health-timeout 5s 
-        --health-retries 5
+          --health-cmd pg_isready 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
 
     steps:
       # Check Out Repository
@@ -57,7 +57,6 @@ jobs:
       # Run test cases with Jest
       - name: Jest tests
         run: npm run test
-        
 #   Deploy:
 #     needs: [Lint-Test]
 #     runs-on: ubuntu-latest
