@@ -9,10 +9,10 @@ jobs:
     services:
       postgres:
         image: postgres:14
-          env:
-            POSTGRES_DB: skylab
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: postgres
+        env:
+          POSTGRES_DB: skylab
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
