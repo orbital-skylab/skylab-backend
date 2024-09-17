@@ -6,7 +6,8 @@ import { DisplayType } from "@prisma/client";
 export const MOCK_VOTER_MANAGEMENT = {
   hasInternalList: true,
   hasExternalList: true,
-  isRegistrationOpen: false,
+  registrationStartTime: null,
+  registrationEndTime: null,
 };
 
 export const MOCK_VOTE_CONFIG = {

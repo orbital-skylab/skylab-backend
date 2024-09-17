@@ -13,7 +13,8 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
   const voterManagement = {
     hasInternalList: true,
     hasExternalList: true,
-    isRegistrationOpen: false,
+    registrationStartTime: null,
+    registrationEndTime: null,
   };
 
   const voteConfig = {
@@ -141,7 +142,8 @@ export const seedVoteEvent = async (prisma: PrismaClient) => {
       voterManagement: {
         create: {
           ...voterManagement,
-          isRegistrationOpen: true,
+          registrationStartTime: yesterday,
+          registrationEndTime: nextYear,
         },
       },
       voteConfig: {

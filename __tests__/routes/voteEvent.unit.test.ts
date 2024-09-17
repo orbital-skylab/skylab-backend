@@ -271,7 +271,7 @@ describe("GET /:voteEventId route unit test", () => {
       voteEvent: {
         ...returnValue,
         voterManagement: {
-          isRegistrationOpen: false,
+          ...voteEventHelpers.DEFAULT_REGISTRATION_PERIOD,
         },
         resultsFilter: {
           areResultsPublished: undefined,
@@ -361,7 +361,7 @@ describe("PUT /:voteEventId/voter-management route unit test", () => {
   let editVoterManagementSpy;
   const requestBody = {
     voterManagement: {
-      isRegistrationOpen: false,
+      ...voteEventHelpers.DEFAULT_REGISTRATION_PERIOD,
       hasInternalList: false,
       hasExternalList: true,
     },
@@ -496,7 +496,7 @@ describe("POST /:voteEventId/register route unit test", () => {
       voteEvent: {
         ...MOCK_VOTE_EVENT_1_WITH_ID,
         voterManagement: {
-          isRegistrationOpen: false,
+          ...voteEventHelpers.DEFAULT_REGISTRATION_PERIOD,
         },
       },
     });

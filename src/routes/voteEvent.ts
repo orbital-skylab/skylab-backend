@@ -2,8 +2,7 @@
 import { VoteEvent } from "@prisma/client";
 import { Request, Response, Router } from "express";
 import { validationResult } from "express-validator";
-import authorizeVoter from "../middleware/authorizeVoter";
-import authorizeVoterOfVoteEvent from "../middleware/authorizeVoterOfVoteEvent";
+import { SkylabError } from "../errors/SkylabError";
 import {
   addCandidate,
   addExternalVoter,
@@ -13,6 +12,7 @@ import {
   addManyInternalVoters,
   addManyVotes,
   createVoteEvent,
+  DEFAULT_REGISTRATION_PERIOD,
   editVoteEvent,
   editVoterManagement,
   generateExternalVoters,
@@ -34,10 +34,14 @@ import {
   VOTE_EVENT_PUBLIC_INCLUSION,
 } from "../helpers/voteEvent.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
+import authorizeVoter from "../middleware/authorizeVoter";
+import authorizeVoterOfVoteEvent from "../middleware/authorizeVoterOfVoteEvent";
+import { findUniqueVoteEvent } from "../models/voteEvent.db";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { errorFormatter, throwValidationError } from "../validators/validator";
 import {
   addCandidateValidator,
@@ -48,9 +52,6 @@ import {
   createVoteEventValidator,
   editVoteEventValidator,
 } from "../validators/voteEvent.validator";
-import { SkylabError } from "../errors/SkylabError";
-import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
-import { findUniqueVoteEvent } from "../models/voteEvent.db";
 
 const router = Router();
 
@@ -108,7 +109,7 @@ router.get(
         voteEvent = {
           ...voteEvent,
           voterManagement: {
-            isRegistrationOpen: false,
+            ...DEFAULT_REGISTRATION_PERIOD,
           },
           resultsFilter: {
             areResultsPublished: voteEvent.resultsFilter?.areResultsPublished,
@@ -210,7 +211,7 @@ router.post(
         voteEvent: {
           ...voteEvent,
           voterManagement: {
-            isRegistrationOpen: false,
+            ...DEFAULT_REGISTRATION_PERIOD,
           },
         },
       });

@@ -80,7 +80,7 @@ describe("GET / endpoint", () => {
         id: mockVoteEvent1Id,
         voteConfig: MOCK_VOTE_CONFIG,
         voterManagement: {
-          isRegistrationOpen: MOCK_VOTER_MANAGEMENT.isRegistrationOpen,
+          ...voteEventHelpers.DEFAULT_REGISTRATION_PERIOD,
         },
         resultsFilter: {
           areResultsPublished: true,
@@ -119,7 +119,8 @@ describe("GET / endpoint", () => {
           return {
             ...voteEvent,
             voterManagement: {
-              isRegistrationOpen: expect.any(Boolean),
+              registrationStartTime: expect.any(String),
+              registrationEndTime: expect.any(String),
             },
           };
         })[0],
@@ -137,7 +138,8 @@ describe("GET / endpoint", () => {
           return {
             ...voteEvent,
             voterManagement: {
-              isRegistrationOpen: false,
+              registrationStartTime: "",
+              registrationEndTime: expect.any(String),
             },
           };
         })[0],
@@ -237,7 +239,7 @@ describe("GET /:voteEventId endpoint", () => {
       id: mockVoteEvent1Id,
       voteConfig: MOCK_VOTE_CONFIG,
       voterManagement: {
-        isRegistrationOpen: false,
+        ...voteEventHelpers.DEFAULT_REGISTRATION_PERIOD,
       },
       resultsFilter: {
         areResultsPublished: true,
@@ -318,7 +320,8 @@ describe("PUT /:voteEventId endpoint", () => {
     const updatedVoterManagement = {
       hasInternalList: true,
       hasExternalList: true,
-      isRegistrationOpen: true,
+      registrationStartTime: "2024-06-30T00:00:00.000Z",
+      registrationEndTime: "2024-07-01T00:00:00.000Z",
     };
 
     const response = await request.put(`${BASE_URL}/${mockVoteEvent1Id}`).send({
@@ -342,6 +345,10 @@ describe("PUT /:voteEventId endpoint", () => {
     if (!dbCheck) return;
     expect(dbCheck.voterManagement).toEqual({
       ...updatedVoterManagement,
+      registrationStartTime: new Date(
+        updatedVoterManagement.registrationStartTime
+      ),
+      registrationEndTime: new Date(updatedVoterManagement.registrationEndTime),
       voteEventId: mockVoteEvent1Id,
     });
 
@@ -445,7 +452,8 @@ describe("PUT /:voteEventId/voter-management endpoint", () => {
   const updatedVoterManagement = {
     hasInternalList: true,
     hasExternalList: true,
-    isRegistrationOpen: true,
+    registrationStartTime: null,
+    registrationEndTime: null,
   };
 
   it("should set voter management for the first time", async () => {
@@ -591,7 +599,9 @@ describe("POST /:voteEventId/register endpoint", () => {
     expect(voteEvent.title).toBe(MOCK_VOTE_EVENT_2.title);
     expect(new Date(voteEvent.startTime)).toEqual(MOCK_VOTE_EVENT_2.startTime);
     expect(new Date(voteEvent.endTime)).toEqual(MOCK_VOTE_EVENT_2.endTime);
-    expect(voteEvent.voterManagement.isRegistrationOpen).toEqual(false);
+    expect(voteEvent.voterManagement).toEqual({
+      ...voteEventHelpers.DEFAULT_REGISTRATION_PERIOD,
+    });
 
     // Verify the internal voter was actually added to the database
     const dbCheck = await prisma.user.findUnique({

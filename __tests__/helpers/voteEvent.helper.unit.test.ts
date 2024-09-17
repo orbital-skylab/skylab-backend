@@ -211,7 +211,10 @@ describe("getInternalVoterVoteEvents helper unit test", () => {
 
     expect(result).toEqual(
       mockVoteEvents.map((ve) => {
-        return { ...ve, voterManagement: { isRegistrationOpen: false } };
+        return {
+          ...ve,
+          voterManagement: { ...voteEventHelper.DEFAULT_REGISTRATION_PERIOD },
+        };
       })
     );
     expect(findManyVoteEventsSpy).toHaveBeenCalledTimes(2);
@@ -226,7 +229,10 @@ describe("getInternalVoterVoteEvents helper unit test", () => {
     expect(findManyVoteEventsSpy).toHaveBeenNthCalledWith(2, {
       where: {
         id: { notIn: mockVoteEvents.map((ve) => ve.id) },
-        voterManagement: { isRegistrationOpen: true },
+        voterManagement: {
+          registrationStartTime: { lte: expect.any(Date) },
+          registrationEndTime: { gte: expect.any(Date) },
+        },
         voteConfig: { isNot: null },
       },
       include: VOTE_EVENT_PUBLIC_INCLUSION,
@@ -261,7 +267,10 @@ describe("getExternalVoterVoteEvents helper unit test", () => {
 
     expect(result).toEqual(
       mockVoteEvents.map((ve) => {
-        return { ...ve, voterManagement: { isRegistrationOpen: false } };
+        return {
+          ...ve,
+          voterManagement: { ...voteEventHelper.DEFAULT_REGISTRATION_PERIOD },
+        };
       })
     );
     expect(findManyVoteEventsSpy).toHaveBeenCalledTimes(1);

@@ -48,13 +48,19 @@ type UserWithRoles = User & {
   adviser?: Adviser[];
 };
 
+export const DEFAULT_REGISTRATION_PERIOD = {
+  registrationStartTime: "",
+  registrationEndTime: "",
+};
+
 // Fields avaialable for administartors
 export const VOTE_EVENT_INCLUSION = {
   voterManagement: {
     select: {
       hasInternalList: true,
       hasExternalList: true,
-      isRegistrationOpen: true,
+      registrationStartTime: true,
+      registrationEndTime: true,
     },
   },
   voteConfig: {
@@ -87,7 +93,8 @@ export const VOTE_EVENT_INCLUSION = {
 export const VOTE_EVENT_PUBLIC_INCLUSION = {
   voterManagement: {
     select: {
-      isRegistrationOpen: true,
+      registrationStartTime: true,
+      registrationEndTime: true,
     },
   },
   voteConfig: {
@@ -347,7 +354,8 @@ export async function getAllVoteEvents() {
       ? {
           ...voteEvent,
           voterManagement: {
-            isRegistrationOpen: false,
+            registrationStartTime: "",
+            registrationEndTime: "",
           },
         }
       : voteEvent;
@@ -365,11 +373,16 @@ export async function getInternalVoterVoteEvents(internalVoterId: number) {
     include: VOTE_EVENT_PUBLIC_INCLUSION,
   });
 
+  const now = new Date();
+
   // Get other set up vote events with registration open
   const openVoteEvents = await findManyVoteEvents({
     where: {
       id: { notIn: voteEvents.map((v) => v.id) },
-      voterManagement: { isRegistrationOpen: true },
+      voterManagement: {
+        registrationStartTime: { lte: now }, // Registration has started
+        registrationEndTime: { gte: now }, // Registration has not ended
+      },
       voteConfig: { isNot: null },
     },
     include: VOTE_EVENT_PUBLIC_INCLUSION,
@@ -380,7 +393,7 @@ export async function getInternalVoterVoteEvents(internalVoterId: number) {
       return {
         ...voteEvent,
         voterManagement: {
-          isRegistrationOpen: false,
+          ...DEFAULT_REGISTRATION_PERIOD,
         },
       };
     }),
@@ -402,7 +415,7 @@ export async function getExternalVoterVoteEvents(externalVoterId: string) {
     return {
       ...voteEvent,
       voterManagement: {
-        isRegistrationOpen: false,
+        ...DEFAULT_REGISTRATION_PERIOD,
       },
     };
   });
@@ -1166,12 +1179,14 @@ export async function editVoterManagement({
             create: {
               hasInternalList: voterManagement.hasInternalList,
               hasExternalList: voterManagement.hasExternalList,
-              isRegistrationOpen: voterManagement.isRegistrationOpen,
+              registrationStartTime: voterManagement.registrationStartTime,
+              registrationEndTime: voterManagement.registrationEndTime,
             },
             update: {
               hasInternalList: voterManagement.hasInternalList,
               hasExternalList: voterManagement.hasExternalList,
-              isRegistrationOpen: voterManagement.isRegistrationOpen,
+              registrationStartTime: voterManagement.registrationStartTime,
+              registrationEndTime: voterManagement.registrationEndTime,
             },
           },
         },

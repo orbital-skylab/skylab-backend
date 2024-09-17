@@ -13,7 +13,6 @@ import {
   MOCK_VOTE_CONFIG,
   MOCK_VOTE_EVENT_1,
   MOCK_VOTE_EVENT_2,
-  MOCK_VOTER_MANAGEMENT,
   NON_EXISTENT_ID,
   NON_EXISTENT_USER_EMAIL,
   VOTER_ID_1,
@@ -31,6 +30,7 @@ import {
   addManyInternalVoters,
   addManyVotes,
   createVoteEvent,
+  DEFAULT_REGISTRATION_PERIOD,
   editVoteEvent,
   editVoterManagement,
   generateExternalVoters,
@@ -89,7 +89,7 @@ describe("getAllVoteEvents helper integration test", () => {
         id: mockVoteEvent1Id,
         voteConfig: MOCK_VOTE_CONFIG,
         voterManagement: {
-          isRegistrationOpen: MOCK_VOTER_MANAGEMENT.isRegistrationOpen,
+          ...DEFAULT_REGISTRATION_PERIOD,
         },
         resultsFilter: {
           areResultsPublished: true,
@@ -126,7 +126,7 @@ describe("getInternalVoterVoteEvent helper integration test", () => {
         id: mockVoteEvent1Id,
         voteConfig: MOCK_VOTE_CONFIG,
         voterManagement: {
-          isRegistrationOpen: false,
+          ...DEFAULT_REGISTRATION_PERIOD,
         },
         resultsFilter: {
           areResultsPublished: true,
@@ -160,7 +160,7 @@ describe("getExternalVoterVoteEvents helper integration test", () => {
         id: mockVoteEvent1Id,
         voteConfig: MOCK_VOTE_CONFIG,
         voterManagement: {
-          isRegistrationOpen: false,
+          ...DEFAULT_REGISTRATION_PERIOD,
         },
         resultsFilter: {
           areResultsPublished: true,
@@ -947,7 +947,8 @@ describe("editVoterManagement helper integration test", () => {
         voterManagement: {
           hasInternalList: true,
           hasExternalList: true,
-          isRegistrationOpen: true,
+          registrationStartTime: null,
+          registrationEndTime: null,
         },
       },
       voteEventId: mockVoteEvent1Id,
@@ -956,7 +957,8 @@ describe("editVoterManagement helper integration test", () => {
     expect(updatedVoteEvent.voterManagement).toEqual({
       hasInternalList: true,
       hasExternalList: true,
-      isRegistrationOpen: true,
+      registrationStartTime: null,
+      registrationEndTime: null,
     });
 
     // check voter management in db
@@ -968,7 +970,8 @@ describe("editVoterManagement helper integration test", () => {
       expect.objectContaining({
         hasInternalList: true,
         hasExternalList: true,
-        isRegistrationOpen: true,
+        registrationStartTime: null,
+        registrationEndTime: null,
       })
     );
 
@@ -1002,7 +1005,8 @@ describe("editVoterManagement helper integration test", () => {
         voterManagement: {
           hasInternalList: true,
           hasExternalList: true,
-          isRegistrationOpen: true,
+          registrationStartTime: null,
+          registrationEndTime: null,
           copyInternalVoteEventId: mockVoteEvent2Id,
           copyExternalVoteEventId: mockVoteEvent2Id,
         },
@@ -1013,7 +1017,8 @@ describe("editVoterManagement helper integration test", () => {
     expect(updatedVoteEvent.voterManagement).toEqual({
       hasInternalList: true,
       hasExternalList: true,
-      isRegistrationOpen: true,
+      registrationStartTime: null,
+      registrationEndTime: null,
     });
 
     // check voter management in db
@@ -1025,7 +1030,8 @@ describe("editVoterManagement helper integration test", () => {
       expect.objectContaining({
         hasInternalList: true,
         hasExternalList: true,
-        isRegistrationOpen: true,
+        registrationStartTime: null,
+        registrationEndTime: null,
       })
     );
 
@@ -1051,7 +1057,8 @@ describe("editVoterManagement helper integration test", () => {
           voterManagement: {
             hasInternalList: true,
             hasExternalList: true,
-            isRegistrationOpen: true,
+            registrationStartTime: null,
+            registrationEndTime: null,
           },
         },
         voteEventId: NON_EXISTENT_ID,

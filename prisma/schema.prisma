@@ -296,11 +296,12 @@ model VoteEvent {
 }
 
 model VoterManagement {
-  voteEvent          VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
-  voteEventId        Int       @id
-  hasInternalList    Boolean
-  hasExternalList    Boolean
-  isRegistrationOpen Boolean
+  voteEvent             VoteEvent @relation(fields: [voteEventId], references: [id], onDelete: Cascade)
+  voteEventId           Int       @id
+  hasInternalList       Boolean
+  hasExternalList       Boolean
+  registrationStartTime DateTime?
+  registrationEndTime   DateTime?
 }
 
 model VoteConfig {
