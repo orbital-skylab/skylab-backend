@@ -236,7 +236,7 @@ model Answer {
   answer       String
   submissionId Int
 
-  @@id([submissionId, questionId, answer])
+  @@id([submissionId, questionId])
 }
 
 model Announcement {
