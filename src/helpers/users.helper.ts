@@ -18,10 +18,29 @@ import { UserRolesEnum } from "../validators/user.validator";
 import { getOneCohort } from "../models/cohorts.db";
 import { findFirstStudentWithoutError } from "../models/students.db";
 
+export type UserWithRoleData = User & {
+  student?: Student[];
+  mentor?: Mentor[];
+  administrator?: Administrator[];
+  adviser?: Adviser[];
+};
+
 export function removePasswordFromUser(user: User) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...userWithoutPassword } = user;
   return userWithoutPassword;
+}
+
+export function formatUserWithRoleData(user: UserWithRoleData) {
+  const { student, mentor, administrator, adviser, ...userInfo } = user;
+  const userInfoWithoutPassword = removePasswordFromUser(userInfo);
+  return {
+    ...userInfoWithoutPassword,
+    student: student ? student[0] ?? {} : {},
+    mentor: mentor ? mentor[0] ?? {} : {},
+    adviser: adviser ? adviser[0] ?? {} : undefined,
+    administrator: administrator ? administrator[0] ?? {} : undefined,
+  };
 }
 
 export async function getUsersFilterRoleInputParser(
@@ -120,24 +139,11 @@ export async function getManyUsersWithFilter(
     },
   };
 
-  const users: (User & {
-    student?: Student[];
-    mentor?: Mentor[];
-    administrator?: Administrator[];
-    adviser?: Adviser[];
-  })[] = await findManyUsers(userQuery);
+  const users: UserWithRoleData[] = await findManyUsers(userQuery);
 
   /* Parse Users Objects */
   const parsedUsers = users.map((user) => {
-    const { student, mentor, administrator, adviser, ...userInfo } = user;
-    const userInfoWithoutPassword = removePasswordFromUser(userInfo);
-    return {
-      ...userInfoWithoutPassword,
-      student: student ? student[0] ?? {} : {},
-      mentor: mentor ? mentor[0] ?? {} : {},
-      adviser: adviser ? adviser[0] ?? {} : undefined,
-      administrator: administrator ? administrator[0] ?? {} : undefined,
-    };
+    return formatUserWithRoleData(user);
   });
 
   return parsedUsers;

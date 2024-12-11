@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Request, Response, Router } from "express";
 import { validationResult } from "express-validator";
 import { addAdviserRoleToManyUsers } from "../helpers/advisers.helper";
 import {
@@ -9,7 +9,6 @@ import {
   getOneUserById,
 } from "../helpers/users.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
-import authorizeSelf from "../middleware/authorizeSelf";
 import authorizeSignedIn from "../middleware/authorizeSignedIn";
 import { getLeanUsersWithFilter } from "../models/users.db";
 import {
@@ -76,54 +75,58 @@ router.post(
   }
 );
 
-router.put("/:variable", authorizeSelf, async (req: Request, res: Response) => {
-  const { variable } = req.params;
+router.put(
+  "/:variable",
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    const { variable } = req.params;
 
-  try {
-    if (variable == "Students") {
-      return apiResponseWrapper(res, {
-        data: await addRoleToUsers(
-          UserRolesEnum.Student,
-          req.body.cohortYear,
-          req.body.userIds
-        ),
-      });
-    } else if (variable == "Mentors") {
-      return apiResponseWrapper(res, {
-        data: await addRoleToUsers(
-          UserRolesEnum.Mentor,
-          req.body.cohortYear,
-          req.body.userIds
-        ),
-      });
-    } else if (variable == "Administrators") {
-      return apiResponseWrapper(res, {
-        data: await addRoleToUsers(
-          UserRolesEnum.Administrator,
-          req.body.cohortYear,
-          req.body.userIds
-        ),
-      });
-    } else if (variable == "Advisers") {
-      return apiResponseWrapper(res, {
-        data: await addRoleToUsers(
-          UserRolesEnum.Adviser,
-          req.body.cohortYear,
-          req.body.userIds
-        ),
-      });
-    } else {
-      // userId
-      const updatedUser = await editOneUserById(
-        Number(variable),
-        req.body.user
-      );
-      return apiResponseWrapper(res, { user: updatedUser });
+    try {
+      if (variable == "Students") {
+        return apiResponseWrapper(res, {
+          data: await addRoleToUsers(
+            UserRolesEnum.Student,
+            req.body.cohortYear,
+            req.body.userIds
+          ),
+        });
+      } else if (variable == "Mentors") {
+        return apiResponseWrapper(res, {
+          data: await addRoleToUsers(
+            UserRolesEnum.Mentor,
+            req.body.cohortYear,
+            req.body.userIds
+          ),
+        });
+      } else if (variable == "Administrators") {
+        return apiResponseWrapper(res, {
+          data: await addRoleToUsers(
+            UserRolesEnum.Administrator,
+            req.body.cohortYear,
+            req.body.userIds
+          ),
+        });
+      } else if (variable == "Advisers") {
+        return apiResponseWrapper(res, {
+          data: await addRoleToUsers(
+            UserRolesEnum.Adviser,
+            req.body.cohortYear,
+            req.body.userIds
+          ),
+        });
+      } else {
+        // userId
+        const updatedUser = await editOneUserById(
+          Number(variable),
+          req.body.user
+        );
+        return apiResponseWrapper(res, { user: updatedUser });
+      }
+    } catch (e) {
+      return routeErrorHandler(res, e);
     }
-  } catch (e) {
-    return routeErrorHandler(res, e);
   }
-});
+);
 
 router
   .delete(

@@ -68,5 +68,5 @@
     "useUnknownInCatchVariables": false
   },
   "include": ["src/**/*.ts", "spec/**/*.ts"],
-  "exclude": ["src/public/"]
+  "exclude": ["src/public/", "__tests__", "__mocks__", "jest.config.js"]
 }

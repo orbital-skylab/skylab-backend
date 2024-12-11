@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { SkylabError } from "../errors/SkylabError";
 import {
+  EXTERNAL_VOTER_TOKEN,
+  externalVoterLogin,
   hashPassword,
   sendPasswordResetEmail,
   userLogin,
@@ -16,6 +18,18 @@ import {
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const router = Router();
+
+const cookieOptions: {
+  maxAge: number;
+  sameSite: boolean | "none" | "lax" | "strict" | undefined;
+  secure: boolean;
+  httpOnly: boolean;
+} = {
+  maxAge: 10 * 60 * 60 * 24 * 1000,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  secure: process.env.NODE_ENV === "production",
+  httpOnly: true,
+};
 
 router.post("/sign-in", async (req: Request, res: Response) => {
   try {
@@ -38,14 +52,31 @@ router.post("/sign-in", async (req: Request, res: Response) => {
     }
 
     return res
-      .cookie("token", token, {
-        maxAge: 10 * 60 * 60 * 24 * 1000,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        secure: process.env.NODE_ENV === "production",
-        httpOnly: true,
-      })
+      .cookie("token", token, cookieOptions)
       .status(HttpStatusCode.OK)
       .json(userData);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.post("/sign-in/external-voter", async (req: Request, res: Response) => {
+  try {
+    const { voterId } = req.body;
+
+    if (!voterId) {
+      throw new SkylabError(
+        "Missing request parameters",
+        HttpStatusCode.BAD_REQUEST
+      );
+    }
+
+    const { token } = await externalVoterLogin(voterId);
+
+    return res
+      .cookie(EXTERNAL_VOTER_TOKEN, token, cookieOptions)
+      .status(HttpStatusCode.OK)
+      .json(true);
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -69,6 +100,20 @@ router.get(
   }
 );
 
+router.get("/sign-out/external-voter", async (_: Request, res: Response) => {
+  try {
+    res
+      .clearCookie(EXTERNAL_VOTER_TOKEN, {
+        sameSite: "none",
+        secure: true,
+        httpOnly: true,
+      })
+      .sendStatus(HttpStatusCode.OK);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
 router.get("/info", authorizeSignedIn, async (req: Request, res: Response) => {
   try {
     const { token } = req.cookies;
@@ -79,6 +124,24 @@ router.get("/info", authorizeSignedIn, async (req: Request, res: Response) => {
     ) as any;
     const userData = await getOneUserById(Number(jwtData.id));
     return apiResponseWrapper(res, userData as JwtPayload);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.get("/external-voter", async (req: Request, res: Response) => {
+  try {
+    const externalVoterToken = req.cookies[EXTERNAL_VOTER_TOKEN];
+
+    if (!externalVoterToken) {
+      throw new SkylabError(
+        "Authentication failed",
+        HttpStatusCode.UNAUTHORIZED
+      );
+    }
+    jwt.verify(externalVoterToken, process.env.JWT_SECRET ?? "jwt_secret");
+
+    return apiResponseWrapper(res, { isExternalVoter: true });
   } catch (e) {
     return routeErrorHandler(res, e);
   }

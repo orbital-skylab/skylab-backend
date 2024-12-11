@@ -1,0 +1,2 @@
+npx eslint . --config .eslintrc.js --ext .js,.ts
+npx tsc --noemit
