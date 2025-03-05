@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { getSubmissionsByDeadlineId } from "../helpers/dashboard.admin.helper";
+import { getSubmissions } from "../helpers/dashboard.admin.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
@@ -21,7 +21,7 @@ router.get(
       return throwValidationError(res, errors);
     }
     try {
-      const submissions = await getSubmissionsByDeadlineId(req.query);
+      const submissions = await getSubmissions(req.query);
       return apiResponseWrapper(res, { submissions: submissions });
     } catch (e) {
       return routeErrorHandler(res, e);

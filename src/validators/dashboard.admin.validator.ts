@@ -4,7 +4,7 @@ import { CohortQueryValidator } from "./validator";
 
 export const GetSubmissionsByDeadlineIDValidator = [
   CohortQueryValidator,
-  query("deadlineId").isNumeric().toInt(),
+  query("deadlineId").isNumeric().toInt().optional(),
   query("submissionStatus")
     .isIn([
       SubmissionStatusEnum.SUBMITTED,
@@ -14,4 +14,5 @@ export const GetSubmissionsByDeadlineIDValidator = [
     .optional(),
   query("page").isNumeric().toInt().optional(),
   query("limit").isNumeric().toInt().optional(),
+  query("dropped").isBoolean(),
 ];
