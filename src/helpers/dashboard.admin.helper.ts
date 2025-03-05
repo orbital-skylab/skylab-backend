@@ -120,7 +120,6 @@ export const getAllSubmissions = async (
     dropped: boolean;
   }
 ) => {
-  console.log("HELLO");
   const { search, cohortYear, page, limit, dropped } = query;
   const projects = await findManyProjectsWithUserData({
     where: {
@@ -131,15 +130,11 @@ export const getAllSubmissions = async (
     skip: query.limit && query.page ? limit * page : undefined,
   });
 
-  console.log(projects);
-
   const milestoneDeadlines = await findManyDeadlines({
     where: {
       type: "Milestone",
     },
   });
-
-  console.log(milestoneDeadlines);
 
   let results: {
     fromProject: Project;
