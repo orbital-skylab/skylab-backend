@@ -1,6 +1,9 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { getSubmissions } from "../helpers/dashboard.admin.helper";
+import {
+  getSubmissions,
+  sendReminderEmail,
+} from "../helpers/dashboard.admin.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
@@ -28,5 +31,17 @@ router.get(
     }
   }
 );
+
+router.post("/send-reminders", async (req: Request, res: Response) => {
+  try {
+    const { emails, ccs, subject, message } = req.body;
+
+    sendReminderEmail(emails, ccs, subject, message);
+
+    return apiResponseWrapper(res, {});
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 export default router;

@@ -14,6 +14,7 @@ import {
   findFirstNonDraftSubmission,
   findManySubmissions,
 } from "../models/submissions.db";
+import { SENDER, GET_HTML_CONTENT_REMINDER } from "../utils/Emails";
 
 export enum SubmissionStatusEnum {
   UNSUBMITTED = "Unsubmitted",
@@ -309,3 +310,28 @@ export const getSubmissionsByDeadlineId = async (
     });
   }
 };
+
+export async function sendReminderEmail(
+  emails: string[],
+  ccs: string[],
+  subject: string,
+  message: string
+) {
+  try {
+    const { default: sgMail } = await import("@sendgrid/mail");
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY ?? "sendgrid_api_key");
+
+    const msg = {
+      to: emails,
+      cc: ccs,
+      from: SENDER.email,
+      subject: subject,
+      html: GET_HTML_CONTENT_REMINDER(message),
+    };
+
+    await sgMail.sendMultiple(msg);
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
