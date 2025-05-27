@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { TransactionalEmailsApiApiKeys } from "sib-api-v3-typescript";
 import { SkylabError } from "../errors/SkylabError";
 import { findUniqueUserWithRoleData } from "../models/users.db";
 import { SUBJECT, SENDER, GET_HTML_CONTENT } from "../utils/Emails";
@@ -76,18 +75,17 @@ export async function sendPasswordResetEmail(
   origin: string
 ) {
   try {
-    const sendInBlue = await import("sib-api-v3-typescript");
-    const apiInstance = new sendInBlue.TransactionalEmailsApi();
-    apiInstance.setApiKey(
-      TransactionalEmailsApiApiKeys.apiKey,
-      process.env.SIB_EMAIL_API_KEY ?? "sib_email_api_key"
-    );
-    const newPasswordResetEmail = new sendInBlue.SendSmtpEmail();
-    newPasswordResetEmail.subject = SUBJECT;
-    newPasswordResetEmail.to = [{ email }];
-    newPasswordResetEmail.sender = SENDER;
-    newPasswordResetEmail.htmlContent = GET_HTML_CONTENT(origin, token, id);
-    await apiInstance.sendTransacEmail(newPasswordResetEmail);
+    const { default: sgMail } = await import("@sendgrid/mail");
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY ?? "sendgrid_api_key");
+
+    const msg = {
+      to: [{ email }],
+      from: SENDER.email,
+      subject: SUBJECT,
+      html: GET_HTML_CONTENT(origin, token, id),
+    };
+
+    await sgMail.send(msg);
   } catch (e) {
     console.error(e);
   }

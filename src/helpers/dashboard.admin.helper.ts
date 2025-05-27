@@ -7,10 +7,14 @@ import {
   Submission,
   User,
 } from "@prisma/client";
-import { findUniqueDeadline } from "../models/deadline.db";
+import { findUniqueDeadline, findManyDeadlines } from "../models/deadline.db";
 import { findManyProjectsWithUserData } from "../models/projects.db";
 import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
-import { findFirstNonDraftSubmission } from "../models/submissions.db";
+import {
+  findFirstNonDraftSubmission,
+  findManySubmissions,
+} from "../models/submissions.db";
+import { SENDER, GET_HTML_CONTENT_REMINDER } from "../utils/Emails";
 
 export enum SubmissionStatusEnum {
   UNSUBMITTED = "Unsubmitted",
@@ -89,7 +93,94 @@ export function flattenProjectUsers(
   };
 }
 
-export async function getSubmissionsByDeadlineId(
+export const getSubmissions = async (
+  query: any & {
+    cohortYear: number;
+    deadlineId?: number;
+    submissionStatus?: SubmissionStatusEnum;
+    search?: string;
+    page?: number;
+    limit?: number;
+    dropped: boolean;
+  }
+) => {
+  const { deadlineId } = query;
+  if (deadlineId) {
+    return await getSubmissionsByDeadlineId(query);
+  }
+
+  return await getAllSubmissions(query);
+};
+
+export const getAllSubmissions = async (
+  query: any & {
+    cohortYear: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+    dropped: boolean;
+  }
+) => {
+  const { search, cohortYear, page, limit, dropped } = query;
+  const projects = await findManyProjectsWithUserData({
+    where: {
+      cohortYear: cohortYear,
+      name: search ? { contains: search } : undefined,
+    },
+    take: query.limit ?? undefined,
+    skip: query.limit && query.page ? limit * page : undefined,
+  });
+
+  const milestoneDeadlines = await findManyDeadlines({
+    where: {
+      type: "Milestone",
+    },
+  });
+
+  let results: {
+    fromProject: Project;
+    toUser?: User;
+    toProject?: Project;
+    submission?: Submission[];
+  }[];
+
+  const pSubmissions = projects.map(async (project) => {
+    const submission = await findManySubmissions({
+      where: {
+        fromProjectId: project.id,
+        deadlineId: {
+          in: milestoneDeadlines.map(
+            (milestoneDeadline) => milestoneDeadline.id
+          ),
+        },
+      },
+      select: {
+        id: true,
+        updatedAt: true,
+        deadlineId: true,
+      },
+    });
+
+    return {
+      fromProject: flattenProjectUsers(project),
+      submission: submission || undefined,
+    };
+  });
+
+  results = await Promise.all(pSubmissions);
+
+  results = results.filter((result) => {
+    if (dropped == "true") {
+      return !!result.fromProject.hasDropped;
+    } else {
+      return !result.fromProject.hasDropped;
+    }
+  });
+
+  return results;
+};
+
+export const getSubmissionsByDeadlineId = async (
   query: any & {
     cohortYear: number;
     deadlineId: number;
@@ -97,10 +188,18 @@ export async function getSubmissionsByDeadlineId(
     search?: string;
     page?: number;
     limit?: number;
+    dropped: boolean;
   }
-) {
-  const { submissionStatus, search, cohortYear, page, limit, deadlineId } =
-    query;
+) => {
+  const {
+    submissionStatus,
+    search,
+    cohortYear,
+    page,
+    limit,
+    deadlineId,
+    dropped,
+  } = query;
 
   const deadline = await findUniqueDeadline({ where: { id: deadlineId } });
   const projects = await findManyProjectsWithUserData({
@@ -134,7 +233,7 @@ export async function getSubmissionsByDeadlineId(
       return {
         fromProject: relation.fromProject,
         toProject: relation.toProject,
-        ...submission,
+        submission: submission || undefined,
       };
     });
     results = await Promise.all(pSubmissions);
@@ -150,7 +249,7 @@ export async function getSubmissionsByDeadlineId(
       return {
         fromProject: flattenProjectUsers(project),
         toUser: project.adviser?.user,
-        ...submission,
+        submission: submission || undefined,
       };
     });
     results = await Promise.all(pSubmissions);
@@ -165,14 +264,29 @@ export async function getSubmissionsByDeadlineId(
 
       return {
         fromProject: flattenProjectUsers(project),
-        ...submission,
+        submission: submission || undefined,
       };
     });
     results = await Promise.all(pSubmissions);
   }
 
+  results = results.filter((result) => {
+    if (dropped == "true") {
+      return !!result.fromProject.hasDropped;
+    } else {
+      return !result.fromProject.hasDropped;
+    }
+  });
+
   if (!submissionStatus) {
-    return results;
+    return results.map((result) => {
+      const { submission, ...resultData } = result;
+      return {
+        id: submission ? submission.id : undefined,
+        updatedAt: submission ? submission.updatedAt : undefined,
+        ...resultData,
+      };
+    });
   } else {
     const filteredResult = results.filter((result) => {
       if (submissionStatus == SubmissionStatusEnum.UNSUBMITTED) {
@@ -182,9 +296,10 @@ export async function getSubmissionsByDeadlineId(
           result.submission && result.submission.updatedAt > deadline.dueBy
         );
       } else if (submissionStatus == SubmissionStatusEnum.SUBMITTED) {
-        return result.submission;
+        return !!result.submission;
       }
     });
+
     return filteredResult.map((result) => {
       const { submission, ...resultData } = result;
       return {
@@ -193,5 +308,30 @@ export async function getSubmissionsByDeadlineId(
         ...resultData,
       };
     });
+  }
+};
+
+export async function sendReminderEmail(
+  emails: string[],
+  ccs: string[],
+  subject: string,
+  message: string
+) {
+  try {
+    const { default: sgMail } = await import("@sendgrid/mail");
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY ?? "sendgrid_api_key");
+
+    const msg = {
+      to: emails,
+      cc: ccs,
+      from: SENDER.email,
+      subject: subject,
+      html: GET_HTML_CONTENT_REMINDER(message),
+    };
+
+    await sgMail.sendMultiple(msg);
+  } catch (e) {
+    console.error(e);
+    throw e;
   }
 }

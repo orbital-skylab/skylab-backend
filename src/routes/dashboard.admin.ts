@@ -1,6 +1,9 @@
 import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import { getSubmissionsByDeadlineId } from "../helpers/dashboard.admin.helper";
+import {
+  getSubmissions,
+  sendReminderEmail,
+} from "../helpers/dashboard.admin.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
 import {
   apiResponseWrapper,
@@ -21,12 +24,24 @@ router.get(
       return throwValidationError(res, errors);
     }
     try {
-      const submissions = await getSubmissionsByDeadlineId(req.query);
+      const submissions = await getSubmissions(req.query);
       return apiResponseWrapper(res, { submissions: submissions });
     } catch (e) {
       return routeErrorHandler(res, e);
     }
   }
 );
+
+router.post("/send-reminders", async (req: Request, res: Response) => {
+  try {
+    const { emails, ccs, subject, message } = req.body;
+
+    sendReminderEmail(emails, ccs, subject, message);
+
+    return apiResponseWrapper(res, {});
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
 
 export default router;
