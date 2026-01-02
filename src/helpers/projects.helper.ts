@@ -214,3 +214,20 @@ export async function getAdviserUserByProjectID(projectId: number) {
   });
   return adviser;
 }
+
+/**
+ * Fetch public projects for static site generation
+ * Returns up to 10 non-dropped projects with student, adviser, and mentor data
+ * Ordered by most recent cohort year and project ID
+ */
+export async function getPublicProjects(limit = 10) {
+  const projects = await findManyProjectsWithUserData({
+    where: {
+      hasDropped: false,
+    },
+    take: limit,
+    orderBy: [{ cohortYear: "desc" }, { id: "desc" }],
+  });
+
+  return projects.map((project) => parseGetProjectInput(project));
+}

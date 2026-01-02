@@ -8,6 +8,7 @@ import {
   getManyProjectsWithFilter,
   getOneProjectById,
   getProjectsViaRoleIds,
+  getPublicProjects,
 } from "../helpers/projects.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
 import authorizeAdviserOfProject from "../middleware/authorizeAdviserOfProject";
@@ -114,6 +115,15 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
       mentorId: Number(mentorId),
     });
     return apiResponseWrapper(res, { projects: projects });
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.get("/public", async (req: Request, res: Response) => {
+  try {
+    const publicProjects = await getPublicProjects(10);
+    return apiResponseWrapper(res, { projects: publicProjects });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
