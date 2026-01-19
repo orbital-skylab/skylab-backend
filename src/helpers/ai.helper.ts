@@ -10,9 +10,10 @@ import {
   updateUniqueFaqConversation,
 } from "../models/ai.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
-import openai from "../utils/openai";
+import { getOpenAIClient } from "../utils/openai";
 import { SYSTEM_PROMPT } from "./ai.faq.helper";
 
+const openai = getOpenAIClient();
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
   page?: number;

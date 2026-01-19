@@ -106,5 +106,10 @@ export class OpenAIClient {
   }
 }
 
-const openai = new OpenAIClient();
-export default openai;
+let client: OpenAIClient | null = null;
+export function getOpenAIClient() {
+  if (!client) {
+    client = new OpenAIClient();
+  }
+  return client;
+}
