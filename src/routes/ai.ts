@@ -90,6 +90,7 @@ router.post(
     const jwtData = jwt.verify(
       token,
       process.env.JWT_SECRET ?? "jwt_secret"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any;
 
     if (!content) {

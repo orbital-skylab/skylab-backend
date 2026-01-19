@@ -13,12 +13,10 @@ import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import openai from "../utils/openai";
 import { SYSTEM_PROMPT } from "./ai.faq.helper";
 
-export async function getManyFaqConversationsWithFilter(
-  query: any & {
-    limit?: number;
-    page?: number;
-  }
-) {
+export async function getManyFaqConversationsWithFilter(query: {
+  limit?: number;
+  page?: number;
+}) {
   const { limit, page } = query;
   /* Create Filter Object */
   const studentQuery: Prisma.FaqConversationFindManyArgs = {
