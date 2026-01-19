@@ -114,7 +114,7 @@ router.post(
         })}\n\n`
       );
 
-      const assistantMessage = await postFaqMessage(
+      const response = await postFaqMessage(
         {
           conversationId: conversation.id,
           content,
@@ -128,7 +128,7 @@ router.post(
         }
       );
 
-      res.write(`event: done\ndata:${JSON.stringify(assistantMessage)}\n\n`);
+      res.write(`event: done\ndata:${JSON.stringify(response)}\n\n`);
 
       setTimeout(() => res.end(), 0);
     } catch (err) {
