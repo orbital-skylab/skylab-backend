@@ -8,9 +8,9 @@ import {
   findUniqueFaqConversation,
   findUniqueFaqConversationWithMessageData,
   updateUniqueFaqConversation,
-} from "src/models/ai.db";
-import { HttpStatusCode } from "src/utils/HTTP_Status_Codes";
-import openai from "src/utils/openai";
+} from "../models/ai.db";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+import openai from "../utils/openai";
 import { SYSTEM_PROMPT } from "./ai.faq.helper";
 
 export async function getManyFaqConversationsWithFilter(

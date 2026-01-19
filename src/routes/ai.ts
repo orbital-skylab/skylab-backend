@@ -6,17 +6,17 @@ import {
   getManyFaqConversationsWithFilter,
   getOneFaqConversationById,
   postFaqMessage,
-} from "src/helpers/ai.helper";
+} from "../helpers/ai.helper";
 import authorizeSignedIn from "src/middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
-} from "src/utils/ApiResponseWrapper";
+} from "../utils/ApiResponseWrapper";
 import {
   GetFaqConversationByIDValidator,
   GetFaqConversationsValidator,
   PostFaqMessageValidator,
-} from "src/validators/ai.validator";
+} from "../validators/ai.validator";
 import { errorFormatter, throwValidationError } from "src/validators/validator";
 import jwt from "jsonwebtoken";
 
