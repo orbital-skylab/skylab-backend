@@ -7,7 +7,7 @@ import {
   getOneFaqConversationById,
   postFaqMessage,
 } from "../helpers/ai.helper";
-import authorizeSignedIn from "src/middleware/authorizeSignedIn";
+import authorizeSignedIn from "../middleware/authorizeSignedIn";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -17,7 +17,7 @@ import {
   GetFaqConversationsValidator,
   PostFaqMessageValidator,
 } from "../validators/ai.validator";
-import { errorFormatter, throwValidationError } from "src/validators/validator";
+import { errorFormatter, throwValidationError } from "../validators/validator";
 import jwt from "jsonwebtoken";
 
 const router = Router();
