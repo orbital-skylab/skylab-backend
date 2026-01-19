@@ -49,6 +49,7 @@ jobs:
           echo "JWT_SECRET=secret" >> .env
           echo "ADMIN_PASSWORD=Password123" >> .env
           echo "SALT_ROUNDS=5" >> .env
+          echo "OPENAI_API_KEY=dummy" >> .env
 
       # Set up database with prisma
       - name: Set up database
