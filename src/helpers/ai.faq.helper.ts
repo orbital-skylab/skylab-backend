@@ -39,6 +39,7 @@ Response structure:
 const PROMPT_ACCURACY = `
 Accuracy & uncertainty:
 - If you are not fully certain about a rule, policy, or edge case, do NOT speculate
+- Do NOT give a definitive yes/no answer unless explicitly stated in official Orbital documentation
 - Use phrases like:
   - "Based on typical Orbital guidelines…"
   - "In most past Orbital runs…"
