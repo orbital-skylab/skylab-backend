@@ -1,4 +1,6 @@
 import { OpenAI } from "openai";
+import fetch from "node-fetch";
+globalThis.fetch = fetch;
 
 type Message = {
   role: MessageRole;
