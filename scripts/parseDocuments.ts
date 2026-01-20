@@ -6,6 +6,7 @@ import ical from "ical.js";
 const DOCS_DIR = path.join(process.cwd(), "docs");
 
 /**
+<<<<<<< HEAD
  * @function parsePdfs
  * Recursively parses PDF files in the docs directory and converts them to text files.
  *
@@ -19,6 +20,9 @@ const DOCS_DIR = path.join(process.cwd(), "docs");
  * - Logs conversion progress and any errors encountered
  *
  * @throws Logs errors to console for individual PDF conversion failures but does not throw
+=======
+ * process PDFs recursively
+>>>>>>> 5cc757f (Add data ingestion pipeline)
  */
 async function parsePdfs(dir: string): Promise<void> {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -59,6 +63,7 @@ async function parsePdfs(dir: string): Promise<void> {
   }
 }
 
+<<<<<<< HEAD
 /**
  * @function parseIcs
  * Recursively parses ICS (iCalendar) files in a directory and converts them to text format.
@@ -72,6 +77,8 @@ async function parsePdfs(dir: string): Promise<void> {
  *
  * @throws Logs errors to console but does not throw; conversion failures are caught and logged per file
  */
+=======
+>>>>>>> 5cc757f (Add data ingestion pipeline)
 async function parseIcs(dir: string): Promise<void> {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 

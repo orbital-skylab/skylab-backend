@@ -10,9 +10,9 @@ import {
   updateUniqueFaqConversation,
 } from "../models/ai.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
-import { getOpenAIClient } from "../utils/openai";
 import { inferNamespacesFromQuery, SYSTEM_PROMPT } from "./ai.faq.helper";
 import { getPineconeClient } from "../utils/pinecone";
+import { getOpenAIClient } from "src/utils/openai";
 
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
@@ -148,17 +148,17 @@ export async function postFaqMessage(
   const semanticSearchResults = await pineconeClient.query(
     inputEmbedding,
     namespaces,
-    10
+    5
   );
 
   const context = semanticSearchResults
     .map((m, i) => {
-      const text = m.metadata?.text;
+      const text = m.metadata?.text?.toString();
       return `
-        CONTEXT ${i + 1}
-        FILE: ${m.metadata?.file ?? "Unknown"}
-        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}
-        URL: ${m.metadata?.url ?? "Unknown"}
+        Context ${i + 1}\n
+        FILE: ${m.metadata?.file ?? "Unknown"}\n
+        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}\n
+        URL: ${m.metadata?.url ?? "Unknown"}\n
         CONTENT: ${text}
       `;
     })
