@@ -11,7 +11,8 @@ import {
 } from "../models/ai.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOpenAIClient } from "../utils/openai";
-import { SYSTEM_PROMPT } from "./ai.faq.helper";
+import { inferNamespacesFromQuery, SYSTEM_PROMPT } from "./ai.faq.helper";
+import { getPineconeClient } from "src/utils/pinecone";
 
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
@@ -90,6 +91,7 @@ export async function postFaqMessage(
   },
   onDelta: (chunk: string) => void
 ) {
+  const pineconeClient = getPineconeClient();
   const conversation = await findUniqueFaqConversationWithMessageData({
     where: { id: data.conversationId },
   });
@@ -136,13 +138,35 @@ export async function postFaqMessage(
     return { userMessage, assistantMessage };
   }
 
+  const inputEmbedding = await getOpenAIClient().getEmbedding(data.content);
+  const namespaces = inferNamespacesFromQuery(data.content);
+  const semanticSearchResults = await pineconeClient.query(
+    inputEmbedding,
+    namespaces,
+    5
+  );
+
+  const context = semanticSearchResults
+    .map((m, i) => {
+      const text = m.metadata?.text?.trim();
+      return `
+        Context ${i + 1}\n
+        FILE: ${m.metadata?.file ?? "Unknown"}\n
+        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}\n
+        URL: ${m.metadata?.url ?? "Unknown"}\n
+        CONTENT: ${text}
+      `;
+    })
+    .filter(Boolean)
+    .join("\n---------\n");
   const response = await getOpenAIClient().chat(
     data.content,
     SYSTEM_PROMPT,
     history,
-    onDelta
+    onDelta,
+    context
   );
-
+  console.log(context);
   const assistantMessage = await createFaqMessage(conversation.id, {
     role: "ASSISTANT",
     content: response,

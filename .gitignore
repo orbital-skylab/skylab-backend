@@ -132,3 +132,6 @@ dist
 # others
 prisma/dbml
 prisma/erd
+
+# rag docs
+docs/

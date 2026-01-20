@@ -1,3 +1,43 @@
+export const DOCUMENTATION_NAMESPACES = [
+  "faq",
+  "timeline",
+  "assessment",
+  "core",
+];
+
+export function inferNamespacesFromQuery(query: string): string[] {
+  const q = query.toLowerCase();
+
+  const namespaces: string[] = [];
+
+  if (/when|date|deadline|timeline|schedule|submission/.test(q)) {
+    namespaces.push("timeline");
+  }
+
+  if (
+    /milestone|grading|grade|rubric|assessment|evaluation|deadline|assessment criteria/.test(
+      q
+    )
+  ) {
+    namespaces.push("assessment");
+  }
+
+  if (/can i|allowed|faq|how do i|is it allowed/.test(q)) {
+    namespaces.push("faq");
+  }
+
+  if (/programme|structure|track|orbital|level|programme structure/.test(q)) {
+    namespaces.push("core");
+  }
+
+  // Search everything if no specific namespace inferred
+  if (namespaces.length === 0) {
+    return ["faq", "timeline", "assessment", "core"];
+  }
+
+  return Array.from(new Set(namespaces));
+}
+
 const PROMPT_IDENTITY = `
 You are the "Orbital FAQ Assistant", an official assistant for orbitees in the NUS Orbital programme.
 

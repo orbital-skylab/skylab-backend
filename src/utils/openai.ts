@@ -26,15 +26,9 @@ export class OpenAIClient {
     message: string,
     systemPrompt: string,
     history: Message[] = [],
-    onDelta?: (message: string) => void
+    onDelta?: (message: string) => void,
+    context?: string
   ) {
-    /*
-	    const inputEmbedding = await this.getEmbedding(message);
-    const semanticSearchResults = await pineconeClient.query(inputEmbedding);
-    const promptContext = semanticSearchResults
-      .map((m) => m.metadata?.text ?? "")
-      .join("\n---\n");
-	*/
     const stream = await this.client.responses.create({
       model: this.MODEL,
       input: [
@@ -48,7 +42,10 @@ export class OpenAIClient {
         })),
         {
           role: "user",
-          content: `User Message:${message}`,
+          content: `
+            ${context ? "Context:\n" + context + "\n\n" : ""}
+            User Message:${message}
+          `,
         },
       ],
       temperature: this.TEMPERATURE,
