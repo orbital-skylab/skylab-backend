@@ -107,8 +107,8 @@ export async function findManyFaqConversationsWithMessageData({
   include,
   ...query
 }: Prisma.FaqConversationFindManyArgs) {
-  console.log(query);
   const manyFaqConversations = await prisma.faqConversation.findMany({
+    ...query,
     include: {
       ...include,
       messages: {
@@ -116,7 +116,6 @@ export async function findManyFaqConversationsWithMessageData({
         orderBy: { createdAt: "desc" },
       },
     },
-    ...query,
   });
   return manyFaqConversations;
 }
