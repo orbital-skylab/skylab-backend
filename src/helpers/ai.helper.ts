@@ -143,17 +143,17 @@ export async function postFaqMessage(
   const semanticSearchResults = await pineconeClient.query(
     inputEmbedding,
     namespaces,
-    5
+    10
   );
 
   const context = semanticSearchResults
     .map((m, i) => {
       const text = m.metadata?.text?.trim();
       return `
-        Context ${i + 1}\n
-        FILE: ${m.metadata?.file ?? "Unknown"}\n
-        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}\n
-        URL: ${m.metadata?.url ?? "Unknown"}\n
+        CONTEXT ${i + 1}
+        FILE: ${m.metadata?.file ?? "Unknown"}
+        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}
+        URL: ${m.metadata?.url ?? "Unknown"}
         CONTENT: ${text}
       `;
     })
