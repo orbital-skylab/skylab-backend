@@ -71,7 +71,7 @@ export class PineconeClient {
     const allResults: {
       id: string;
       score?: number;
-      metadata?: Record<string, any>;
+      metadata?: RecordMetadata;
       namespace: string;
     }[] = [];
 

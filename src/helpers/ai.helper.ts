@@ -148,7 +148,7 @@ export async function postFaqMessage(
 
   const context = semanticSearchResults
     .map((m, i) => {
-      const text = m.metadata?.text?.trim();
+      const text = m.metadata?.text;
       return `
         CONTEXT ${i + 1}
         FILE: ${m.metadata?.file ?? "Unknown"}
