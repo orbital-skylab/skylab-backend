@@ -14,8 +14,8 @@
     "heroku-postbuild": "npx prisma generate",
     "e2e": "export NODE_ENV=test || set NODE_ENV=test && tsc && node dist/index.js",
     "prepare": "husky",
-    "scripts:parse": "npx ts-node scripts/parseFaqDocuments.ts",
-    "scripts:index": "npx ts-node scripts/indexFaqDocuments.ts"
+    "faq:parse-docs": "npx ts-node scripts/parseFaqDocuments.ts",
+    "faq:index-docs": "npx ts-node scripts/indexFaqDocuments.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

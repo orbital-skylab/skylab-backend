@@ -6,7 +6,19 @@ import ical from "ical.js";
 const DOCS_DIR = path.join(process.cwd(), "docs");
 
 /**
- * process PDFs recursively
+ * @function parsePdfs
+ * Recursively parses PDF files in the docs directory and converts them to text files.
+ *
+ * @param dir - The directory path to search for PDF files
+ * @returns A promise that resolves when all PDF files in the directory and subdirectories have been processed
+ *
+ * @remarks
+ * - Recursively processes subdirectories
+ * - Skips PDF files if corresponding .txt or .md files already exist
+ * - Extracts text content from PDF files and saves to .txt files
+ * - Logs conversion progress and any errors encountered
+ *
+ * @throws Logs errors to console for individual PDF conversion failures but does not throw
  */
 async function parsePdfs(dir: string): Promise<void> {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -47,6 +59,19 @@ async function parsePdfs(dir: string): Promise<void> {
   }
 }
 
+/**
+ * @function parseIcs
+ * Recursively parses ICS (iCalendar) files in a directory and converts them to text format.
+ *
+ * For each ICS file found, extracts VEVENT components and writes their details (summary, start/end times,
+ * location, description) to a corresponding .txt file. Skips conversion if a .txt or .md file with the
+ * same base name already exists. Processes subdirectories recursively.
+ *
+ * @param dir - The directory path to scan for ICS files
+ * @returns A promise that resolves when all ICS files in the directory and subdirectories have been processed
+ *
+ * @throws Logs errors to console but does not throw; conversion failures are caught and logged per file
+ */
 async function parseIcs(dir: string): Promise<void> {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 

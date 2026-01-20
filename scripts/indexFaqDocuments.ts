@@ -79,7 +79,7 @@ export async function indexDocuments() {
             metadata: {
               file: file,
               namespace,
-              chunkIndex: i + j,
+              batch: i,
               text: chunk,
               url: fullMetadata?.url ?? "",
             },
