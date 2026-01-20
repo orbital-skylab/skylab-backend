@@ -17,12 +17,14 @@ import { getPineconeClient } from "src/utils/pinecone";
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
   page?: number;
+  order?: "asc" | "desc";
 }) {
-  const { limit, page } = query;
+  const { limit, page, order } = query;
   /* Create Filter Object */
   const studentQuery: Prisma.FaqConversationFindManyArgs = {
     take: limit ?? undefined,
     skip: limit && page ? limit * page : undefined,
+    orderBy: order ? { createdAt: order } : undefined,
   };
 
   /* Fetch Students with Filter Object */
@@ -41,9 +43,14 @@ export async function getOneFaqConversationById(conversationId: number) {
 }
 
 export async function createFaqConversation(
-  conversation: Prisma.FaqConversationCreateArgs
+  conversation: Prisma.FaqConversationCreateArgs,
+  content?: string
 ) {
   try {
+    if (content) {
+      const title = await openai.getTitle(content);
+      conversation.data.title = title;
+    }
     return await createOneFaqConversation(conversation);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {

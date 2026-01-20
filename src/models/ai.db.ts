@@ -101,12 +101,13 @@ export async function findUniqueFaqConversationWithMessageData({
  * @param {Prisma.FaqConversationFindManyArgs} options - Standard Prisma findMany arguments
  *
  * @returns {Promise<Prisma.FaqConversationGetPayload<{ include: { messages: true } }>>}
- * Array of FAQ conversations with the 2 most recent messages (ordered by creation date, descending)
+ * Array of FAQ conversations with the 2 most recent messages (ordered by creation date, descending order)
  */
 export async function findManyFaqConversationsWithMessageData({
   include,
   ...query
 }: Prisma.FaqConversationFindManyArgs) {
+  console.log(query);
   const manyFaqConversations = await prisma.faqConversation.findMany({
     include: {
       ...include,

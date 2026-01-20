@@ -65,15 +65,19 @@ router.get(
 
 router.post("/faq", authorizeSignedIn, async (req: Request, res: Response) => {
   const { token } = req.cookies;
+  const { content } = req.body;
   const jwtData = jwt.verify(
     token,
     process.env.JWT_SECRET ?? "jwt_secret"
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as any;
 
-  const conversation = await createFaqConversation({
-    data: { userId: Number(jwtData.id) },
-  });
+  const conversation = await createFaqConversation(
+    {
+      data: { userId: Number(jwtData.id) },
+    },
+    content
+  );
 
   return apiResponseWrapper(res, { conversation });
 });
