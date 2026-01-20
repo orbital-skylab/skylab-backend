@@ -28,11 +28,9 @@ export async function getManyFaqConversationsWithFilter(query: {
   };
 
   /* Fetch Students with Filter Object */
-  const conversations = await findManyFaqConversationsWithMessageData(
-    studentQuery
-  );
+  const result = await findManyFaqConversationsWithMessageData(studentQuery);
 
-  return conversations;
+  return result;
 }
 
 export async function getOneFaqConversationById(conversationId: number) {

@@ -96,19 +96,32 @@ export async function findUniqueFaqConversationWithMessageData({
  * @function findManyFaqConversationsWithMessageData
  * Retrieves multiple FAQ conversations with their associated message data.
  *
- * @param {Object} options - Query options
- * @param {Prisma.FaqConversationInclude} [options.include] - Additional relations to include in the query
- * @param {Prisma.FaqConversationFindManyArgs} options - Standard Prisma findMany arguments
+ * Fetches FAQ conversations with pagination support and includes the two most recent messages
+ * for each conversation, ordered by creation date in descending order.
  *
- * @returns {Promise<Prisma.FaqConversationGetPayload<{ include: { messages: true } }>>}
- * Array of FAQ conversations with the 2 most recent messages (ordered by creation date, descending order)
+ * @param {Object} params - The query parameters
+ * @param {Prisma.FaqConversationInclude} [params.include] - Additional relations to include in the result
+ * @param {number} [params.take=10] - Number of conversations to retrieve per page
+ * @param {number} [params.skip] - Number of conversations to skip for pagination
+ * @param {Prisma.FaqConversationFindManyArgs} params - Additional Prisma query arguments
+ *
+ * @returns {Promise<{conversations: Prisma.FaqConversation[], hasMore: boolean}>}
+ * An object containing:
+ * - `conversations`: Array of FAQ conversations with message data
+ * - `hasMore`: Boolean indicating if there are more results beyond the current page
  */
 export async function findManyFaqConversationsWithMessageData({
   include,
+  take,
+  skip,
   ...query
 }: Prisma.FaqConversationFindManyArgs) {
-  const manyFaqConversations = await prisma.faqConversation.findMany({
-    ...query,
+  const pageSize = take ?? 10;
+
+  const results = await prisma.faqConversation.findMany({
+    take: pageSize + 1,
+    skip,
+    orderBy: { createdAt: "desc" },
     include: {
       ...include,
       messages: {
@@ -116,8 +129,16 @@ export async function findManyFaqConversationsWithMessageData({
         orderBy: { createdAt: "desc" },
       },
     },
+    ...query,
   });
-  return manyFaqConversations;
+
+  const hasMore = results.length > pageSize;
+  const faqConversations = hasMore ? results.slice(0, pageSize) : results;
+
+  return {
+    faqConversations,
+    hasMore,
+  };
 }
 
 /**

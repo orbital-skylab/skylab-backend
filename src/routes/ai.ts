@@ -32,10 +32,8 @@ router.get(
       return throwValidationError(res, errors);
     }
     try {
-      const faqConversations = await getManyFaqConversationsWithFilter(
-        req.query
-      );
-      return apiResponseWrapper(res, { faqConversations: faqConversations });
+      const result = await getManyFaqConversationsWithFilter(req.query);
+      return apiResponseWrapper(res, result);
     } catch (e) {
       return routeErrorHandler(res, e);
     }
