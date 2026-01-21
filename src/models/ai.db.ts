@@ -94,7 +94,7 @@ export async function findUniqueFaqConversationWithMessageData({
 
 /**
  * @function findManyFaqConversationsWithMessageData
- * Retrieves multiple FAQ conversations with their associated message data.
+ * Retrieves multiple FAQ conversations with their associated message data (2 most recent messages).
  *
  * Fetches FAQ conversations with pagination support and includes the two most recent messages
  * for each conversation, ordered by creation date in descending order.
@@ -107,7 +107,7 @@ export async function findUniqueFaqConversationWithMessageData({
  *
  * @returns {Promise<{conversations: Prisma.FaqConversation[], hasMore: boolean}>}
  * An object containing:
- * - `conversations`: Array of FAQ conversations with message data
+ * - `conversations`: Array of FAQ conversations with message data (2 most recent messages)
  * - `hasMore`: Boolean indicating if there are more results beyond the current page
  */
 export async function findManyFaqConversationsWithMessageData({
