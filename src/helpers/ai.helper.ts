@@ -12,7 +12,7 @@ import {
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOpenAIClient } from "../utils/openai";
 import { inferNamespacesFromQuery, SYSTEM_PROMPT } from "./ai.faq.helper";
-import { getPineconeClient } from "src/utils/pinecone";
+import { getPineconeClient } from "../utils/pinecone";
 
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
