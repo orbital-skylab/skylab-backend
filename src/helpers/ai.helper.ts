@@ -4,6 +4,7 @@ import { SkylabError } from "../errors/SkylabError";
 import {
   createFaqMessage,
   createOneFaqConversation,
+  deleteUniqueFaqConversation,
   findManyFaqConversationsWithMessageData,
   findUniqueFaqConversation,
   findUniqueFaqConversationWithMessageData,
@@ -194,4 +195,13 @@ export function isInputInvalid(content: string): boolean {
 
   const isInvalid = trimmed.length < 3 || alphaRatio < 0.3 || hasRepeatedChars;
   return isInvalid;
+}
+
+export async function deleteOneConversationByConversationId(
+  conversationId: number
+) {
+  const deletedConversation = await deleteUniqueFaqConversation({
+    where: { id: conversationId },
+  });
+  return deletedConversation;
 }

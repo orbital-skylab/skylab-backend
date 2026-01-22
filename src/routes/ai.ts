@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   createFaqConversation,
+  deleteOneConversationByConversationId,
   ensureFaqConversationExists,
   getManyFaqConversationsWithFilter,
   getOneFaqConversationById,
@@ -142,6 +143,22 @@ router.post(
         })}\n\n`
       );
       res.end();
+    }
+  }
+);
+
+router.delete(
+  "/faq/:conversationId",
+  authorizeSignedIn,
+  async (req: Request, res: Response) => {
+    const { conversationId } = req.params;
+    try {
+      const deletedConversation = await deleteOneConversationByConversationId(
+        Number(conversationId)
+      );
+      return apiResponseWrapper(res, { faqConversation: deletedConversation });
+    } catch (e) {
+      return routeErrorHandler(res, e);
     }
   }
 );
