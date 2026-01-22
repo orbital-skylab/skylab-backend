@@ -18,6 +18,7 @@ import {
   findUniqueProject,
   findUniqueProjectWithUserData,
   updateOneProject,
+  countProjects,
 } from "../models/projects.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
@@ -216,18 +217,68 @@ export async function getAdviserUserByProjectID(projectId: number) {
 }
 
 /**
- * Fetch public projects for static site generation
- * Returns up to 10 non-dropped projects with student, adviser, and mentor data
- * Ordered by most recent cohort year and project ID
+ * Achievement level ranking: Artemis (highest) > Apollo > Gemini > Vostok (lowest)
  */
-export async function getPublicProjects(limit = 10) {
-  const projects = await findManyProjectsWithUserData({
-    where: {
-      hasDropped: false,
-    },
-    take: limit,
-    orderBy: [{ cohortYear: "desc" }, { id: "desc" }],
+const ACHIEVEMENT_RANK: Record<AchievementLevel, number> = {
+  Artemis: 1,
+  Apollo: 2,
+  Gemini: 3,
+  Vostok: 4,
+};
+
+export interface GetPublicProjectsParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedProjects {
+  projects: ReturnType<typeof parseGetProjectInput>[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/**
+ * Fetch public projects for static site generation
+ * Supports pagination and returns projects sorted by cohort year (desc) then achievement level
+ */
+export async function getPublicProjects(
+  params: GetPublicProjectsParams = {}
+): Promise<PaginatedProjects> {
+  const { page = 1, limit = 20 } = params;
+  const skip = (page - 1) * limit;
+
+  const where = { hasDropped: false };
+
+  const [projectsRaw, total] = await Promise.all([
+    findManyProjectsWithUserData({
+      where,
+      orderBy: [{ cohortYear: "desc" }, { id: "desc" }],
+    }),
+    countProjects(where),
+  ]);
+
+  // Sort by cohort year (desc), then by achievement level rank
+  const sortedProjects = projectsRaw.sort((a, b) => {
+    // First by cohort year descending
+    if (b.cohortYear !== a.cohortYear) {
+      return b.cohortYear - a.cohortYear;
+    }
+    // Then by achievement level (Artemis first)
+    const rankA = a.achievement ? ACHIEVEMENT_RANK[a.achievement] : 999;
+    const rankB = b.achievement ? ACHIEVEMENT_RANK[b.achievement] : 999;
+    return rankA - rankB;
   });
 
-  return projects.map((project) => parseGetProjectInput(project));
+  // Apply pagination after sorting
+  const paginatedProjects = sortedProjects.slice(skip, skip + limit);
+
+  return {
+    projects: paginatedProjects.map((project) => parseGetProjectInput(project)),
+    total,
+    page,
+    pageSize: limit,
+    totalPages: Math.ceil(total / limit),
+  };
 }

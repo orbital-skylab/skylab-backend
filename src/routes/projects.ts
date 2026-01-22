@@ -85,8 +85,11 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
 
 router.get("/public", async (req: Request, res: Response) => {
   try {
-    const publicProjects = await getPublicProjects(10);
-    return apiResponseWrapper(res, { projects: publicProjects });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const result = await getPublicProjects({ page, limit });
+    return apiResponseWrapper(res, result);
   } catch (e) {
     return routeErrorHandler(res, e);
   }

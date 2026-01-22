@@ -88,3 +88,8 @@ export async function deleteOneProject(query: Prisma.ProjectDeleteArgs) {
   const deletedProject = await prisma.project.delete(query);
   return deletedProject;
 }
+
+export async function countProjects(where?: Prisma.ProjectWhereInput) {
+  const count = await prisma.project.count({ where });
+  return count;
+}
