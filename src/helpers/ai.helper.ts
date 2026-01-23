@@ -4,6 +4,7 @@ import { SkylabError } from "../errors/SkylabError";
 import {
   createFaqMessage,
   createOneFaqConversation,
+  deleteManyFaqConversations,
   deleteUniqueFaqConversation,
   findManyFaqConversationsWithMessageData,
   findUniqueFaqConversation,
@@ -204,4 +205,22 @@ export async function deleteOneConversationByConversationId(
     where: { id: conversationId },
   });
   return deletedConversation;
+}
+
+export async function deleteManyConversationsByConversationIds(
+  conversationIds: number[]
+) {
+  if (conversationIds.length === 0) {
+    return { count: 0 };
+  }
+
+  const result = await deleteManyFaqConversations({
+    where: {
+      id: {
+        in: conversationIds,
+      },
+    },
+  });
+
+  return result;
 }

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   createFaqConversation,
+  deleteManyConversationsByConversationIds,
   deleteOneConversationByConversationId,
   ensureFaqConversationExists,
   getManyFaqConversationsWithFilter,
@@ -14,7 +15,10 @@ import {
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
 import {
-  GetFaqConversationByIDValidator,
+  CreateFaqConversationValidator,
+  DeleteFaqConversationByIdValidator,
+  DeleteFaqConversationsByIdsValidator,
+  GetFaqConversationByIdValidator,
   GetFaqConversationsValidator,
   PostFaqMessageValidator,
 } from "../validators/ai.validator";
@@ -44,13 +48,13 @@ router.get(
 router.get(
   "/faq/:conversationId",
   authorizeSignedIn,
-  GetFaqConversationByIDValidator,
+  GetFaqConversationByIdValidator,
   async (req: Request, res: Response) => {
-    const { conversationId } = req.params;
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       return throwValidationError(res, errors);
     }
+    const { conversationId } = req.params;
     try {
       const conversation = await getOneFaqConversationById(
         Number(conversationId)
@@ -62,30 +66,44 @@ router.get(
   }
 );
 
-router.post("/faq", authorizeSignedIn, async (req: Request, res: Response) => {
-  const { token } = req.cookies;
-  const { content } = req.body;
-  const jwtData = jwt.verify(
-    token,
-    process.env.JWT_SECRET ?? "jwt_secret"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) as any;
+router.post(
+  "/faq",
+  authorizeSignedIn,
+  CreateFaqConversationValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    const { token } = req.cookies;
+    const { content } = req.body;
+    const jwtData = jwt.verify(
+      token,
+      process.env.JWT_SECRET ?? "jwt_secret"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ) as any;
 
-  const conversation = await createFaqConversation(
-    {
-      data: { userId: Number(jwtData.id) },
-    },
-    content
-  );
+    const conversation = await createFaqConversation(
+      {
+        data: { userId: Number(jwtData.id) },
+      },
+      content
+    );
 
-  return apiResponseWrapper(res, { conversation });
-});
+    return apiResponseWrapper(res, { conversation });
+  }
+);
 
 router.post(
   "/faq/:conversationId?/message",
   authorizeSignedIn,
   PostFaqMessageValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+
     const { conversationId } = req.params;
     const { content } = req.body;
     const { token } = req.cookies;
@@ -148,9 +166,38 @@ router.post(
 );
 
 router.delete(
+  "/faq/bulk",
+  authorizeSignedIn,
+  DeleteFaqConversationsByIdsValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    const { conversationIds } = req.body;
+    try {
+      const result = await deleteManyConversationsByConversationIds(
+        conversationIds
+      );
+
+      return apiResponseWrapper(res, {
+        deletedCount: result.count,
+      });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.delete(
   "/faq/:conversationId",
   authorizeSignedIn,
+  DeleteFaqConversationByIdValidator,
   async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
     const { conversationId } = req.params;
     try {
       const deletedConversation = await deleteOneConversationByConversationId(
