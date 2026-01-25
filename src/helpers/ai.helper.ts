@@ -12,9 +12,9 @@ import {
   updateUniqueFaqConversation,
 } from "../models/ai.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+import { AudioInput, getOpenAIClient } from "../utils/openai";
 import { inferNamespacesFromQuery, SYSTEM_PROMPT } from "./ai.faq.helper";
 import { getPineconeClient } from "../utils/pinecone";
-import { getOpenAIClient } from "src/utils/openai";
 
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
@@ -167,7 +167,11 @@ export async function postFaqMessage(
     .filter(Boolean)
     .join("\n---------\n");
 
+<<<<<<< HEAD
   const response = await getOpenAIClient().getResponse(
+=======
+  const response = await getOpenAIClient().chat(
+>>>>>>> 42b50e3 (Add audio transcription)
     data.content,
     SYSTEM_PROMPT,
     history,
@@ -181,6 +185,26 @@ export async function postFaqMessage(
   });
 
   return { userMessage, assistantMessage };
+}
+
+export async function transcribeFaqAudio(input: AudioInput): Promise<string> {
+  if (!input.audioBase64) {
+    throw new SkylabError("Audio input is empty", HttpStatusCode.BAD_REQUEST);
+  }
+
+  try {
+    return await getOpenAIClient().transcribe({
+      audioBase64: input.audioBase64,
+      format: input.format,
+    });
+  } catch (e) {
+    console.error("Failed to transcribe audio:", e);
+
+    throw new SkylabError(
+      "Audio transcription failed",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
 }
 
 export function isInputInvalid(content: string): boolean {

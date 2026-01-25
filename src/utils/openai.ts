@@ -7,6 +7,13 @@ type Message = {
   content: string;
 };
 type MessageRole = "USER" | "ASSISTANT";
+type ImageInput = {
+  imageBase64: string;
+};
+type AudioInput = {
+  audioBase64: string;
+  format: "wav" | "mp3";
+};
 type OpenAIClientConfig = {
   model?: string;
   embeddingModel?: string;
@@ -20,9 +27,10 @@ const DEFAULT_OPENAI_CONFIG = {
 
 export class OpenAIClient {
   private client: OpenAI;
-  private MODEL = "gpt-4.1";
-  private EMBEDDING_MODEL = "text-embedding-3-large";
-  private TEMPERATURE = 0.7;
+
+  private readonly model: string;
+  private readonly embeddingModel: string;
+  private readonly temperature: number;
 
   constructor(config: OpenAIClientConfig = {}) {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -32,58 +40,112 @@ export class OpenAIClient {
 
     this.client = new OpenAI({ apiKey });
 
-    this.MODEL = config.model ?? DEFAULT_OPENAI_CONFIG.model;
-    this.EMBEDDING_MODEL =
+    this.model = config.model ?? DEFAULT_OPENAI_CONFIG.model;
+    this.embeddingModel =
       config.embeddingModel ?? DEFAULT_OPENAI_CONFIG.embeddingModel;
-    this.TEMPERATURE = config.temperature ?? DEFAULT_OPENAI_CONFIG.temperature;
+    this.temperature = config.temperature ?? DEFAULT_OPENAI_CONFIG.temperature;
   }
+
+  // ---------- HELPERS ----------
+
+  private mapHistory(history: Message[]) {
+    return history.map((m) => ({
+      role: m.role.toLowerCase() as "user" | "assistant",
+      content: m.content,
+    }));
+  }
+
+  private buildUserContent(
+    userPrompt: string,
+    context?: string,
+    images?: ImageInput[],
+    audio?: AudioInput
+  ) {
+    const userContent: any[] = [];
+
+    // TEXT
+    userContent.push({
+      type: "input_text",
+      text: `${
+        context ? `Context:\n${context}\n\n` : ""
+      }User Message: ${userPrompt}`,
+    });
+
+    // IMAGES
+    images?.forEach((img) => {
+      userContent.push({
+        type: "input_image",
+        image_url: `data:image/jpeg;base64,${img.imageBase64}`,
+        detail: "auto",
+      });
+    });
+
+    // AUDIO
+    if (audio) {
+      userContent.push({
+        type: "input_audio",
+        input_audio: {
+          data: audio.audioBase64,
+          format: audio.format,
+        },
+      });
+    }
+
+    return userContent;
+  }
+
+  // ---------- MAIN RESPONSE ----------
 
   async getResponse(
     userPrompt: string,
     systemPrompt: string,
     history: Message[] = [],
     onDelta?: (message: string) => void,
-    context?: string
+    context?: string,
+    images?: ImageInput[],
+    audio?: AudioInput
   ) {
+    const userContent = this.buildUserContent(
+      userPrompt,
+      context,
+      images,
+      audio
+    );
+
     const stream = await this.client.responses.create({
-      model: this.MODEL,
+      model: this.model,
+      temperature: this.temperature,
+      stream: true,
       input: [
         {
           role: "system",
-          content: `${systemPrompt}`,
+          content: systemPrompt,
         },
-        ...history.map((m) => ({
-          role: m.role.toLowerCase() as "user" | "assistant",
-          content: m.content,
-        })),
+        ...this.mapHistory(history),
         {
           role: "user",
-          content: `
-            ${context ? "Context:\n" + context + "\n\n" : ""}
-            User Message:${userPrompt}
-          `,
+          content: userContent,
         },
       ],
-      temperature: this.TEMPERATURE,
-      stream: true,
     });
 
-    let fullResponseText = "";
+    let fullResponse = "";
 
     for await (const event of stream) {
       if (event.type === "response.output_text.delta") {
-        const chunk = event.delta;
-        fullResponseText += chunk;
-        onDelta?.(chunk);
+        fullResponse += event.delta;
+        onDelta?.(event.delta);
       }
     }
 
-    return fullResponseText;
+    return fullResponse;
   }
+
+  // ---------- EMBEDDINGS ----------
 
   async getEmbedding(text: string) {
     const response = await this.client.embeddings.create({
-      model: this.EMBEDDING_MODEL,
+      model: this.embeddingModel,
       input: text,
     });
 
@@ -92,31 +154,33 @@ export class OpenAIClient {
 
   async getEmbeddings(texts: string[]) {
     const response = await this.client.embeddings.create({
-      model: this.EMBEDDING_MODEL,
+      model: this.embeddingModel,
       input: texts,
     });
 
     return response.data.map((d) => d.embedding);
   }
 
+  // ---------- TITLE ----------
+
   async getTitle(content: string) {
     const response = await this.client.responses.create({
-      model: this.MODEL,
+      model: this.model,
       input: [
         {
           role: "system",
           content: `
-						Generate a concise title for this conversation starter.
-						Keep it under 6 words.
-						Do NOT include any prefixes like "Title:" or extra punctuation.
-						Return only the title itself.
-						`,
+Generate a concise title for this conversation starter.
+Keep it under 6 words.
+Return only the title.
+          `,
         },
-        { role: "user", content: content },
+        { role: "user", content },
       ],
-      temperature: this.TEMPERATURE,
+      temperature: this.temperature,
       max_output_tokens: 16,
     });
+
     return response.output_text;
   }
 }
