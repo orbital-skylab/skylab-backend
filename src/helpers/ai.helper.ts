@@ -13,7 +13,6 @@ import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOpenAIClient } from "../utils/openai";
 import { SYSTEM_PROMPT } from "./ai.faq.helper";
 
-const openai = getOpenAIClient();
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
   page?: number;
@@ -112,7 +111,7 @@ export async function postFaqMessage(
   if (!conversation.title) {
     void (async () => {
       try {
-        const title = await openai.getTitle(data.content);
+        const title = await getOpenAIClient().getTitle(data.content);
 
         await updateUniqueFaqConversation({
           where: { id: conversation.id },
@@ -137,7 +136,7 @@ export async function postFaqMessage(
     return { userMessage, assistantMessage };
   }
 
-  const response = await openai.chat(
+  const response = await getOpenAIClient().chat(
     data.content,
     SYSTEM_PROMPT,
     history,
