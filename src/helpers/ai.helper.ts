@@ -46,7 +46,7 @@ export async function createFaqConversation(
 ) {
   try {
     if (content) {
-      const title = await openai.getTitle(content);
+      const title = await getOpenAIClient().getTitle(content);
       conversation.data.title = title;
     }
     return await createOneFaqConversation(conversation);
