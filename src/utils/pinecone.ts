@@ -71,11 +71,7 @@ export class PineconeClient {
     const allResults: {
       id: string;
       score?: number;
-<<<<<<< HEAD
       metadata?: RecordMetadata;
-=======
-      metadata?: Record<string, any>;
->>>>>>> 5cc757f (Add data ingestion pipeline)
       namespace: string;
     }[] = [];
 
