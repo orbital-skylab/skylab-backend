@@ -25,10 +25,10 @@ course and receive a CU grade individually.)
 For more information about the current events surronding Orbital, please check out our Facebook page.
 The remainder of this page is informational for the 2025 cohort.
 
-## Self help for Orbitees
+## Self help for Orbitees of Orbital 26
 Before you have been accepted into the programme…  
 
-- The application period for Orbital 25 is tentatively scheduled in mid-March.
+- The application period for Orbital 26 is tentatively scheduled in mid-March.
 - Please check out and follow our Facebook page using the “Facebook” tab on top to get the latest
 updates.
 - Students who are going to do any of the following will NOT be allowed to participate in Orbital.
@@ -56,12 +56,12 @@ abreast of announcements.
 [Dates here are indicative, but may be revised; please consult the official Orbital calendar above for the
 most updated information]  
 Orbital consists of 3 main events (details accessible from the navigation bar above):
-1. (**mandatory**) Liftoff (12-19 May 25; the week right after final exams): project idea formulation +
+1. (**mandatory**) Liftoff (11-17 May; the week right after final exams): project idea formulation +
 planning
-2. (optional) Mission Control (17/24/31 May + 7 Jun 24: the first few Saturdays of the programme):
+2. (optional) Mission Control (16/23/30 May + 6 Jun: the first few Saturdays of the programme):
 online workshops on technical / software engineering topics + project consultations (recordings to be
 provided on a best effort basis)
-3. (**mandatory**) Splashdown (27 Aug 25; Wednesday, Week 3 of Sem I, AY 25/26): poster presentation
+3. (**mandatory**) Splashdown (26 Aug; Wednesday, Week 3 of Sem I, AY 26/27): poster presentation
 (with voting) + invited talks + awards ceremony  
 
 In addition, although Orbital is structured as a self-driven programme, it consists of 3 (mandatory)
@@ -71,13 +71,13 @@ which teams will be critically evaluating other peers’ projects. The peer eval
 the Orbital process, as it helps students reflect on each others’ work and helps them to push each other
 to a successful conclusion (you’re not at it alone!). The quality of a team’s evaluation of other teams
 factors into the final level of achievement of the team and is evaluated after the final milestone:
-1. Evaluation Milestone 1 (2 Jun 25)
-    - Peer Evaluation 1 (9 Jun 25)
-2. Evaluation Milestone 2 (30 Jun 25)
-    - Peer Evaluation 2 (7 Jul 25)
-3. Evaluation Milestone 3 (28 Jul 25)
-    - Peer Evaluation 3 (4 Aug 25)
-    - Feedback on Peer Evaluations (11 Aug 25)
+1. Evaluation Milestone 1 (1 Jun)
+    - Peer Evaluation 1 (8 Jun)
+2. Evaluation Milestone 2 (29 Jun)
+    - Peer Evaluation 2 (6 Jul)
+3. Evaluation Milestone 3 (27 Jun)
+    - Peer Evaluation 3 (3 Aug)
+    - Feedback on Peer Evaluations (10 Aug)
 
 
 It is fine for you to be overseas during the summer vacation. However, you are expected to manage your
