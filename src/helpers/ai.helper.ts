@@ -208,6 +208,7 @@ export async function transcribeFaqAudio(input: AudioInput): Promise<string> {
 }
 
 export function isInputInvalid(content: string): boolean {
+  // remove whitespace
   const trimmed = content.trim();
   if (trimmed.length === 0) {
     return true;
@@ -216,9 +217,13 @@ export function isInputInvalid(content: string): boolean {
   const alphaCount = trimmed.replace(/[^\p{L}]/gu, "").length;
   const alphaRatio = alphaCount / trimmed.length;
 
+  // repeated characters (at least 5 times)
   const hasRepeatedChars = /(.)\1{4,}/.test(trimmed);
 
-  const isInvalid = trimmed.length < 3 || alphaRatio < 0.3 || hasRepeatedChars;
+  // too short
+  const isTooShort = trimmed.length < 3;
+
+  const isInvalid = isTooShort || alphaRatio < 0.3 || hasRepeatedChars;
   return isInvalid;
 }
 
