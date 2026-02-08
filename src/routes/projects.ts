@@ -38,15 +38,17 @@ function parsePaginationParams(query: Request["query"]): {
   const rawPage = parseInt(query.page as string);
   const rawLimit = parseInt(query.limit as string);
 
-  const page = !isNaN(rawPage) && rawPage >= PAGINATION_LIMITS.MIN_PAGE
-    ? rawPage
-    : PAGINATION_LIMITS.DEFAULT_PAGE;
+  const page =
+    !isNaN(rawPage) && rawPage >= PAGINATION_LIMITS.MIN_PAGE
+      ? rawPage
+      : PAGINATION_LIMITS.DEFAULT_PAGE;
 
-  const limit = !isNaN(rawLimit) &&
+  const limit =
+    !isNaN(rawLimit) &&
     rawLimit >= PAGINATION_LIMITS.MIN_LIMIT &&
     rawLimit <= PAGINATION_LIMITS.MAX_LIMIT
-    ? rawLimit
-    : PAGINATION_LIMITS.DEFAULT_LIMIT;
+      ? rawLimit
+      : PAGINATION_LIMITS.DEFAULT_LIMIT;
 
   return { page, limit };
 }
