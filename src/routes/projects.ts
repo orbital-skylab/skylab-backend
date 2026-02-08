@@ -9,6 +9,7 @@ import {
   getOneProjectById,
   getProjectsViaRoleIds,
   getPublicProjects,
+  getPublicProjectsCount,
 } from "../helpers/projects.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
 import authorizeAdviserOfProject from "../middleware/authorizeAdviserOfProject";
@@ -18,6 +19,38 @@ import {
 } from "../utils/ApiResponseWrapper";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { Project } from "@prisma/client";
+
+/** Pagination constraints for input validation */
+const PAGINATION_LIMITS = {
+  MIN_PAGE: 1,
+  MAX_LIMIT: 100,
+  MIN_LIMIT: 1,
+  DEFAULT_PAGE: 1,
+  DEFAULT_LIMIT: 20,
+} as const;
+
+/**
+ * Validate and parse pagination query parameters
+ */
+function parsePaginationParams(query: Request["query"]): {
+  page: number;
+  limit: number;
+} {
+  const rawPage = parseInt(query.page as string);
+  const rawLimit = parseInt(query.limit as string);
+
+  const page = !isNaN(rawPage) && rawPage >= PAGINATION_LIMITS.MIN_PAGE
+    ? rawPage
+    : PAGINATION_LIMITS.DEFAULT_PAGE;
+
+  const limit = !isNaN(rawLimit) &&
+    rawLimit >= PAGINATION_LIMITS.MIN_LIMIT &&
+    rawLimit <= PAGINATION_LIMITS.MAX_LIMIT
+    ? rawLimit
+    : PAGINATION_LIMITS.DEFAULT_LIMIT;
+
+  return { page, limit };
+}
 
 const router = Router();
 
@@ -122,10 +155,24 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
 
 router.get("/public", async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const { page, limit } = parsePaginationParams(req.query);
 
     const result = await getPublicProjects({ page, limit });
+    return apiResponseWrapper(res, result);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+/**
+ * GET /projects/public/count
+ * Returns total number of public projects and total pages based on limit
+ */
+router.get("/public/count", async (req: Request, res: Response) => {
+  try {
+    const { limit } = parsePaginationParams(req.query);
+
+    const result = await getPublicProjectsCount(limit);
     return apiResponseWrapper(res, result);
   } catch (e) {
     return routeErrorHandler(res, e);
