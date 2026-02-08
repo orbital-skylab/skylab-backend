@@ -1,4 +1,4 @@
-import { DeadlineType } from "@prisma/client";
+import { DeadlineType, Submission } from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "../models/deadline.db";
 import {
@@ -72,14 +72,29 @@ export async function getDeadlinesByStudentId(studentId: number) {
       const pEvaluationDeadlines = relations.map(async (relation) => {
         const submission = await findFirstSubmission({
           where: {
-            id: deadline.id,
+            deadlineId: deadline.id,
             fromProjectId: project.id,
             toProjectId: relation.toProjectId,
           },
         });
+
+        let toProjectSubmission: Submission | null = null;
+        if (deadline.evaluatingMilestoneId) {
+          toProjectSubmission = await findFirstSubmission({
+            where: {
+              deadlineId: deadline.evaluatingMilestoneId,
+              fromProjectId: relation.toProjectId,
+            },
+            rejectOnNotFound: false,
+          });
+        }
+
         return {
           ...deadlineAttribute,
           submission: submission ? submission : undefined,
+          toProjectSubmission: toProjectSubmission
+            ? toProjectSubmission
+            : undefined,
           fromProject: relation.fromProject,
           toProject: relation.toProject,
         };
