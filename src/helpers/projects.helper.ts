@@ -218,7 +218,6 @@ export async function getAdviserUserByProjectID(projectId: number) {
 
 /**
  * Achievement level ranking: Artemis (highest) > Apollo > Gemini > Vostok (lowest)
- * Exported for testing
  */
 export const ACHIEVEMENT_RANK: Record<AchievementLevel, number> = {
   Artemis: 1,
@@ -229,7 +228,6 @@ export const ACHIEVEMENT_RANK: Record<AchievementLevel, number> = {
 
 /**
  * Sort projects by cohort year (desc), then by achievement level rank
- * Follows Single Responsibility Principle (SRP): only handles sorting
  *
  * @param projects - Array of projects with user data
  * @returns Sorted array of projects
@@ -251,7 +249,6 @@ export function sortByAchievementRank<
 
 /**
  * Build pagination metadata
- * Follows Single Responsibility Principle (SRP): only handles metadata calculation
  *
  * @param total - Total number of items
  * @param page - Current page number
@@ -308,7 +305,6 @@ export async function getPublicProjects(
     countProjects(where),
   ]);
 
-  // Sort using extracted helper function (SRP)
   const sortedProjects = sortByAchievementRank(projectsRaw);
 
   // Apply pagination after sorting
@@ -322,7 +318,6 @@ export async function getPublicProjects(
 
 /**
  * Get public projects count for metadata-only requests
- * Follows Interface Segregation Principle (ISP): clients don't need full project data
  *
  * @param limit - Items per page for totalPages calculation
  * @returns Total count and total pages
