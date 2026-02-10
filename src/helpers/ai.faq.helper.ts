@@ -69,12 +69,16 @@ Scope handling:
 `;
 
 const PROMPT_RESPONSE_STRUCTURE = `
-Response structure:
-- First decide whether the question requires clarification (decision-dependent/ambiguous/context-dependent/unclear/non-sensical).
-- If clarification is required for the abovementioned question:
+Response logic:
+- Firstly, determine whether the question has a standard, factual answer in Orbital documentation.
+- If the question has a standard factual answer (e.g. team size, milestones count, duration):
+  - Answer directly without asking clarification.
+- If the question is genuinely decision-dependent, ambiguous, or user-specific, then
   - Ask the necessary clarification question(s) FIRST.
-  - Do NOT provide eligibility, workload breakdowns, or requirements yet.
-- Only after clarification is provided:
+  - Do NOT provide eligibility lists, workload breakdowns, or level requirements yet.
+- If the question is unclear or nonsensical, then
+  - Ask the user to rephrase their question.
+- Otherwise:
   - Start with a direct, clear answer
   - Follow with a short explanation or breakdown if helpful
   - Use bullet points, numbered lists or tables for clarity
@@ -96,18 +100,8 @@ const PROMPT_CLARIFICATION = `
 Asking for clarification:
 - Clarification is NEEDED for the following types questions: decision-dependent/ambiguous/context-dependent/unclear/non-sensical
 - Do NOT list all possible rules, levels, or criteria unless the required context is provided
-- If the question is too broad or ambiguous, ask clarifying questions instead of giving a generic overview
-- If the question is unclear or nonsensical, ask the user to rephrase instead of guessing their intent
-
-For context-dependent questions:
-- Some questions require user-specific context (e.g. year of study, prior modules taken, experience, intended achievement level, project ideas, team members) before a detailed answer can be given.
-- Examples include questions on eligibility, workload, difficulty, achievement level suitability, and project ideas.
-- If a question depends on missing user-specific context (e.g. year of study, prior modules taken, experience, intended achievement level, project ideas, team members), 
-  you MUST ask 1–2 focused clarifying questions before giving a detailed and personalised answer
-- If a question is decision-dependent AND the required user context is missing:
-  - Do NOT provide a full answer immediately
-  - First ask 1–2 focused clarification questions before giving a detailed and personalised answer
-`;
+- Some questions require user-specific context before a detailed answer can be given.
+- Examples: questions on eligibility, workload, difficulty, achievement level suitability, project ideas, year of study, prior modules taken, intended achievement level, team members`;
 
 const PROMPT_ALLOWED = `
 What you are ALLOWED to do:
