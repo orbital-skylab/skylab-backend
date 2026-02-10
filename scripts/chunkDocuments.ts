@@ -1,104 +1,57 @@
-import "dotenv/config";
-import fs from "fs";
-import path from "path";
-import { getPineconeClient } from "../src/utils/pinecone";
-import { getOpenAIClient } from "../src/utils/openai";
-import { PineconeRecord, RecordMetadata } from "@pinecone-database/pinecone";
-import metadata from "../docs/metadata";
+import crypto from "crypto";
 
-const DOCS_DIR = path.join(process.cwd(), "docs");
-
-/**
- * @function indexDocuments
- * Indexes FAQ documents by reading markdown files from a directory structure,
- * chunking their content, generating embeddings using OpenAI, and upserting
- * the vectors to Pinecone organized by namespace.
- *
- * @remarks
- * This function processes all subdirectories under DOCS_DIR as namespaces.
- * For each namespace, it:
- * 1. Reads all markdown files
- * 2. Chunks the text content into manageable pieces
- * 3. Creates batches of chunks (up to 7500 tokens per batch)
- * 4. Generates embeddings for each batch
- * 5. Upserts the records to Pinecone with metadata
- *
- * @throws {Error} If file system operations or API calls fail
- *
- * @returns {Promise<void>} Resolves when all documents have been indexed
- */
-export async function indexDocuments() {
-  const pinecone = getPineconeClient();
-  const openai = getOpenAIClient();
-
-  const namespaces = fs
-    .readdirSync(DOCS_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
-
-  console.log("Starting document indexing");
-  for (const namespace of namespaces) {
-    const records: PineconeRecord<RecordMetadata>[] = [];
-
-    const namespaceDir = path.join(DOCS_DIR, namespace);
-    console.log(`\nStarting indexing on namespace: ${namespace}`);
-
-    const files = fs.readdirSync(namespaceDir).filter((f) => f.endsWith(".md"));
-
-    for (const file of files) {
-      const filePath = path.join(namespaceDir, file);
-      const text = fs.readFileSync(filePath, "utf-8").trim();
-      const chunks = chunkText(text);
-      const fullMetadata = metadata.find((m) => m.file === file);
-
-      if (!chunks.length) {
-        continue;
-      }
-
-      const batches = createChunkBatches(chunks, 7500);
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        console.log(
-          `Embedding chunk batch with token length: ${batch.reduce(
-            (sum, c) => sum + estimateTokenLength(c),
-            0
-          )} and text: ${batch
-            .map((c, j) => `--- BATCH ${i} CHUNK ${j} ---\n${c}`)
-            .join("\n")}`
-        );
-
-        // get embeddings for batch i
-        const embeddings = await Promise.all(
-          batch.map((c) => openai.getEmbedding(c))
-        );
-
-        records.push(
-          ...batch.map((chunk, j) => ({
-            id: `${file}::batch-${i}-chunk-${j}`,
-            values: embeddings[j],
-            metadata: {
-              file: file,
-              namespace,
-              batch: i,
-              text: chunk,
-              url: fullMetadata?.url ?? "",
-            },
-          }))
-        );
-      }
-    }
-    if (records.length === 0) {
-      continue;
-    }
-    await pinecone.upsertRecords(records, namespace);
-    console.log(`Finished indexing on namespace: ${namespace}`);
-  }
-  console.log("\nDocument indexing complete");
+export interface Chunk {
+  id: string;
+  text: string;
+  file: string; //filename
+  namespace: string;
+  batch: number;
+  url: string;
 }
 
-const CHARS_PER_TOKEN = 6;
-function estimateTokenLength(s: string) {
-  return Math.ceil(s.length / CHARS_PER_TOKEN);
+/**
+ * Chunks a document text into smaller pieces and creates structured chunk objects.
+ *
+ * @param text - The document text to be chunked
+ * @param file - The source file name or identifier
+ * @param namespace - The namespace for organizing the chunks
+ * @param url - The URL associated with the document
+ * @returns An array of Chunk objects containing the chunked text with metadata
+ *
+ * @example
+ * ```typescript
+ * const chunks = chunkDocuments(documentText, "document.txt", "docs", "https://example.com");
+ * ```
+ */
+export default function chunkDocuments(
+  text: string,
+  file: string,
+  namespace: string,
+  url: string
+): Chunk[] {
+  const chunks = chunkText(text);
+  if (!chunks.length) return [];
+
+  const batches = createChunkBatches(chunks, 7500);
+  const results: Chunk[] = [];
+
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
+
+    for (let j = 0; j < batch.length; j++) {
+      const textChunk = batch[j];
+      results.push({
+        id: `${file}::${hashChunk(textChunk)}`,
+        text: textChunk,
+        file,
+        namespace,
+        batch: i,
+        url,
+      });
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -195,6 +148,14 @@ export function chunkText(
   return finalChunks;
 }
 
+/**
+ * Extracts the overlap portion of text by collecting sentences from the end
+ * until the total token count reaches or exceeds the specified overlap limit.
+ *
+ * @param text - The input text to extract overlap from
+ * @param overlapTokens - The maximum number of tokens to include in the overlap
+ * @returns A string containing the sentences that form the overlap portion
+ */
 function getOverlapPortion(text: string, overlapTokens: number): string {
   const sentences = splitBySentences(text);
 
@@ -212,6 +173,23 @@ function getOverlapPortion(text: string, overlapTokens: number): string {
   return overlap.join(" ");
 }
 
+/**
+ * Splits text into paragraphs based on multiple blank lines or markdown headers.
+ *
+ * Splits the input text by:
+ * - Two or more consecutive newlines, or
+ * - A newline followed by a markdown heading (1-6 hash symbols)
+ *
+ * @param text - The text to split into paragraphs
+ * @returns An array of trimmed, non-empty paragraph strings
+ *
+ * @example
+ * ```
+ * const text = "First paragraph\n\nSecond paragraph\n# Header\nThird paragraph";
+ * const paragraphs = splitByParagraphs(text);
+ * // Returns: ["First paragraph", "Second paragraph", "# Header", "Third paragraph"]
+ * ```
+ */
 function splitByParagraphs(text: string): string[] {
   return text
     .split(/\n{2,}|\n(?=#{1,6}\s)/)
@@ -219,6 +197,22 @@ function splitByParagraphs(text: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Splits a text string into an array of sentences.
+ *
+ * Uses a regular expression with a positive lookbehind to split on whitespace
+ * that follows sentence-ending punctuation marks (period, exclamation mark, or question mark).
+ * Each sentence is trimmed of leading/trailing whitespace, and empty strings are filtered out.
+ *
+ * @param text - The text to split into sentences
+ * @returns An array of trimmed sentences
+ *
+ * @example
+ * ```typescript
+ * const sentences = splitBySentences("Hello world! How are you? I'm fine.");
+ * // Returns: ["Hello world!", "How are you?", "I'm fine."]
+ * ```
+ */
 function splitBySentences(text: string): string[] {
   return text
     .split(/(?<=[.!?])\s+/)
@@ -269,4 +263,21 @@ function createChunkBatches(chunks: string[], maxTokens = 8000): string[][] {
   return batches;
 }
 
-indexDocuments();
+const CHARS_PER_TOKEN = 6;
+/**
+ * Estimates the token length of a given string.
+ * @param s - The string to estimate token length for.
+ * @returns The estimated number of tokens, rounded up to the nearest integer.
+ */
+function estimateTokenLength(s: string) {
+  return Math.ceil(s.length / CHARS_PER_TOKEN);
+}
+
+/**
+ * Generates a SHA-256 hash of the provided text.
+ * @param text - The text content to hash
+ * @returns The hexadecimal representation of the SHA-256 hash
+ */
+function hashChunk(text: string) {
+  return crypto.createHash("sha256").update(text).digest("hex");
+}

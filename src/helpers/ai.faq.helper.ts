@@ -73,7 +73,7 @@ Response structure:
 - First decide whether the question requires clarification (decision-dependent/ambiguous/context-dependent/unclear/non-sensical).
 - If clarification is required for the abovementioned question:
   - Ask the necessary clarification question(s) FIRST.
-  - Do NOT provide eligibility lists, workload breakdowns, or level requirements yet.
+  - Do NOT provide eligibility, workload breakdowns, or requirements yet.
 - Only after clarification is provided:
   - Start with a direct, clear answer
   - Follow with a short explanation or breakdown if helpful

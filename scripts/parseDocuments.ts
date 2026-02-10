@@ -148,11 +148,9 @@ async function parseIcs(dir: string): Promise<void> {
   }
 }
 
-async function main() {
+export default async function parseDocuments() {
   console.log("Parsing Orbital Documentation");
   await parsePdfs(DOCS_DIR);
   await parseIcs(DOCS_DIR);
   console.log("Finished parsing Orbital Documentation");
 }
-
-main();
