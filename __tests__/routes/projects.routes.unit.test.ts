@@ -240,6 +240,67 @@ describe("GET /projects/public", () => {
 
     assertRouteErrorHandler();
   });
+
+  it("passes achievement query parameter with pagination", async () => {
+    const mockResult = {
+      projects: [],
+      total: 0,
+      page: 1,
+      pageSize: 28,
+      totalPages: 0,
+    };
+    getPublicProjectsSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(
+      `${BASE_URL}/public?page=1&limit=28&achievement=artemis`
+    );
+
+    expect(getPublicProjectsSpy).toHaveBeenCalledWith({
+      page: 1,
+      limit: 28,
+      achievement: "artemis",
+    });
+    assertApiResponse(mockResult);
+  });
+
+  it("passes achievement query parameter with default pagination", async () => {
+    const mockResult = {
+      projects: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
+    };
+    getPublicProjectsSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(`${BASE_URL}/public?achievement=apollo`);
+
+    expect(getPublicProjectsSpy).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      achievement: "apollo",
+    });
+    assertApiResponse(mockResult);
+  });
+
+  it("handles different achievement levels in filter", async () => {
+    const mockResult = {
+      projects: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
+    };
+    getPublicProjectsSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(`${BASE_URL}/public?achievement=vostok`);
+
+    expect(getPublicProjectsSpy).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      achievement: "vostok",
+    });
+  });
 });
 
 describe("GET /projects/public/count", () => {
@@ -259,7 +320,7 @@ describe("GET /projects/public/count", () => {
     await supertest(app).get(`${BASE_URL}/public/count`);
 
     expect(getPublicProjectsCountSpy).toHaveBeenCalledTimes(1);
-    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20);
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20, undefined);
     assertApiResponse(mockResult);
   });
 
@@ -269,7 +330,7 @@ describe("GET /projects/public/count", () => {
 
     await supertest(app).get(`${BASE_URL}/public/count?limit=28`);
 
-    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(28);
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(28, undefined);
     assertApiResponse(mockResult);
   });
 
@@ -279,7 +340,7 @@ describe("GET /projects/public/count", () => {
 
     await supertest(app).get(`${BASE_URL}/public/count?limit=-5`);
 
-    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20);
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20, undefined);
   });
 
   it("defaults limit to 20 when limit exceeds max (100)", async () => {
@@ -288,7 +349,7 @@ describe("GET /projects/public/count", () => {
 
     await supertest(app).get(`${BASE_URL}/public/count?limit=999`);
 
-    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20);
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20, undefined);
   });
 
   it("returns 200 status on success", async () => {
@@ -307,5 +368,36 @@ describe("GET /projects/public/count", () => {
     await supertest(app).get(`${BASE_URL}/public/count`);
 
     assertRouteErrorHandler();
+  });
+
+  it("passes achievement query parameter with limit", async () => {
+    const mockResult = { total: 20, totalPages: 1 };
+    getPublicProjectsCountSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(
+      `${BASE_URL}/public/count?limit=28&achievement=artemis`
+    );
+
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(28, "artemis");
+    assertApiResponse(mockResult);
+  });
+
+  it("passes achievement query parameter with default limit", async () => {
+    const mockResult = { total: 30, totalPages: 2 };
+    getPublicProjectsCountSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(`${BASE_URL}/public/count?achievement=apollo`);
+
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20, "apollo");
+    assertApiResponse(mockResult);
+  });
+
+  it("handles different achievement levels", async () => {
+    const mockResult = { total: 15, totalPages: 1 };
+    getPublicProjectsCountSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(`${BASE_URL}/public/count?achievement=vostok`);
+
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(20, "vostok");
   });
 });

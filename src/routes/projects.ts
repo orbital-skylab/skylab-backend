@@ -158,8 +158,13 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
 router.get("/public", async (req: Request, res: Response) => {
   try {
     const { page, limit } = parsePaginationParams(req.query);
+    const { achievement } = req.query;
 
-    const result = await getPublicProjects({ page, limit });
+    const result = await getPublicProjects({
+      page,
+      limit,
+      achievement: achievement as any,
+    });
     return apiResponseWrapper(res, result);
   } catch (e) {
     return routeErrorHandler(res, e);
@@ -169,12 +174,14 @@ router.get("/public", async (req: Request, res: Response) => {
 /**
  * GET /projects/public/count
  * Returns total number of public projects and total pages based on limit
+ * Optional query param: achievement (filter by achievement level)
  */
 router.get("/public/count", async (req: Request, res: Response) => {
   try {
     const { limit } = parsePaginationParams(req.query);
+    const achievement = req.query.achievement as string | undefined;
 
-    const result = await getPublicProjectsCount(limit);
+    const result = await getPublicProjectsCount(limit, achievement);
     return apiResponseWrapper(res, result);
   } catch (e) {
     return routeErrorHandler(res, e);
