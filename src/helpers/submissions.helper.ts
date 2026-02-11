@@ -175,7 +175,13 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
 
       return {
         deadline: deadline,
-        sections: sections,
+        sections: sections.map((section) => {
+          const { questions, ...sectionData } = section;
+          return {
+            ...sectionData,
+            questions: parseQuestionsInput(questions),
+          };
+        }),
         answers: answers,
       };
     }
@@ -223,7 +229,13 @@ export async function getAnonymousAnswersViaStudentID(studentId: number) {
 
       return {
         deadline: deadline,
-        sections: sections,
+        sections: sections.map((section) => {
+          const { questions, ...sectionData } = section;
+          return {
+            ...sectionData,
+            questions: parseQuestionsInput(questions),
+          };
+        }),
         answers: answers,
       };
     }
