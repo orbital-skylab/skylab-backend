@@ -97,6 +97,41 @@ describe("getPublicProjectsCount", () => {
 
     expect(result.totalPages).toBe(0);
   });
+
+  it("filters by achievement level when provided", async () => {
+    mockedCountProjects.mockResolvedValue(50);
+
+    const result = await getPublicProjectsCount(28, "artemis");
+
+    expect(result.total).toBe(50);
+    expect(result.totalPages).toBe(2); // Math.ceil(50/28)
+    expect(mockedCountProjects).toHaveBeenCalledWith({
+      hasDropped: false,
+      achievement: "Artemis",
+    });
+  });
+
+  it("validates achievement enum value conversion", async () => {
+    mockedCountProjects.mockResolvedValue(25);
+
+    await getPublicProjectsCount(28, "vostok");
+
+    expect(mockedCountProjects).toHaveBeenCalledWith({
+      hasDropped: false,
+      achievement: "Vostok",
+    });
+  });
+
+  it("handles invalid achievement value gracefully", async () => {
+    mockedCountProjects.mockResolvedValue(100);
+
+    const result = await getPublicProjectsCount(28, "invalid_level");
+
+    expect(mockedCountProjects).toHaveBeenCalledWith({
+      hasDropped: false,
+    });
+    expect(result.total).toBe(100);
+  });
 });
 
 describe("getPublicProjects", () => {
@@ -115,7 +150,7 @@ describe("getPublicProjects", () => {
     expect(result.projects).toHaveLength(5);
   });
 
-  it("sorts by cohort year descending then achievement rank", async () => {
+  it("requests projects with correct sort order from database", async () => {
     mockedFindManyProjectsWithUserData.mockResolvedValue(
       MOCK_ALL_PROJECTS_UNSORTED as any
     );
@@ -123,22 +158,76 @@ describe("getPublicProjects", () => {
 
     const result = await getPublicProjects();
 
-    const projectInfo = result.projects.map((p) => ({
-      cohortYear: p.cohortYear,
-      achievement: p.achievement,
-    }));
+    // Verify the database was asked to sort by cohortYear desc, id desc
+    expect(mockedFindManyProjectsWithUserData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ cohortYear: "desc" }, { id: "desc" }],
+      })
+    );
+    expect(result.projects).toHaveLength(5);
+  });
 
-    expect(projectInfo[0]).toEqual({
-      cohortYear: 2024,
-      achievement: "Artemis",
+  it("filters projects by achievement level", async () => {
+    mockedFindManyProjectsWithUserData.mockResolvedValue([
+      MOCK_PROJECT_ARTEMIS_2024,
+    ] as any);
+    mockedCountProjects.mockResolvedValue(1);
+
+    const result = await getPublicProjects({ achievement: "Artemis" });
+
+    expect(mockedFindManyProjectsWithUserData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          achievement: "Artemis",
+          hasDropped: false,
+        }),
+      })
+    );
+    expect(result.projects).toHaveLength(1);
+  });
+
+  it("applies pagination with achievement filter", async () => {
+    mockedFindManyProjectsWithUserData.mockResolvedValue([
+      MOCK_PROJECT_ARTEMIS_2024,
+    ] as any);
+    mockedCountProjects.mockResolvedValue(50);
+
+    const result = await getPublicProjects({
+      page: 2,
+      limit: 28,
+      achievement: "Apollo",
     });
-    expect(projectInfo[1]).toEqual({ cohortYear: 2024, achievement: "Apollo" });
-    expect(projectInfo[2]).toEqual({ cohortYear: 2024, achievement: "Gemini" });
-    expect(projectInfo[3]).toEqual({ cohortYear: 2024, achievement: "Vostok" });
-    expect(projectInfo[4]).toEqual({
-      cohortYear: 2023,
-      achievement: "Artemis",
-    });
+
+    expect(mockedFindManyProjectsWithUserData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 28,
+        skip: 28, // (2-1) * 28
+        where: expect.objectContaining({
+          achievement: "Apollo",
+        }),
+      })
+    );
+    expect(result.page).toBe(2);
+    expect(result.totalPages).toBe(2); // Math.ceil(50/28)
+  });
+
+  it("returns all projects when achievement is not specified", async () => {
+    mockedFindManyProjectsWithUserData.mockResolvedValue(
+      MOCK_ALL_PROJECTS_UNSORTED as any
+    );
+    mockedCountProjects.mockResolvedValue(5);
+
+    const result = await getPublicProjects();
+
+    expect(mockedFindManyProjectsWithUserData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          achievement: undefined,
+          hasDropped: false,
+        }),
+      })
+    );
+    expect(result.projects).toHaveLength(5);
   });
 
   it("only queries non-dropped projects", async () => {

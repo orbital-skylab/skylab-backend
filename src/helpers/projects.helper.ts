@@ -271,6 +271,7 @@ export function buildPaginationMetadata(
 export interface GetPublicProjectsParams {
   page?: number;
   limit?: number;
+  achievement?: AchievementLevel;
 }
 
 export interface PaginatedProjects {
@@ -287,31 +288,32 @@ const DEFAULT_LIMIT = 20;
 
 /**
  * Fetch public projects for static site generation
- * Supports pagination and returns projects sorted by cohort year (desc) then achievement level
+ * Supports pagination, optional achievement filtering, and returns projects sorted by cohort year (desc) then ID (desc)
+ * Achievement filtering happens at DB level to ensure consistent page sizes
  */
 export async function getPublicProjects(
   params: GetPublicProjectsParams = {}
 ): Promise<PaginatedProjects> {
-  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = params;
+  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, achievement } = params;
   const skip = (page - 1) * limit;
 
-  const where = { hasDropped: false };
+  const where = {
+    hasDropped: false,
+    achievement: achievement ?? undefined,
+  };
 
   const [projectsRaw, total] = await Promise.all([
     findManyProjectsWithUserData({
       where,
+      take: limit,
+      skip,
       orderBy: [{ cohortYear: "desc" }, { id: "desc" }],
     }),
     countProjects(where),
   ]);
 
-  const sortedProjects = sortByAchievementRank(projectsRaw);
-
-  // Apply pagination after sorting
-  const paginatedProjects = sortedProjects.slice(skip, skip + limit);
-
   return {
-    projects: paginatedProjects.map((project) => parseGetProjectInput(project)),
+    projects: projectsRaw.map((project) => parseGetProjectInput(project)),
     ...buildPaginationMetadata(total, page, limit),
   };
 }
@@ -320,12 +322,29 @@ export async function getPublicProjects(
  * Get public projects count for metadata-only requests
  *
  * @param limit - Items per page for totalPages calculation
+ * @param achievement - Optional achievement level filter (e.g., "artemis", "apollo")
  * @returns Total count and total pages
  */
 export async function getPublicProjectsCount(
-  limit: number = DEFAULT_LIMIT
+  limit: number = DEFAULT_LIMIT,
+  achievement?: string
 ): Promise<{ total: number; totalPages: number }> {
-  const total = await countProjects({ hasDropped: false });
+  const where: Prisma.ProjectWhereInput = { hasDropped: false };
+
+  // Add achievement filter if provided
+  if (achievement) {
+    // Convert lowercase string (e.g., "artemis") to PascalCase (e.g., "Artemis")
+    const pascalCase =
+      achievement.charAt(0).toUpperCase() + achievement.slice(1).toLowerCase();
+    // Validate against enum values
+    if (
+      Object.values(AchievementLevel).includes(pascalCase as AchievementLevel)
+    ) {
+      where.achievement = pascalCase as AchievementLevel;
+    }
+  }
+
+  const total = await countProjects(where);
   return {
     total,
     totalPages: total > 0 ? Math.ceil(total / limit) : 0,
