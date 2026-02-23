@@ -164,14 +164,15 @@ export async function postFaqMessage(
     })
     .filter(Boolean)
     .join("\n---------\n");
-  const response = await getOpenAIClient().chat(
+
+  const response = await getOpenAIClient().getResponse(
     data.content,
     SYSTEM_PROMPT,
     history,
     onDelta,
     context
   );
-  console.log(context);
+
   const assistantMessage = await createFaqMessage(conversation.id, {
     role: "ASSISTANT",
     content: response,

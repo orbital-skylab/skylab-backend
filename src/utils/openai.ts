@@ -22,8 +22,8 @@ export class OpenAIClient {
     this.client = new OpenAI({ apiKey });
   }
 
-  async chat(
-    message: string,
+  async getResponse(
+    userPrompt: string,
     systemPrompt: string,
     history: Message[] = [],
     onDelta?: (message: string) => void,
@@ -44,7 +44,7 @@ export class OpenAIClient {
           role: "user",
           content: `
             ${context ? "Context:\n" + context + "\n\n" : ""}
-            User Message:${message}
+            User Message:${userPrompt}
           `,
         },
       ],
