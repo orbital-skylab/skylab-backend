@@ -7,6 +7,16 @@ type Message = {
   content: string;
 };
 type MessageRole = "USER" | "ASSISTANT";
+type OpenAIClientConfig = {
+  model?: string;
+  embeddingModel?: string;
+  temperature?: number;
+};
+const DEFAULT_OPENAI_CONFIG = {
+  model: "gpt-4.1",
+  embeddingModel: "text-embedding-3-large",
+  temperature: 0.7,
+} as const;
 
 export class OpenAIClient {
   private client: OpenAI;
@@ -14,12 +24,18 @@ export class OpenAIClient {
   private EMBEDDING_MODEL = "text-embedding-3-large";
   private TEMPERATURE = 0.7;
 
-  constructor() {
+  constructor(config: OpenAIClientConfig = {}) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY is not set in config");
     }
+
     this.client = new OpenAI({ apiKey });
+
+    this.MODEL = config.model ?? DEFAULT_OPENAI_CONFIG.model;
+    this.EMBEDDING_MODEL =
+      config.embeddingModel ?? DEFAULT_OPENAI_CONFIG.embeddingModel;
+    this.TEMPERATURE = config.temperature ?? DEFAULT_OPENAI_CONFIG.temperature;
   }
 
   async getResponse(
