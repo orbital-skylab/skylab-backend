@@ -136,7 +136,7 @@ export async function postFaqMessage(
     return { userMessage, assistantMessage };
   }
 
-  const response = await getOpenAIClient().chat(
+  const response = await getOpenAIClient().getResponse(
     data.content,
     SYSTEM_PROMPT,
     history,
