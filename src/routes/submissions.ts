@@ -12,6 +12,8 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
+import { extractJwtData } from "../helpers/authentication.helper";
+import { findUniqueUserWithRoleData } from "../models/users.db";
 
 const router = Router();
 
@@ -57,12 +59,17 @@ router.get(
 router
   .get(
     "/:submissionId",
-    // authorizeSignedIn,
+    authorizeSignedIn,
     async (req: Request, res: Response) => {
       const { submissionId } = req.params;
       try {
+        const jwtData = extractJwtData(req, res);
+        const userData = await findUniqueUserWithRoleData({
+          where: { id: Number(jwtData.id) },
+        });
         const submission = await getSubmissionBySubmissionId(
-          Number(submissionId)
+          Number(submissionId),
+          userData
         );
         return apiResponseWrapper(res, { submission: submission });
       } catch (e) {
