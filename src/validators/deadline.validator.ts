@@ -1,4 +1,4 @@
-import { DeadlineType } from "@prisma/client";
+import { DeadlineType, EvaluatorType } from "@prisma/client";
 import { body, param } from "express-validator";
 import { getOneDeadlineById } from "../helpers/deadline.helper";
 import {
@@ -38,4 +38,8 @@ export const CreateDeadlineValidator = [
         return Promise.reject("There is no such milestone to evaluate");
       }
     }),
+  body("deadline.evaluatorType")
+    .if(body("deadline.type").equals("Evaluation"))
+    .notEmpty()
+    .isIn(Object.values(EvaluatorType)),
 ];

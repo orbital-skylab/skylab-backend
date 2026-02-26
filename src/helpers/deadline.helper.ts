@@ -5,6 +5,7 @@ import {
   DeadlineType,
   Option,
   AchievementLevel,
+  EvaluatorType,
 } from "@prisma/client";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
@@ -45,15 +46,19 @@ export async function createDeadline(body: {
     type: DeadlineType;
     desc?: string;
     evaluatingMilestoneId?: number; // If type == "Evaluation"
+    evaluatorType?: EvaluatorType; // If type == "Evaluation"
   };
 }) {
   const { deadline: deadlineData } = body;
-  const { evaluatingMilestoneId, cohortYear, ...deadline } = deadlineData;
+  const { evaluatingMilestoneId, evaluatorType, cohortYear, ...deadline } =
+    deadlineData;
 
   const createdDeadline = await createOneDeadline({
     data: {
       cohort: { connect: { academicYear: cohortYear } },
       ...deadline,
+      evaluatorType:
+        deadline.type === DeadlineType.Evaluation ? evaluatorType : undefined,
       evaluating:
         deadline.type === DeadlineType.Evaluation
           ? {
