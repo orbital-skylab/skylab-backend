@@ -1,0 +1,130 @@
+import { OpenAI } from "openai";
+import fetch from "node-fetch";
+globalThis.fetch = fetch;
+
+type Message = {
+  role: MessageRole;
+  content: string;
+};
+type MessageRole = "USER" | "ASSISTANT";
+type OpenAIClientConfig = {
+  model?: string;
+  embeddingModel?: string;
+  temperature?: number;
+};
+const DEFAULT_OPENAI_CONFIG = {
+  model: "gpt-4.1",
+  embeddingModel: "text-embedding-3-large",
+  temperature: 0.7,
+} as const;
+
+export class OpenAIClient {
+  private client: OpenAI;
+  private MODEL = "gpt-4.1";
+  private EMBEDDING_MODEL = "text-embedding-3-large";
+  private TEMPERATURE = 0.7;
+
+  constructor(config: OpenAIClientConfig = {}) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY is not set in config");
+    }
+
+    this.client = new OpenAI({ apiKey });
+
+    this.MODEL = config.model ?? DEFAULT_OPENAI_CONFIG.model;
+    this.EMBEDDING_MODEL =
+      config.embeddingModel ?? DEFAULT_OPENAI_CONFIG.embeddingModel;
+    this.TEMPERATURE = config.temperature ?? DEFAULT_OPENAI_CONFIG.temperature;
+  }
+
+  async getResponse(
+    userPrompt: string,
+    systemPrompt: string,
+    history: Message[] = [],
+    onDelta?: (message: string) => void,
+    context?: string
+  ) {
+    const stream = await this.client.responses.create({
+      model: this.MODEL,
+      input: [
+        {
+          role: "system",
+          content: `${systemPrompt}`,
+        },
+        ...history.map((m) => ({
+          role: m.role.toLowerCase() as "user" | "assistant",
+          content: m.content,
+        })),
+        {
+          role: "user",
+          content: `
+            ${context ? "Context:\n" + context + "\n\n" : ""}
+            User Message:${userPrompt}
+          `,
+        },
+      ],
+      temperature: this.TEMPERATURE,
+      stream: true,
+    });
+
+    let fullResponseText = "";
+
+    for await (const event of stream) {
+      if (event.type === "response.output_text.delta") {
+        const chunk = event.delta;
+        fullResponseText += chunk;
+        onDelta?.(chunk);
+      }
+    }
+
+    return fullResponseText;
+  }
+
+  async getEmbedding(text: string) {
+    const response = await this.client.embeddings.create({
+      model: this.EMBEDDING_MODEL,
+      input: text,
+    });
+
+    return response.data[0].embedding;
+  }
+
+  async getEmbeddings(texts: string[]) {
+    const response = await this.client.embeddings.create({
+      model: this.EMBEDDING_MODEL,
+      input: texts,
+    });
+
+    return response.data.map((d) => d.embedding);
+  }
+
+  async getTitle(content: string) {
+    const response = await this.client.responses.create({
+      model: this.MODEL,
+      input: [
+        {
+          role: "system",
+          content: `
+						Generate a concise title for this conversation starter.
+						Keep it under 6 words.
+						Do NOT include any prefixes like "Title:" or extra punctuation.
+						Return only the title itself.
+						`,
+        },
+        { role: "user", content: content },
+      ],
+      temperature: this.TEMPERATURE,
+      max_output_tokens: 16,
+    });
+    return response.output_text;
+  }
+}
+
+let client: OpenAIClient | null = null;
+export function getOpenAIClient() {
+  if (!client) {
+    client = new OpenAIClient();
+  }
+  return client;
+}
