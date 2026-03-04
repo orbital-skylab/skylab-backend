@@ -156,7 +156,6 @@ export const getAllSubmissions = async (
     },
     take: query.limit ?? undefined,
     skip: query.limit && query.page ? limit * page : undefined,
-    orderBy: { id: "asc" },
   });
 
   const milestoneDeadlines = await findManyDeadlines({
