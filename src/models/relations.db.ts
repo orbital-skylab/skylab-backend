@@ -84,6 +84,54 @@ export async function findManyRelationsWithFromToProjectData({
   });
 }
 
+export async function findManyRelationsForEvaluations(
+  query: Omit<Prisma.EvaluationRelationFindManyArgs, "include">
+) {
+  return await prisma.evaluationRelation.findMany({
+    ...query,
+    orderBy: [{ fromProjectId: "asc" }, { toProjectId: "asc" }],
+    include: {
+      fromProject: {
+        include: { adviser: { include: { user: true } } },
+      },
+      toProject: {
+        include: {
+          students: { include: { user: true } },
+          adviser: { include: { user: true } },
+          mentor: { include: { user: true } },
+        },
+      },
+    },
+  });
+}
+
+export async function findManyRelationsWithFromToProjectUserData({
+  include,
+  ...query
+}: Prisma.EvaluationRelationFindManyArgs) {
+  return await prisma.evaluationRelation.findMany({
+    ...query,
+    orderBy: [{ fromProjectId: "asc" }, { toProjectId: "asc" }],
+    include: {
+      ...include,
+      fromProject: {
+        include: {
+          students: { include: { user: true } },
+          adviser: { include: { user: true } },
+          mentor: { include: { user: true } },
+        },
+      },
+      toProject: {
+        include: {
+          students: { include: { user: true } },
+          adviser: { include: { user: true } },
+          mentor: { include: { user: true } },
+        },
+      },
+    },
+  });
+}
+
 export async function deleteOneRelation(
   relation: Prisma.EvaluationRelationDeleteArgs
 ) {
