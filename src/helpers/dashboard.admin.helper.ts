@@ -495,6 +495,15 @@ export const getAllEvaluationSubmissions = async (query: any) => {
   return combined;
 };
 
+export const getEvaluationSubmissions = async (query: any) => {
+  const { deadlineId } = query;
+
+  if (deadlineId) {
+    return await getEvaluationSubmissionsByDeadlineId(query);
+  }
+  return await getAllEvaluationSubmissions(query);
+};
+
 export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
   const {
     submissionStatus,

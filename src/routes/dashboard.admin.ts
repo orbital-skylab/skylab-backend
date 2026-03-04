@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   getSubmissions,
-  getAllEvaluationSubmissions,
+  getEvaluationSubmissions,
   sendReminderEmail,
 } from "../helpers/dashboard.admin.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
@@ -48,14 +48,15 @@ router.post("/send-reminders", async (req: Request, res: Response) => {
 router.get(
   "/evaluations",
   authorizeAdmin,
-  GetSubmissionsByDeadlineIDValidator, // Reuse the same validator!
+  GetSubmissionsByDeadlineIDValidator,
   async (req: Request, res: Response) => {
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       return throwValidationError(res, errors);
     }
     try {
-      const submissions = await getAllEvaluationSubmissions(req.query);
+      // 2. USE THE WRAPPER HERE
+      const submissions = await getEvaluationSubmissions(req.query);
       return apiResponseWrapper(res, { submissions: submissions });
     } catch (e) {
       return routeErrorHandler(res, e);
