@@ -31,6 +31,9 @@ export async function getManyDeadlinesWithFilter(
       cohortYear: cohortYear ?? undefined,
       name: { contains: name, mode: "insensitive" },
     },
+    orderBy: {
+      id: "asc",
+    },
   };
 
   const deadlines = await findManyDeadlines(deadlinesQuery);
