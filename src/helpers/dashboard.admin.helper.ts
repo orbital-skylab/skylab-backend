@@ -636,7 +636,12 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
         submission: submission || undefined,
       };
     });
-    results.push(...(await Promise.all(pAdviserSubmissions)));
+    const resolvedAdviserSubmissions = await Promise.all(pAdviserSubmissions);
+    results.push(
+      ...resolvedAdviserSubmissions.filter(
+        (res): res is NonNullable<typeof res> => res !== null
+      )
+    );
   }
 
   if (submissionStatus) {
