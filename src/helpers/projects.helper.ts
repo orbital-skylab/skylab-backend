@@ -121,7 +121,7 @@ export async function getManyProjectsLean(
       cohortYear: cohortYear,
       hasDropped: hasDropped,
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, teamName: true },
     orderBy: { id: "asc" },
   });
   return leanProjects;
