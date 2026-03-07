@@ -19,7 +19,7 @@ import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOneAdviserById } from "./advisers.helper";
 import { parseQuestionsInput } from "./deadline.helper";
 import { getOneStudentById } from "./students.helper";
-import { findUniqueUserWithRoleData } from "src/models/users.db";
+import { findUniqueUserWithRoleData } from "../models/users.db";
 
 type SubmissionWithRelations = Prisma.SubmissionGetPayload<{
   include: {
