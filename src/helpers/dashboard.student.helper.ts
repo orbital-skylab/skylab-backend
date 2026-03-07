@@ -86,7 +86,7 @@ export async function getDeadlinesByStudentId(studentId: number) {
 
         let toProjectSubmission: Submission | null = null;
         if (deadline.evaluatingMilestoneId) {
-          toProjectSubmission = await findFirstSubmission({
+          toProjectSubmission = await findFirstNonDraftSubmission({
             where: {
               deadlineId: deadline.evaluatingMilestoneId,
               fromProjectId: relation.toProjectId,
