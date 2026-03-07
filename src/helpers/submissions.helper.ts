@@ -68,11 +68,6 @@ export async function getSubmissionBySubmissionId(
     };
   });
 
-  const isReceiver =
-    (submission.toProjectId &&
-      submission.toProjectId === user.student?.projectId) ||
-    (submission.toUserId && submission.toUserId === user.id);
-
   const isAuthor =
     (submission.fromProjectId &&
       submission.fromProjectId === user.student?.projectId) ||
@@ -82,7 +77,7 @@ export async function getSubmissionBySubmissionId(
 
   let filteredAnswers = submission.answers;
 
-  if (isReceiver && !isAuthor && !isAdmin) {
+  if (!isAuthor && !isAdmin) {
     parsedSections = parsedSections.map((section) => ({
       ...section,
       questions: section.questions.filter((q) => !q.isAnonymous),
