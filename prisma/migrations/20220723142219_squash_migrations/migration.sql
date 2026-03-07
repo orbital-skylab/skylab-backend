@@ -133,7 +133,6 @@ CREATE TABLE "Question" (
     "desc" TEXT NOT NULL,
     "type" "QuestionType" NOT NULL,
     "isAnonymous" BOOLEAN NOT NULL DEFAULT false,
-    "isRequired" BOOLEAN NOT NULL DEFAULT false,
     "sectionId" INTEGER NOT NULL,
 
     CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
