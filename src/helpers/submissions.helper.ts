@@ -19,6 +19,7 @@ import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOneAdviserById } from "./advisers.helper";
 import { parseQuestionsInput } from "./deadline.helper";
 import { getOneStudentById } from "./students.helper";
+import { getProjectIDsByAdviserID } from "./projects.helper";
 import { findUniqueUserWithRoleData } from "../models/users.db";
 
 type SubmissionWithRelations = Prisma.SubmissionGetPayload<{
@@ -188,6 +189,9 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
   const adviser = await getOneAdviserById(adviserId);
   const { cohortYear } = adviser;
 
+  const adviserProjects = await getProjectIDsByAdviserID(adviserId);
+  const projectIds = adviserProjects.map((p) => p.id);
+
   const deadlines = await findManyDeadlinesWithAnonymousQuestionsData({
     where: { cohortYear: cohortYear },
   });
@@ -198,7 +202,7 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
         where: {
           deadlineId: deadline.id,
           isDraft: false,
-          toUserId: adviser.userId,
+          toProjectId: { in: projectIds },
         },
       });
 
