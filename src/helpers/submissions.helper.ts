@@ -190,6 +190,12 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
   const { cohortYear } = adviser;
 
   const adviserProjects = await getProjectIDsByAdviserID(adviserId);
+  if (adviserProjects.length === 0) {
+    throw new SkylabError(
+      "This adviser is not in charge of any projects, and hence has no anonymous answers to view!",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
   const projectIds = adviserProjects.map((p) => p.id);
 
   const deadlines = await findManyDeadlinesWithAnonymousQuestionsData({
@@ -200,7 +206,7 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
     async ({ sections, ...deadline }) => {
       const submissions = await findManySubmissions({
         where: {
-          deadlineId: deadline.id,
+          id: deadline.id ? deadline.id : undefined,
           isDraft: false,
           OR: [
             { toProjectId: { in: projectIds } },
