@@ -202,7 +202,10 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
         where: {
           deadlineId: deadline.id,
           isDraft: false,
-          toProjectId: { in: projectIds },
+          OR: [
+            { toProjectId: { in: projectIds } },
+            { toUserId: adviser.userId },
+          ],
         },
       });
 
