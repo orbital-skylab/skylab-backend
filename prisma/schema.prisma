@@ -160,6 +160,7 @@ model Question {
   desc           String
   type           QuestionType
   isAnonymous    Boolean      @default(false)
+  isRequired     Boolean      @default(false)
   answers        Answer[]
   options        Option[] //for MCQ/Multi-select questions
   section        Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
