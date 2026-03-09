@@ -16,13 +16,45 @@ import {
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+import { Project } from "@prisma/client";
 
 const router = Router();
+
+const projectGalleryCache = {
+  data: null as Project[] | null,
+  lastUpdated: 0,
+};
+
+const CACHE_TTL = 5 * 60 * 1000;
 
 router
   .get("/", async (req: Request, res: Response) => {
     try {
+      const { limit, page, achievement, search } = req.query;
+
+      const isDefaultFetch =
+        (page === "0" || !page) &&
+        (search === "" || !search) &&
+        String(achievement).toUpperCase() === "ARTEMIS" &&
+        (!limit || Number(limit) === 16);
+
+      if (
+        isDefaultFetch &&
+        projectGalleryCache.data &&
+        Date.now() - projectGalleryCache.lastUpdated < CACHE_TTL
+      ) {
+        console.log("Cache hit");
+        return apiResponseWrapper(res, { projects: projectGalleryCache.data });
+      }
+      console.log("Cache missed");
+
       const allProjects = await getManyProjectsWithFilter(req.query);
+
+      if (isDefaultFetch) {
+        projectGalleryCache.data = allProjects;
+        projectGalleryCache.lastUpdated = Date.now();
+      }
+
       return apiResponseWrapper(res, { projects: allProjects });
     } catch (e) {
       return routeErrorHandler(res, e);
@@ -31,6 +63,9 @@ router
   .post("/", authorizeAdmin, async (req: Request, res: Response) => {
     try {
       const createdProject = await createProject(req.body);
+
+      projectGalleryCache.data = null;
+
       return apiResponseWrapper(res, { project: createdProject });
     } catch (e) {
       return routeErrorHandler(res, e);

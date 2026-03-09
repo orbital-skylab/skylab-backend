@@ -19,7 +19,7 @@ Skylab v2 has the intention of replacing the pre-existing [Skylab](https://nussk
 2. Clone the repo into a directory of your choice by typing `git clone https://github.com/orbital-skylab/skylab-backend` into a terminal
 3. Navigate to the 'skylab-backend' directory by typing `cd skylab-backend`
 4. Install the packages by typing `npm install`
-6. Place the `.env` file in the root directory of the project
+5. Place the `.env` file in the root directory of the project
 
 ## Start the application
 
@@ -29,4 +29,4 @@ Skylab v2 has the intention of replacing the pre-existing [Skylab](https://nussk
 
 ## Documentation
 
-Documentation for this project is done using [GitHub Wiki](https://github.com/orbital-skylab/skylab-backend/wiki). 
+Documentation for this project is done using [GitHub Wiki](https://github.com/orbital-skylab/skylab-backend/wiki).
