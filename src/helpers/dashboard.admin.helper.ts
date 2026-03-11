@@ -39,15 +39,15 @@ export type EvaluationResult = {
 
 export function flattenProjectUsers(
   project: Project & {
-    students: (Student & {
+    students?: (Student & {
       user: User;
     })[];
-    mentor:
+    mentor?:
       | (Mentor & {
           user: User;
         })
       | null;
-    adviser:
+    adviser?:
       | (Adviser & {
           user: User;
         })
@@ -55,15 +55,18 @@ export function flattenProjectUsers(
   }
 ) {
   const { students, adviser, mentor, ...projectData } = project;
-  const flattenedStudents = students.map((student) => {
-    const { user, ...studentData } = student;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, password, ...userData } = user;
-    return {
-      ...userData,
-      ...studentData,
-    };
-  });
+
+  const flattenedStudents = students
+    ? students.map((student) => {
+        const { user, ...studentData } = student;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, password, ...userData } = user;
+        return {
+          ...userData,
+          ...studentData,
+        };
+      })
+    : [];
 
   let tempMentorAdviser;
 
@@ -346,6 +349,7 @@ export async function sendReminderEmail(
     throw e;
   }
 }
+
 export const getAllEvaluationSubmissions = async (query: any) => {
   const { search, cohortYear, page, limit, dropped, evaluatorTypeFilter } =
     query;
@@ -413,6 +417,16 @@ export const getAllEvaluationSubmissions = async (query: any) => {
       },
     });
 
+    const evaluatorProjectIds = Array.from(
+      new Set(relations.map((r) => r.fromProjectId))
+    );
+    const evaluatorProjects = await findManyProjectsWithUserData({
+      where: { id: { in: evaluatorProjectIds } },
+    });
+    const projectsWithStudentsMap = new Map(
+      evaluatorProjects.map((p) => [p.id, p.students])
+    );
+
     const pTeamSubmissions = relations.map(async (relation) => {
       const submissions = await findManySubmissions({
         where: {
@@ -422,6 +436,16 @@ export const getAllEvaluationSubmissions = async (query: any) => {
         },
         select: { id: true, updatedAt: true, deadlineId: true },
       });
+
+      const rawStudents =
+        projectsWithStudentsMap.get(relation.fromProjectId) || [];
+      const flattenedStudents = rawStudents.map((student) => {
+        const { user, ...studentData } = student;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, password, ...userData } = user || {};
+        return { ...userData, ...studentData };
+      });
+
       return {
         relationId: relation.id,
         fromProject: {
@@ -432,6 +456,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
                 ...relation.fromProject.adviser.user,
               }
             : null,
+          students: flattenedStudents,
         },
         toProject: flattenProjectUsers(relation.toProject),
         submission: submissions || undefined,
@@ -565,6 +590,16 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
       },
     });
 
+    const evaluatorProjectIds = Array.from(
+      new Set(relations.map((r) => r.fromProjectId))
+    );
+    const evaluatorProjects = await findManyProjectsWithUserData({
+      where: { id: { in: evaluatorProjectIds } },
+    });
+    const projectsWithStudentsMap = new Map(
+      evaluatorProjects.map((p) => [p.id, p.students])
+    );
+
     const pTeamSubmissions = relations.map(async (relation) => {
       const submission = await findFirstNonDraftSubmission({
         where: {
@@ -573,6 +608,16 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
           toProjectId: relation.toProjectId,
         },
       });
+
+      const rawStudents =
+        projectsWithStudentsMap.get(relation.fromProjectId) || [];
+      const flattenedStudents = rawStudents.map((student) => {
+        const { user, ...studentData } = student;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, password, ...userData } = user || {};
+        return { ...userData, ...studentData };
+      });
+
       return {
         relationId: relation.id,
         fromProject: {
@@ -583,6 +628,7 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
                 ...relation.fromProject.adviser.user,
               }
             : null,
+          students: flattenedStudents,
         },
         toProject: flattenProjectUsers(relation.toProject),
         submission: submission || undefined,
