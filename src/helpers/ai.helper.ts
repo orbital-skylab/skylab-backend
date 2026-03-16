@@ -147,6 +147,7 @@ export async function postFaqMessage(
 
   const inputEmbedding = await getOpenAIClient().getEmbedding(data.content);
   const namespaces = inferNamespacesFromQuery(data.content);
+  // console.log("Inferred namespaces:", namespaces);
   const semanticSearchResults = await pineconeClient.query(
     inputEmbedding,
     namespaces,
@@ -165,7 +166,7 @@ export async function postFaqMessage(
       `;
     })
     .filter(Boolean)
-    .join("\n---------\n");
+    .join("\n---------------------------------------------\n");
 
   const response = await getOpenAIClient().getResponse(
     data.content,

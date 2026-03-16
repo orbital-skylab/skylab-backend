@@ -72,12 +72,13 @@ Scope of questions:
 
 const PROMPT_RESPONSE_STRUCTURE = `
 Response logic:
-- Firstly, determine whether the question has a standard, factual answer in Orbital documentation.
-- If the question has a standard factual answer (e.g. team size, milestones count, duration):
-  - Skip to the last point
-- If the question is decision-dependent, ambiguous, or user-specific, then
+If the question is genuinely decision-dependent, ambiguous, or require more information from the user:
   - Ask the necessary clarification question(s) FIRST.
   - Do NOT provide eligibility lists, workload breakdowns, or level requirements yet.
+- If the retrieved context is insufficient and does not contain sufficient facts:
+  - Do NOT guess or present a generic statement as a definitive answer.
+  - If the missing information can be resolved by the user, ask the necessary clarification question(s) FIRST.
+    - Otherwise, clearly state that the exact answer is not available in the current documentation and direct the user to the official Orbital source or adviser.
 - If the question is unclear or nonsensical, then
   - Ask the user to rephrase their question.
 - If the question is out of the scope of allowed questions, then
