@@ -237,7 +237,7 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
       let adviserSubmissionWrapper: AdviserFeedback | null = null;
 
       if (deadline.evaluatorType !== "Team") {
-        const pAdviserSubmission = findFirstNonDraftSubmission({
+        const pAdviserSubmission = await findFirstNonDraftSubmission({
           where: {
             deadlineId: deadline.id,
             fromUserId: adviserUser.id,
