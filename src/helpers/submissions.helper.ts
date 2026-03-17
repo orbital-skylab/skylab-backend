@@ -206,7 +206,7 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
     async ({ sections, ...deadline }) => {
       const submissions = await findManySubmissions({
         where: {
-          id: deadline.id ? deadline.id : undefined,
+          deadlineId: deadline.id,
           isDraft: false,
           OR: [
             { toProjectId: { in: projectIds } },

@@ -55,7 +55,6 @@ router.get(
       return throwValidationError(res, errors);
     }
     try {
-      // 2. USE THE WRAPPER HERE
       const submissions = await getEvaluationSubmissions(req.query);
       return apiResponseWrapper(res, { submissions: submissions });
     } catch (e) {

@@ -451,10 +451,12 @@ export const getAllEvaluationSubmissions = async (query: any) => {
         fromProject: {
           ...relation.fromProject,
           adviser: relation.fromProject.adviser
-            ? {
-                ...relation.fromProject.adviser,
-                ...relation.fromProject.adviser.user,
-              }
+            ? (() => {
+                const { user, ...adviserData } = relation.fromProject.adviser;
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { password, ...adviserUserData } = user || {};
+                return { ...adviserData, ...adviserUserData };
+              })()
             : null,
           students: flattenedStudents,
         },
@@ -490,7 +492,10 @@ export const getAllEvaluationSubmissions = async (query: any) => {
       });
       return {
         relationId: `A-${project.id}`,
-        fromUser: project.adviser?.user,
+        fromUser: project.adviser
+          ? // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            (({ password, ...rest }) => rest)(project.adviser.user as User)
+          : undefined,
         toProject: flattenProjectUsers(project),
         submission: submissions || undefined,
       };
@@ -618,16 +623,21 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
         return { ...userData, ...studentData };
       });
 
+      const adviser = relation.fromProject.adviser;
+      const sanitizedAdviser = adviser
+        ? (() => {
+            const { user, ...adviserData } = adviser as any;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { id, password, ...userData } = (user as any) || {};
+            return { ...adviserData, ...userData };
+          })()
+        : null;
+
       return {
         relationId: relation.id,
         fromProject: {
           ...relation.fromProject,
-          adviser: relation.fromProject.adviser
-            ? {
-                ...relation.fromProject.adviser,
-                ...relation.fromProject.adviser.user,
-              }
-            : null,
+          adviser: sanitizedAdviser,
           students: flattenedStudents,
         },
         toProject: flattenProjectUsers(relation.toProject),
@@ -683,9 +693,14 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
           toProjectId: project.id,
         },
       });
+
+      const adviserUser: any = adviser.user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _password, ...sanitizedUser } = adviserUser || {};
+
       return {
         relationId: `A-${project.id}`,
-        fromUser: adviser.user,
+        fromUser: sanitizedUser,
         toProject: flattenProjectUsers(project),
         submission: submission || undefined,
       };

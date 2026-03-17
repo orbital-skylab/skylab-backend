@@ -26,11 +26,16 @@ export async function getManyDeadlinesWithFilter(
 ) {
   const { cohortYear, name } = query;
 
+  const where: Prisma.DeadlineWhereInput = {};
+  if (cohortYear !== undefined && cohortYear !== null) {
+    where.cohortYear = cohortYear;
+  }
+  if (name !== undefined && name !== null) {
+    where.name = { contains: name, mode: "insensitive" };
+  }
+
   const deadlinesQuery: Prisma.DeadlineFindManyArgs = {
-    where: {
-      cohortYear: cohortYear ?? undefined,
-      name: { contains: name, mode: "insensitive" },
-    },
+    where,
     orderBy: {
       id: "asc",
     },
