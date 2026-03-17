@@ -22,8 +22,12 @@ export function inferNamespacesFromQuery(query: string): string[] {
     namespaces.push("assessment");
   }
 
-  if (/can i|allowed|faq|how do i|is it allowed/.test(q)) {
-    namespaces.push("faq");
+  if (
+    /can i|allowed|faq|how do i|is it allowed|what needs to be submitted for each milestone/.test(
+      q
+    )
+  ) {
+    namespaces.push("frequentlyAskedQuestions");
   }
 
   if (/programme|structure|track|orbital|level|programme structure/.test(q)) {
