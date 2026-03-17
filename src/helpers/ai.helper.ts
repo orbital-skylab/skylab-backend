@@ -11,25 +11,26 @@ import {
 } from "../models/ai.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOpenAIClient } from "../utils/openai";
-import { SYSTEM_PROMPT } from "./ai.faq.helper";
+import { inferNamespacesFromQuery, SYSTEM_PROMPT } from "./ai.faq.helper";
+import { getPineconeClient } from "../utils/pinecone";
 
 export async function getManyFaqConversationsWithFilter(query: {
   limit?: number;
   page?: number;
+  order?: "asc" | "desc";
 }) {
-  const { limit, page } = query;
+  const { limit, page, order } = query;
   /* Create Filter Object */
   const studentQuery: Prisma.FaqConversationFindManyArgs = {
     take: limit ?? undefined,
     skip: limit && page ? limit * page : undefined,
+    orderBy: order ? { createdAt: order } : undefined,
   };
 
   /* Fetch Students with Filter Object */
-  const conversations = await findManyFaqConversationsWithMessageData(
-    studentQuery
-  );
+  const result = await findManyFaqConversationsWithMessageData(studentQuery);
 
-  return conversations;
+  return result;
 }
 
 export async function getOneFaqConversationById(conversationId: number) {
@@ -40,9 +41,14 @@ export async function getOneFaqConversationById(conversationId: number) {
 }
 
 export async function createFaqConversation(
-  conversation: Prisma.FaqConversationCreateArgs
+  conversation: Prisma.FaqConversationCreateArgs,
+  content?: string
 ) {
   try {
+    if (content) {
+      const title = await getOpenAIClient().getTitle(content);
+      conversation.data.title = title;
+    }
     return await createOneFaqConversation(conversation);
   } catch (e) {
     if (!(e instanceof PrismaClientKnownRequestError)) {
@@ -90,6 +96,7 @@ export async function postFaqMessage(
   },
   onDelta: (chunk: string) => void
 ) {
+  const pineconeClient = getPineconeClient();
   const conversation = await findUniqueFaqConversationWithMessageData({
     where: { id: data.conversationId },
   });
@@ -136,11 +143,34 @@ export async function postFaqMessage(
     return { userMessage, assistantMessage };
   }
 
+  const inputEmbedding = await getOpenAIClient().getEmbedding(data.content);
+  const namespaces = inferNamespacesFromQuery(data.content);
+  const semanticSearchResults = await pineconeClient.query(
+    inputEmbedding,
+    namespaces,
+    10
+  );
+
+  const context = semanticSearchResults
+    .map((m, i) => {
+      const text = m.metadata?.text;
+      return `
+        CONTEXT ${i + 1}
+        FILE: ${m.metadata?.file ?? "Unknown"}
+        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}
+        URL: ${m.metadata?.url ?? "Unknown"}
+        CONTENT: ${text}
+      `;
+    })
+    .filter(Boolean)
+    .join("\n---------\n");
+
   const response = await getOpenAIClient().getResponse(
     data.content,
     SYSTEM_PROMPT,
     history,
-    onDelta
+    onDelta,
+    context
   );
 
   const assistantMessage = await createFaqMessage(conversation.id, {
