@@ -14,6 +14,12 @@ import {
 } from "../utils/ApiResponseWrapper";
 import { extractJwtData } from "../helpers/authentication.helper";
 import { findUniqueUserWithRoleData } from "../models/users.db";
+import {
+  UrlValidationRules,
+  verifyDriveFileAgainstRules,
+} from "../helpers/drive.helper";
+import { prisma } from "../client";
+import { QuestionType, UrlType } from "@prisma/client";
 
 const router = Router();
 
@@ -71,7 +77,7 @@ router
           Number(submissionId),
           userData
         );
-        return apiResponseWrapper(res, { submission: submission });
+        return apiResponseWrapper(res, { submission });
       } catch (e) {
         return routeErrorHandler(res, e);
       }
@@ -93,5 +99,71 @@ router
       }
     }
   );
+
+router.post(
+  "/verify-drive-file",
+  authorizeSignedIn,
+  async (req: Request, res: Response) => {
+    try {
+      const {
+        url,
+        questionId,
+        urlType,
+        urlValidationRules,
+      }: {
+        url?: string;
+        questionId?: number | string;
+        urlType?: UrlType;
+        urlValidationRules?: UrlValidationRules;
+      } = req.body;
+
+      if (!url) {
+        throw new Error("url is required");
+      }
+
+      let resolvedUrlType: UrlType | null | undefined = urlType;
+      let resolvedRules: UrlValidationRules | null | undefined =
+        urlValidationRules;
+
+      if (questionId != null) {
+        const numericQuestionId =
+          typeof questionId === "string" ? Number(questionId) : questionId;
+
+        const question = await prisma.question.findUnique({
+          where: { id: numericQuestionId },
+          select: {
+            id: true,
+            type: true,
+            urlType: true,
+            urlValidationRules: true,
+          },
+        });
+
+        if (!question) {
+          throw new Error("Question not found");
+        }
+
+        if (question.type !== QuestionType.Url) {
+          throw new Error("This question is not a URL question");
+        }
+
+        resolvedUrlType =
+          (question.urlType as UrlType | null) ?? UrlType.Generic;
+        resolvedRules =
+          (question.urlValidationRules as UrlValidationRules | null) ?? null;
+      }
+
+      const result = await verifyDriveFileAgainstRules({
+        url,
+        urlType: resolvedUrlType ?? UrlType.Generic,
+        urlValidationRules: resolvedRules ?? null,
+      });
+
+      return apiResponseWrapper(res, result);
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 export default router;
