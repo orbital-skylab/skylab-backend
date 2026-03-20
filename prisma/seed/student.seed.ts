@@ -21,28 +21,54 @@ export const seedStudents = async (prisma: PrismaClient) => {
     const userFirstName = faker.name.firstName();
     const userLastName = faker.name.lastName();
 
-    await prisma.student.create({
-      data: {
+    const name = i === 0 ? "Student" : `${userFirstName} ${userLastName}`;
+    const email = `student${i}@skylab.com`;
+
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {
+        name,
+        password,
+        profilePicUrl: faker.image.imageUrl(),
+        githubUrl: faker.internet.url(),
+        linkedinUrl: faker.internet.url(),
+        personalSiteUrl: faker.internet.url(),
+        selfIntro: faker.lorem.sentence(),
+      },
+      create: {
+        name,
+        password,
+        email,
+        profilePicUrl: faker.image.imageUrl(),
+        githubUrl: faker.internet.url(),
+        linkedinUrl: faker.internet.url(),
+        personalSiteUrl: faker.internet.url(),
+        selfIntro: faker.lorem.sentence(),
+      },
+    });
+
+    await prisma.student.upsert({
+      where: {
+        userId_cohortYear: {
+          userId: user.id,
+          cohortYear: academicYear,
+        },
+      },
+      update: {
+        matricNo: userMatricNos[i],
+        nusnetId: userNusnetIds[i],
+      },
+      create: {
         matricNo: userMatricNos[i],
         nusnetId: userNusnetIds[i],
         cohort: {
           connect: {
-            academicYear: academicYear,
+            academicYear,
           },
         },
         user: {
-          create: {
-            name: i === 0 ? "Student" : `${userFirstName} ${userLastName}`,
-            password,
-            email:
-              i === 0
-                ? "student@skylab.com"
-                : faker.internet.email(userFirstName, userLastName + `${i}`),
-            profilePicUrl: faker.image.imageUrl(),
-            githubUrl: faker.internet.url(),
-            linkedinUrl: faker.internet.url(),
-            personalSiteUrl: faker.internet.url(),
-            selfIntro: faker.lorem.sentence(),
+          connect: {
+            id: user.id,
           },
         },
       },
@@ -54,7 +80,6 @@ export const seedStudents = async (prisma: PrismaClient) => {
     () => `Team ${faker.word.adjective()} ${faker.word.noun()}`
   );
 
-  // there will be 2 teamless students
   for (let i = 1; i <= NUM_TEAMS; i++) {
     await prisma.project.create({
       data: {
@@ -67,16 +92,11 @@ export const seedStudents = async (prisma: PrismaClient) => {
         proposalPdf: faker.internet.url(),
         cohort: {
           connect: {
-            academicYear: academicYear,
+            academicYear,
           },
         },
         students: {
-          connect: [
-            {
-              id: i,
-            },
-            { id: 401 - i },
-          ],
+          connect: [{ id: i }, { id: 401 - i }],
         },
       },
     });
