@@ -22,7 +22,7 @@ export const seedStudents = async (prisma: PrismaClient) => {
     const userLastName = faker.name.lastName();
 
     const name = i === 0 ? "Student" : `${userFirstName} ${userLastName}`;
-    const email = `student${i}@skylab.com`;
+    const email = i === 0 ? "student@skylab.com" : `student${i}@skylab.com`;
 
     const user = await prisma.user.upsert({
       where: { email },
