@@ -17,6 +17,9 @@ Dr. Zhao Jin
 Advisers (one per team) are senior students with
 software development experience
 - Serve 3 roles:
+    - Evaluator
+    - Project Manager
+    - Cheerleader
 
 ### Mentors
 Mentors (Artemis teams only) are senior students,
@@ -132,7 +135,7 @@ commit / push / pull)
 pull request)
 - Artemis
 - 2-week sprint with objectives / allocation / tracking.
-- Github Projects + Code Review + CI/CD 19
+- Github Projects + Code Review + CI/CD
 
 ### Design
 - Vostok / Gemini

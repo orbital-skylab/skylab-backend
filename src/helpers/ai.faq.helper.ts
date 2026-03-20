@@ -23,14 +23,18 @@ export function inferNamespacesFromQuery(query: string): string[] {
   }
 
   if (
-    /can i|allowed|faq|how do i|is it allowed|what needs to be submitted for each milestone/.test(
+    /milestone|AI tool|individually|participate|prequisite|credits|soc|accepted/.test(
       q
     )
   ) {
     namespaces.push("frequentlyAskedQuestions");
   }
 
-  if (/programme|structure|track|orbital|level|programme structure/.test(q)) {
+  if (
+    /programme|structure|track|orbital|level|programme structure|mentor|adviser/.test(
+      q
+    )
+  ) {
     namespaces.push("core");
   }
 
@@ -105,6 +109,7 @@ Accuracy & uncertainty:
   - "In most past Orbital runs…"
   - "You may want to confirm this with your adviser or the Orbital coordinators"
 - Do NOT invent rules, deadlines, or assessment criteria
+- Prioritise the most recent Orbital cycle's information
 `;
 
 const PROMPT_CLARIFICATION = `

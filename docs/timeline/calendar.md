@@ -1,3 +1,74 @@
+## Orbital 26 Events:
+Event: Orbital 26 Final Submission due
+Start: 13 Aug 2026, 12:00 pm
+End: 14 Aug 2026, 12:00 pm
+
+Event: Orbital 26 Liftoff
+Start: 11 May 2026, 12:00 pm
+End: 19 May 2026, 12:00 pm
+
+Event: Orbital 26 Mission Control #4
+Start: 6 Jun 2026, 12:00 pm
+End: 7 Jun 2026, 12:00 pm
+
+Event: Orbital 26 Briefing
+Start: 11 Mar 2026, 4:00 pm
+End: 11 Mar 2026, 5:00 pm
+
+Event: Orbital 26 Application Period
+Start: 11 Mar 2026, 12:00 pm
+End: 19 Mar 2026, 12:00 pm
+
+Event: Orbital 26 Mission Control #1
+Start: 16 May 2026, 12:00 pm
+End: 17 May 2026, 12:00 pm
+
+Event: Orbital 26 Liftoff Submission due
+Start: 18 May 2026, 12:00 pm
+End: 19 May 2026, 12:00 pm
+
+Event: Orbital 26 Milestone 1 due
+Start: 1 Jun 2026, 12:00 pm
+End: 2 Jun 2026, 12:00 pm
+
+Event: Orbital 26 Milestone 1 Peer Evaluation due
+Start: 8 Jun 2026, 12:00 pm
+End: 9 Jun 2026, 12:00 pm
+
+Event: Orbital 26 Milestone 2 Peer Evaluation due
+Start: 6 Jul 2026, 12:00 pm
+End: 7 Jul 2026, 12:00 pm
+
+Event: Orbital 26 Splashdown
+Start: 26 Aug 2026, 12:00 pm
+End: 27 Aug 2026, 12:00 pm
+
+Event: Orbital 26 Mission Control #3
+Start: 30 May 2026, 12:00 pm
+End: 31 May 2026, 12:00 pm
+
+Event: Orbital 26 Mission Control #2
+Start: 23 May 2026, 12:00 pm
+End: 24 May 2026, 12:00 pm
+
+Event: Orbital 26 Milestone 3 Peer Evaluation due
+Start: 3 Aug 2026, 12:00 pm
+End: 4 Aug 2026, 12:00 pm
+
+Event:  Orbital 26 Feedback on Peer Evaluation due
+Start: 10 Aug 2026, 12:00 pm
+End: 11 Aug 2026, 12:00 pm
+
+Event: Orbital 26 Milestone 3 due
+Start: 27 Jul 2026, 12:00 pm
+End: 28 Jul 2026, 12:00 pm
+
+Event: Orbital 26 Milestone 2 due
+Start: 29 Jun 2026, 12:00 pm
+End: 30 Jun 2026, 12:00 pm
+
+
+## Past Orbital Events:
 Event: Milestone 3 peer evaluation due
 Start: 1 Aug 2022, 12:00 pm
 End: 2 Aug 2022, 12:00 pm
@@ -139,10 +210,6 @@ Event: Milestone 2 Peer Evaluation due
 Start: 3 Jul 2023, 12:00 pm
 End: 4 Jul 2023, 12:00 pm
 
-Event: Orbital 26 Final Submission due
-Start: 13 Aug 2026, 12:00 pm
-End: 14 Aug 2026, 12:00 pm
-
 Event: Mission Control Workshop #4
 Start: 9 Jun 2018, 12:00 pm
 End: 10 Jun 2018, 12:00 pm
@@ -240,9 +307,6 @@ Event: Mission Control #2
 Start: 25 May 2024, 12:00 pm
 End: 26 May 2024, 12:00 pm
 
-Event: Orbital 26 Liftoff
-Start: 11 May 2026, 12:00 pm
-End: 19 May 2026, 12:00 pm
 
 Event: Git Basics by Advay (I3 Auditorium)
 Start: 10 May 2016, 3:30 pm
@@ -309,10 +373,6 @@ Event: Google App Engine by Wee Sun (The Hangar)
 Start: 10 May 2016, 11:30 am
 End: 10 May 2016, 1:00 pm
 
-Event: Orbital 25 Mission Control #4
-Start: 6 Jun 2026, 12:00 pm
-End: 7 Jun 2026, 12:00 pm
-
 Event: Mission Control 1 (Twitter Bootstrap / jQuery @ The Hangar, I3 Building by Min)
 Start: 17 May 2016, 2:00 pm
 End: 17 May 2016, 8:00 pm
@@ -328,10 +388,6 @@ End: 14 May 2018, 3:00 pm
 Event: Mission Control #4
 Start: 4 Jun 2022, 12:00 pm
 End: 5 Jun 2022, 12:00 pm
-
-Event: Orbital 26 Briefing
-Start: 11 Mar 2026, 4:00 pm
-End: 11 Mar 2026, 5:00 pm
 
 Event: Mission Control 2 (Game Development by NUS Games Development Group @ Plug-In at Blk 71)
 Start: 24 May 2016, 2:00 pm
@@ -352,10 +408,6 @@ End: 7 Aug 2022, 12:00 pm
 Event: Milestone 1 due
 Start: 4 Jun 2018, 12:00 pm
 End: 5 Jun 2018, 12:00 pm
-
-Event: Orbital 26 Application Period
-Start: 11 Mar 2026, 12:00 pm
-End: 19 Mar 2026, 12:00 pm
 
 Event: Introduction (i3-Aud / Hangar)
 Start: 14 May 2018, 9:00 am
@@ -524,10 +576,6 @@ Event: HTML/CSS (Hangar)
 Start: 14 May 2018, 4:00 pm
 End: 14 May 2018, 6:00 pm
 
-Event: Orbital 26 Mission Control #1
-Start: 16 May 2026, 12:00 pm
-End: 17 May 2026, 12:00 pm
-
 Event: Mission Control #3
 Start: 1 Jun 2024, 12:00 pm
 End: 2 Jun 2024, 12:00 pm
@@ -580,10 +628,6 @@ Event: Python / Google App Engine
 Start: 9 May 2017, 10:00 am
 End: 9 May 2017, 1:00 pm
 Location: STMI Executive Training Room (ICube-03-44)
-
-Event: Orbital 26 Liftoff Submission due
-Start: 18 May 2026, 12:00 pm
-End: 19 May 2026, 12:00 pm
 
 Event: Mission Control Workshop #3
 Start: 2 Jun 2018, 12:00 pm
@@ -649,10 +693,6 @@ End: 15 Aug 2025, 12:00 pm
 Event: Lunch Break
 Start: 8 May 2017, 12:00 pm
 End: 8 May 2017, 1:00 pm
-
-Event: Orbital 25 Milestone 1 due
-Start: 1 Jun 2026, 12:00 pm
-End: 2 Jun 2026, 12:00 pm
 
 Event: Milestone 3 due
 Start: 27 Jul 2020, 12:00 pm
@@ -724,14 +764,6 @@ Event: Milestone 1 due
 Start: 3 Jun 2024, 12:00 pm
 End: 4 Jun 2024, 12:00 pm
 
-Event: Orbital 26 Milestone 1 Peer Evaluation due
-Start: 8 Jun 2026, 12:00 pm
-End: 9 Jun 2026, 12:00 pm
-
-Event: Orbital 26 Milestone 2 Peer Evaluation due
-Start: 6 Jul 2026, 12:00 pm
-End: 7 Jul 2026, 12:00 pm
-
 Event: Orbital Workshop for 2016 staff only (COM1 #B1-03 ALL)
 Start: 19 Jan 2016, 6:00 pm
 End: 19 Jan 2016, 9:00 pm
@@ -769,10 +801,6 @@ Location: The Hangar
 Event: Re-evaluation
 Start: 23 Aug 2019, 2:00 pm
 End: 23 Aug 2019, 7:00 pm
-
-Event: Orbital 26 Splashdown
-Start: 26 Aug 2026, 12:00 pm
-End: 27 Aug 2026, 12:00 pm
 
 Event: Milestone 2 due
 Start: 1 Jul 2024, 12:00 pm
@@ -827,10 +855,6 @@ Event: Mission Control #5
 Start: 12 Jun 2021, 12:00 pm
 End: 13 Jun 2021, 12:00 pm
 
-Event: Orbital 25 Mission Control #3
-Start: 30 May 2026, 12:00 pm
-End: 31 May 2026, 12:00 pm
-
 Event: Lunch Break / Meet-Your-Adviser / Presentation Preparation
 Start: 14 May 2019, 12:30 pm
 End: 14 May 2019, 2:30 pm
@@ -872,10 +896,6 @@ Event: Mission Control #2
 Start: 21 May 2022, 12:00 pm
 End: 22 May 2022, 12:00 pm
 
-Event: Orbital 25 Mission Control #2
-Start: 23 May 2026, 12:00 pm
-End: 24 May 2026, 12:00 pm
-
 Event: Mission Control Workshop #3
 Start: 27 May 2017, 12:00 pm
 End: 28 May 2017, 12:00 pm
@@ -899,10 +919,6 @@ End: 10 Mar 2021, 5:00 pm
 Event: Mission Control #1
 Start: 18 May 2024, 12:00 pm
 End: 19 May 2024, 12:00 pm
-
-Event: Orbital 26 Milestone 3 Peer Evaluation due
-Start: 3 Aug 2026, 12:00 pm
-End: 4 Aug 2026, 12:00 pm
 
 Event: Introduction by Various (I3 Auditorium)
 Start: 9 May 2016, 9:00 am
@@ -931,10 +947,6 @@ End: 20 Mar 2025, 12:00 pm
 Event: Skylab Prep
 Start: 10 May 2018, 6:00 pm
 End: 10 May 2018, 8:00 pm
-
-Event:  Orbital 26 Feedback on Peer Evaluation due
-Start: 10 Aug 2026, 12:00 pm
-End: 11 Aug 2026, 12:00 pm
 
 Event: Mission Control Workshop #1
 Start: 19 May 2018, 12:00 pm
@@ -1065,10 +1077,6 @@ Event: Milestone 1 due
 Start: 30 May 2022, 12:00 pm
 End: 31 May 2022, 12:00 pm
 
-Event: Orbital 26 Milestone 3 due
-Start: 27 Jul 2026, 12:00 pm
-End: 28 Jul 2026, 12:00 pm
-
 Event: Re-evaluation
 Start: 22 Aug 2019, 2:00 pm
 End: 22 Aug 2019, 7:00 pm
@@ -1133,10 +1141,6 @@ End: 12 May 2020, 12:00 pm
 Event: Splashdown
 Start: 26 Aug 2020, 12:00 pm
 End: 27 Aug 2020, 12:00 pm
-
-Event: Orbital 26 Milestone 2 due
-Start: 29 Jun 2026, 12:00 pm
-End: 30 Jun 2026, 12:00 pm
 
 Event: Mission Control #2
 Start: 22 May 2021, 12:00 pm
