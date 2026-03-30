@@ -128,12 +128,21 @@ export async function findManyFaqConversationsWithMessageData({
         take: 2,
         orderBy: { createdAt: "desc" },
       },
+      _count: {
+        select: {
+          messages: true,
+        },
+      },
     },
     ...query,
   });
 
   const hasMore = results.length > pageSize;
-  const faqConversations = hasMore ? results.slice(0, pageSize) : results;
+  const paginatedResults = hasMore ? results.slice(0, pageSize) : results;
+  const faqConversations = paginatedResults.map(({ _count, ...rest }) => ({
+    ...rest,
+    messageCount: _count.messages,
+  }));
 
   return {
     faqConversations,
@@ -246,4 +255,11 @@ export async function deleteUniqueFaqConversation(
       throw new SkylabError(e.message, HttpStatusCode.BAD_REQUEST);
     }
   }
+}
+
+export async function deleteManyFaqConversations(
+  query: Prisma.FaqConversationDeleteManyArgs
+) {
+  const deleteFaqConversations = await prisma.faqConversation.deleteMany(query);
+  return deleteFaqConversations;
 }

@@ -49,7 +49,9 @@ async function parsePdfs(dir: string): Promise<void> {
       console.log(`Converting ${entry.name} → ${baseName}.txt`);
 
       const buffer = fs.readFileSync(fullPath);
-      const parser = new PDFParse(buffer);
+      const uint8Array = new Uint8Array(buffer);
+      const parser = new PDFParse(uint8Array);
+
       const result = await parser.getText();
 
       fs.writeFileSync(txtPath, result.text.trim(), "utf-8");

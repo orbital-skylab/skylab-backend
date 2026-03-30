@@ -4,6 +4,8 @@ import metadata from "../docs/metadata";
 import chunkDocuments from "./chunkDocuments";
 import embedDocuments from "./embedDocuments";
 import upsertDocuments from "./upsertDocuments";
+import dotenv from "dotenv";
+dotenv.config();
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
 

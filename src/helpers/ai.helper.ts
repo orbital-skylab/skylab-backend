@@ -4,6 +4,8 @@ import { SkylabError } from "../errors/SkylabError";
 import {
   createFaqMessage,
   createOneFaqConversation,
+  deleteManyFaqConversations,
+  deleteUniqueFaqConversation,
   findManyFaqConversationsWithMessageData,
   findUniqueFaqConversation,
   findUniqueFaqConversationWithMessageData,
@@ -148,22 +150,22 @@ export async function postFaqMessage(
   const semanticSearchResults = await pineconeClient.query(
     inputEmbedding,
     namespaces,
-    10
+    5
   );
 
   const context = semanticSearchResults
     .map((m, i) => {
-      const text = m.metadata?.text;
+      const text = m.metadata?.text?.toString();
       return `
-        CONTEXT ${i + 1}
-        FILE: ${m.metadata?.file ?? "Unknown"}
-        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}
-        URL: ${m.metadata?.url ?? "Unknown"}
+        Context ${i + 1}\n
+        FILE: ${m.metadata?.file ?? "Unknown"}\n
+        NAMESPACE: ${m.metadata?.namespace ?? "Unknown"}\n
+        URL: ${m.metadata?.url ?? "Unknown"}\n
         CONTENT: ${text}
       `;
     })
     .filter(Boolean)
-    .join("\n---------\n");
+    .join("\n---------------------------------------------\n");
 
   const response = await getOpenAIClient().getResponse(
     data.content,
@@ -182,6 +184,7 @@ export async function postFaqMessage(
 }
 
 export function isInputInvalid(content: string): boolean {
+  // remove whitespace
   const trimmed = content.trim();
   if (trimmed.length === 0) {
     return true;
@@ -190,8 +193,39 @@ export function isInputInvalid(content: string): boolean {
   const alphaCount = trimmed.replace(/[^\p{L}]/gu, "").length;
   const alphaRatio = alphaCount / trimmed.length;
 
+  // repeated characters (at least 5 times)
   const hasRepeatedChars = /(.)\1{4,}/.test(trimmed);
 
-  const isInvalid = trimmed.length < 3 || alphaRatio < 0.3 || hasRepeatedChars;
+  // too short
+  const isTooShort = trimmed.length < 3;
+
+  const isInvalid = isTooShort || alphaRatio < 0.3 || hasRepeatedChars;
   return isInvalid;
+}
+
+export async function deleteOneConversationByConversationId(
+  conversationId: number
+) {
+  const deletedConversation = await deleteUniqueFaqConversation({
+    where: { id: conversationId },
+  });
+  return deletedConversation;
+}
+
+export async function deleteManyConversationsByConversationIds(
+  conversationIds: number[]
+) {
+  if (conversationIds.length === 0) {
+    return { count: 0 };
+  }
+
+  const result = await deleteManyFaqConversations({
+    where: {
+      id: {
+        in: conversationIds,
+      },
+    },
+  });
+
+  return result;
 }
