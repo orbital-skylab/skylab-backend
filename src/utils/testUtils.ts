@@ -214,4 +214,8 @@ export const voteEventTestTearDown = async () => {
       },
     });
   }
+
+  await prisma.cohort.deleteMany({
+    where: { academicYear: MOCK_PROJECT_1.cohortYear },
+  });
 };
