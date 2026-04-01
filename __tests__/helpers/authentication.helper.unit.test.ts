@@ -1,4 +1,11 @@
-import { afterEach, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import jwt from "jsonwebtoken";
 import { externalVoterLogin } from "../../src/helpers/authentication.helper";
 import * as voteEventModel from "../../src/models/voteEvent.db";

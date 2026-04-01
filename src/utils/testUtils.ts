@@ -73,13 +73,15 @@ export async function voteEventTestSetUp() {
   const userIds = await Promise.all(userPromises);
 
   await prisma.cohort.upsert({
-    where: { academicYear: MOCK_PROJECT_1.cohortYear },
+    where: {
+      academicYear: MOCK_PROJECT_1.cohortYear,
+    },
+    update: {},
     create: {
       academicYear: MOCK_PROJECT_1.cohortYear,
       startDate: new Date(`${MOCK_PROJECT_1.cohortYear}-01-01`),
       endDate: new Date(`${MOCK_PROJECT_1.cohortYear}-12-31`),
     },
-    update: {},
   });
 
   const project1 = await prisma.project.create({
