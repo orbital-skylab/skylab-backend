@@ -72,6 +72,18 @@ export async function voteEventTestSetUp() {
 
   const userIds = await Promise.all(userPromises);
 
+  await prisma.cohort.upsert({
+    where: {
+      academicYear: MOCK_PROJECT_1.cohortYear,
+    },
+    update: {},
+    create: {
+      academicYear: MOCK_PROJECT_1.cohortYear,
+      startDate: new Date(`${MOCK_PROJECT_1.cohortYear}-01-01`),
+      endDate: new Date(`${MOCK_PROJECT_1.cohortYear}-12-31`),
+    },
+  });
+
   const project1 = await prisma.project.create({
     data: {
       ...MOCK_PROJECT_1,
@@ -202,4 +214,8 @@ export const voteEventTestTearDown = async () => {
       },
     });
   }
+
+  await prisma.cohort.deleteMany({
+    where: { academicYear: MOCK_PROJECT_1.cohortYear },
+  });
 };

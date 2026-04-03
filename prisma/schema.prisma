@@ -7,6 +7,11 @@ generator dbml {
   provider = "prisma-dbml-generator"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./erd.svg"
+}
+
 datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
@@ -395,4 +400,33 @@ enum ApplicationStatus {
   Unprocessed
   Approved
   Rejected
+}
+
+model FaqConversation {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  title       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  messages    Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id              Int              @id @default(autoincrement())
+  conversationId  Int
+  role            MessageRole
+  content         String
+  createdAt       DateTime  @default(now())
+
+  conversation    FaqConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }

@@ -16,6 +16,7 @@ import submissionRouter from "./submissions";
 import announcementsRouter from "./announcements";
 import applicationRouter from "./application";
 import voteEventRouter from "./voteEvent";
+import aiRouter from "./ai";
 
 // Export the base-router
 const baseRouter = Router();
@@ -37,6 +38,7 @@ baseRouter.use("/submissions", submissionRouter);
 baseRouter.use("/announcements", announcementsRouter);
 baseRouter.use("/application", applicationRouter);
 baseRouter.use("/vote-events", voteEventRouter);
+baseRouter.use("/ai", aiRouter);
 
 // Export default.
 export default baseRouter;

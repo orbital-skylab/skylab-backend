@@ -51,6 +51,10 @@ jest.mock("../../src/middleware/authorizeAdmin", () => ({
   }),
 }));
 
+jest.mock("../../src/validators/helper/cohort.validator.helper", () => ({
+  checkCohortExists: jest.fn(() => Promise.resolve(true)),
+}));
+
 beforeAll(() => {
   apiResponseWrapperSpy = jest.spyOn(utils, "apiResponseWrapper");
   routeErrorHandlerSpy = jest.spyOn(utils, "routeErrorHandler");
