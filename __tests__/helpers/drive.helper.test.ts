@@ -144,11 +144,9 @@ describe("verifyDriveFileAgainstRules", () => {
     });
 
     expect(result.verified).toBe(false);
-    expect(result.message).toBe(
-      "File cannot be downloaded for validation. Check sharing permissions."
-    );
+    expect(result.message).toBe("Unable to download file for validation");
     expect(result.validation.errors).toContain(
-      "File cannot be downloaded for validation. Check sharing permissions."
+      "Unable to download file for validation"
     );
   });
 
