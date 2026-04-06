@@ -1,15 +1,12 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
-import { UrlType } from "@prisma/client";
 const GOOGLE_DRIVE_API_KEY = process.env.GOOGLE_DRIVE_API_KEY;
+
+export type UrlTypeValue = "Image" | "Video" | "Generic";
 
 export type UrlValidationRules = {
   maxFileSizeBytes?: number;
-  minWidth?: number;
-  maxWidth?: number;
-  minHeight?: number;
-  maxHeight?: number;
-  allowedAspectRatios?: string[];
+  allowedPaperFormats?: Array<"A1" | "A4">;
   minDurationSeconds?: number;
   maxDurationSeconds?: number;
 };
@@ -37,7 +34,7 @@ export type ValidationResult = {
 
 export type VerifyDriveFileAgainstRulesArgs = {
   url: string;
-  urlType?: UrlType | null;
+  urlType?: UrlTypeValue | null;
   urlValidationRules?: UrlValidationRules | null;
 };
 
@@ -79,19 +76,51 @@ function formatBytes(bytes?: number | null): string {
   }`;
 }
 
-function gcd(a: number, b: number): number {
-  return b === 0 ? a : gcd(b, a % b);
+const ISO_A_SERIES_RATIO = Math.sqrt(2);
+const ISO_A_SERIES_TOLERANCE = 0.03;
+const PAPER_FORMAT_MIN_PIXELS = {
+  A4: {
+    shortEdge: 1240,
+    longEdge: 1754,
+  },
+  A1: {
+    shortEdge: 3508,
+    longEdge: 4967,
+  },
+} as const;
+
+function isWithinIsoASeriesRatio(width?: number, height?: number): boolean {
+  if (!width || !height) return false;
+
+  const longerEdge = Math.max(width, height);
+  const shorterEdge = Math.min(width, height);
+  const ratio = longerEdge / shorterEdge;
+
+  return Math.abs(ratio - ISO_A_SERIES_RATIO) <= ISO_A_SERIES_TOLERANCE;
 }
 
-function getAspectRatio(width?: number, height?: number): string | null {
-  if (!width || !height) return null;
-  const divisor = gcd(width, height);
-  return `${width / divisor}:${height / divisor}`;
+function meetsPaperFormatMinimumPixels(
+  width: number,
+  height: number,
+  paperFormat: keyof typeof PAPER_FORMAT_MIN_PIXELS
+): boolean {
+  const longerEdge = Math.max(width, height);
+  const shorterEdge = Math.min(width, height);
+  const minimum = PAPER_FORMAT_MIN_PIXELS[paperFormat];
+
+  return shorterEdge >= minimum.shortEdge && longerEdge >= minimum.longEdge;
 }
 
-function validateFileAgainstRules(
+function formatPaperThreshold(
+  paperFormat: keyof typeof PAPER_FORMAT_MIN_PIXELS
+): string {
+  const minimum = PAPER_FORMAT_MIN_PIXELS[paperFormat];
+  return `${paperFormat}: at least ${minimum.shortEdge} x ${minimum.longEdge}px`;
+}
+
+export function validateFileAgainstRules(
   file: VerifiedFile,
-  urlType: UrlType,
+  urlType: UrlTypeValue,
   rules?: UrlValidationRules | null
 ): ValidationResult {
   const errors: string[] = [];
@@ -107,64 +136,54 @@ function validateFileAgainstRules(
     );
   }
 
-  if (urlType === UrlType.Image) {
-    if (!file.mimeType.startsWith("image/")) {
-      errors.push("This file is not an image");
+  if (urlType === "Image") {
+    const isImageFile = file.mimeType.startsWith("image/");
+
+    if (!isImageFile) {
+      return {
+        isValid: false,
+        errors: [
+          safeRules.allowedPaperFormats?.length
+            ? "This file must be an image. PDFs are not allowed for A1/A4 poster submissions."
+            : "This file must be an image",
+        ],
+      };
     }
 
     const width = file.imageMetadata?.width;
     const height = file.imageMetadata?.height;
 
-    if (
-      safeRules.minWidth != null &&
-      width != null &&
-      width < safeRules.minWidth
-    ) {
-      errors.push(`Image width must be at least ${safeRules.minWidth}px`);
-    }
+    if (safeRules.allowedPaperFormats?.length) {
+      if (width != null && height != null) {
+        if (!isWithinIsoASeriesRatio(width, height)) {
+          errors.push(
+            `File must use ISO A-series proportions for ${safeRules.allowedPaperFormats.join(
+              "/"
+            )} submissions`
+          );
+        } else {
+          const satisfiesAtLeastOneSelectedFormat =
+            safeRules.allowedPaperFormats.some((paperFormat) =>
+              meetsPaperFormatMinimumPixels(width, height, paperFormat)
+            );
 
-    if (
-      safeRules.maxWidth != null &&
-      width != null &&
-      width > safeRules.maxWidth
-    ) {
-      errors.push(`Image width must not exceed ${safeRules.maxWidth}px`);
-    }
-
-    if (
-      safeRules.minHeight != null &&
-      height != null &&
-      height < safeRules.minHeight
-    ) {
-      errors.push(`Image height must be at least ${safeRules.minHeight}px`);
-    }
-
-    if (
-      safeRules.maxHeight != null &&
-      height != null &&
-      height > safeRules.maxHeight
-    ) {
-      errors.push(`Image height must not exceed ${safeRules.maxHeight}px`);
-    }
-
-    if (
-      safeRules.allowedAspectRatios?.length &&
-      width != null &&
-      height != null
-    ) {
-      const ratio = getAspectRatio(width, height);
-
-      if (ratio && !safeRules.allowedAspectRatios.includes(ratio)) {
+          if (!satisfiesAtLeastOneSelectedFormat) {
+            errors.push(
+              `Image resolution is too low. Accepted minimum sizes: ${safeRules.allowedPaperFormats
+                .map(formatPaperThreshold)
+                .join(" or ")}`
+            );
+          }
+        }
+      } else {
         errors.push(
-          `Image aspect ratio must be one of: ${safeRules.allowedAspectRatios.join(
-            ", "
-          )}`
+          "File dimensions could not be read, so A1/A4 layout could not be validated"
         );
       }
     }
   }
 
-  if (urlType === UrlType.Video) {
+  if (urlType === "Video") {
     if (!file.mimeType.startsWith("video/")) {
       errors.push("This file is not a video");
     }
@@ -267,8 +286,10 @@ async function getDriveFileMetadata(url: string): Promise<{
           : null,
       },
     };
-  } catch (error: any) {
-    const status = error?.response?.status;
+  } catch (error: unknown) {
+    const status = axios.isAxiosError(error)
+      ? (error as AxiosError).response?.status
+      : undefined;
 
     if (status === 403) {
       return {
@@ -290,14 +311,61 @@ async function getDriveFileMetadata(url: string): Promise<{
   }
 }
 
+async function checkDriveFileDownloadAccess(fileId: string): Promise<{
+  verified: boolean;
+  message?: string;
+}> {
+  try {
+    await axios.get(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+      params: {
+        key: GOOGLE_DRIVE_API_KEY,
+        alt: "media",
+        supportsAllDrives: true,
+      },
+      headers: {
+        Range: "bytes=0-0",
+      },
+      responseType: "arraybuffer",
+    });
+
+    return {
+      verified: true,
+    };
+  } catch (error: unknown) {
+    const status = axios.isAxiosError(error)
+      ? (error as AxiosError).response?.status
+      : undefined;
+
+    if (status === 403) {
+      return {
+        verified: false,
+        message:
+          "File cannot be downloaded for validation. Check sharing permissions.",
+      };
+    }
+
+    if (status === 404) {
+      return {
+        verified: false,
+        message: "File not found",
+      };
+    }
+
+    return {
+      verified: false,
+      message: "Unable to download file for validation",
+    };
+  }
+}
+
 export async function verifyDriveFileAgainstRules({
   url,
   urlType,
   urlValidationRules,
 }: VerifyDriveFileAgainstRulesArgs) {
-  const effectiveUrlType = urlType ?? "GENERIC";
+  const effectiveUrlType = urlType ?? "Generic";
 
-  if (effectiveUrlType === "GENERIC") {
+  if (effectiveUrlType === "Generic") {
     return {
       verified: true,
       message: "Generic URL does not require file verification",
@@ -321,6 +389,29 @@ export async function verifyDriveFileAgainstRules({
         errors: metadataResult.message ? [metadataResult.message] : [],
       },
     };
+  }
+
+  if (metadataResult.fileId) {
+    const downloadAccessResult = await checkDriveFileDownloadAccess(
+      metadataResult.fileId
+    );
+
+    if (!downloadAccessResult.verified) {
+      return {
+        verified: false,
+        message:
+          downloadAccessResult.message ||
+          "Unable to download file for validation",
+        file: metadataResult.file,
+        fileId: metadataResult.fileId,
+        validation: {
+          isValid: false,
+          errors: downloadAccessResult.message
+            ? [downloadAccessResult.message]
+            : [],
+        },
+      };
+    }
   }
 
   const validation = validateFileAgainstRules(
