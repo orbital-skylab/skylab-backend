@@ -450,6 +450,7 @@ export const getCollatedMilestoneSubmissions = async (
     ({ sections, ...deadline }) => {
       const responseRows: {
         responseId: string;
+        evaluateeProjectId: number;
         evaluatorType: "Team" | "Adviser";
         evaluatorName: string;
         evaluateeName: string;
@@ -469,6 +470,7 @@ export const getCollatedMilestoneSubmissions = async (
           );
           responseRows.push({
             responseId: `team-${relation.id}`,
+            evaluateeProjectId: relation.toProjectId,
             evaluatorType: "Team",
             evaluatorName:
               relation.fromProject.teamName || relation.fromProject.name,
@@ -492,6 +494,7 @@ export const getCollatedMilestoneSubmissions = async (
           );
           responseRows.push({
             responseId: `adviser-${project.id}`,
+            evaluateeProjectId: project.id,
             evaluatorType: "Adviser",
             evaluatorName: project.adviser.user.name,
             evaluateeName: project.teamName || project.name,
@@ -537,16 +540,7 @@ export const getCollatedMilestoneSubmissions = async (
             urlType: question.urlType,
             responses: filteredRows.map((response) => ({
               responseId: response.responseId,
-              evaluateeProjectId:
-                response.evaluatorType === "Team"
-                  ? teamRelations.find(
-                      (relation) =>
-                        `team-${relation.id}` === response.responseId
-                    )?.toProjectId ?? 0
-                  : adviserProjects.find(
-                      (project) =>
-                        `adviser-${project.id}` === response.responseId
-                    )?.id ?? 0,
+              evaluateeProjectId: response.evaluateeProjectId,
               evaluatorType: response.evaluatorType,
               evaluatorName: response.evaluatorName,
               evaluateeName: response.evaluateeName,
