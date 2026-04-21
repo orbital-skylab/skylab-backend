@@ -289,7 +289,7 @@ export async function editDeadlineByDeadlineId(
     where: { id: deadlineId },
     data: {
       ...deadline,
-      evaluatorType: isEvaluationDeadline ? deadline.evaluatorType : undefined,
+      evaluatorType: isEvaluationDeadline ? deadline.evaluatorType : null,
       evaluating: isEvaluationDeadline
         ? evaluatingMilestoneId
           ? { connect: { id: evaluatingMilestoneId } }
