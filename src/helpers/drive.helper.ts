@@ -1,6 +1,9 @@
 import axios, { AxiosError } from "axios";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const GOOGLE_DRIVE_API_KEY = process.env.GOOGLE_DRIVE_API_KEY;
+const GOOGLE_DRIVE_API_TIMEOUT_MS = 10000;
 
 export type UrlTypeValue = "Image" | "Video" | "Generic";
 
@@ -329,10 +332,18 @@ async function getDriveFileMetadata(url: string): Promise<{
     };
   }
 
+  if (!GOOGLE_DRIVE_API_KEY) {
+    throw new SkylabError(
+      "Google Drive API key is not configured",
+      HttpStatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+
   try {
     const response = await axios.get(
       `https://www.googleapis.com/drive/v3/files/${fileId}`,
       {
+        timeout: GOOGLE_DRIVE_API_TIMEOUT_MS,
         params: {
           key: GOOGLE_DRIVE_API_KEY,
           fields:
