@@ -116,24 +116,21 @@ describe("verifyDriveFileAgainstRules", () => {
     mockedAxios.get.mockReset();
   });
 
-  it("fails when the file metadata is readable but the media is not downloadable", async () => {
-    mockedAxios.get
-      .mockResolvedValueOnce({
-        data: {
-          name: "poster.png",
-          mimeType: "image/png",
-          size: "2048",
-          imageMediaMetadata: {
-            width: 1754,
-            height: 1240,
-          },
+  it("fails when metadata says the file cannot be downloaded", async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        name: "poster.png",
+        mimeType: "image/png",
+        size: "2048",
+        capabilities: {
+          canDownload: false,
         },
-      } as never)
-      .mockRejectedValueOnce({
-        response: {
-          status: 403,
+        imageMediaMetadata: {
+          width: 1754,
+          height: 1240,
         },
-      } as never);
+      },
+    } as never);
 
     const result = await verifyDriveFileAgainstRules({
       url: "https://drive.google.com/file/d/test-file-id/view",
@@ -144,28 +141,29 @@ describe("verifyDriveFileAgainstRules", () => {
     });
 
     expect(result.verified).toBe(false);
-    expect(result.message).toBe("Unable to download file for validation");
+    expect(result.message).toBe(
+      "File cannot be downloaded for validation. Check sharing permissions."
+    );
     expect(result.validation.errors).toContain(
-      "Unable to download file for validation"
+      "File cannot be downloaded for validation. Check sharing permissions."
     );
   });
 
-  it("passes when the file is readable, downloadable, and meets validation", async () => {
-    mockedAxios.get
-      .mockResolvedValueOnce({
-        data: {
-          name: "poster.png",
-          mimeType: "image/png",
-          size: "2048",
-          imageMediaMetadata: {
-            width: 1754,
-            height: 1240,
-          },
+  it("passes when metadata is readable, downloadable, and meets validation", async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        name: "poster.png",
+        mimeType: "image/png",
+        size: "2048",
+        capabilities: {
+          canDownload: true,
         },
-      } as never)
-      .mockResolvedValueOnce({
-        data: new ArrayBuffer(1),
-      } as never);
+        imageMediaMetadata: {
+          width: 1754,
+          height: 1240,
+        },
+      },
+    } as never);
 
     const result = await verifyDriveFileAgainstRules({
       url: "https://drive.google.com/file/d/test-file-id/view",

@@ -15,6 +15,7 @@ export type VerifiedFile = {
   name: string;
   mimeType: string;
   size: number | null;
+  canDownload?: boolean;
   imageMetadata?: {
     width?: number;
     height?: number;
@@ -57,6 +58,87 @@ function extractDriveFileId(input: string): string | null {
 
 function isGoogleDriveLink(input: string): boolean {
   return /(?:drive|docs)\.google\.com/.test(input);
+}
+
+function logDriveVerificationError(
+  phase: "metadata",
+  args: {
+    fileId: string;
+    url?: string;
+    error: unknown;
+  }
+) {
+  if (!axios.isAxiosError(args.error)) {
+    console.warn("[drive.verify] unexpected error", {
+      phase,
+      fileId: args.fileId,
+      url: args.url,
+      error:
+        args.error instanceof Error ? args.error.message : String(args.error),
+    });
+    return;
+  }
+
+  const axiosError = args.error as AxiosError;
+  const status = axiosError.response?.status;
+  const statusText = axiosError.response?.statusText;
+  const responseData = axiosError.response?.data;
+
+  console.warn("[drive.verify] upstream request failed", {
+    phase,
+    fileId: args.fileId,
+    url: args.url,
+    status,
+    statusText,
+    responseData:
+      typeof responseData === "string"
+        ? responseData
+        : JSON.stringify(responseData),
+    code: axiosError.code,
+    message: axiosError.message,
+  });
+}
+
+function getAxiosResponseText(error: AxiosError): string {
+  const responseData = error.response?.data;
+
+  if (typeof responseData === "string") {
+    return responseData;
+  }
+
+  if (Buffer.isBuffer(responseData)) {
+    return responseData.toString("utf-8");
+  }
+
+  if (
+    responseData &&
+    typeof responseData === "object" &&
+    "type" in responseData &&
+    "data" in responseData &&
+    (responseData as { type?: string }).type === "Buffer" &&
+    Array.isArray((responseData as { data?: unknown }).data)
+  ) {
+    return Buffer.from((responseData as { data: number[] }).data).toString(
+      "utf-8"
+    );
+  }
+
+  try {
+    return JSON.stringify(responseData);
+  } catch {
+    return "";
+  }
+}
+
+function isGoogleAutomatedQueriesBlock(error: AxiosError): boolean {
+  const responseText = getAxiosResponseText(error).toLowerCase();
+
+  return (
+    responseText.includes("sending automated queries") ||
+    responseText.includes("we can't process your request right now") ||
+    responseText.includes("google help") ||
+    responseText.includes("sorry...")
+  );
 }
 
 function formatBytes(bytes?: number | null): string {
@@ -253,7 +335,8 @@ async function getDriveFileMetadata(url: string): Promise<{
       {
         params: {
           key: GOOGLE_DRIVE_API_KEY,
-          fields: "id,name,mimeType,size,imageMediaMetadata,videoMediaMetadata",
+          fields:
+            "id,name,mimeType,size,imageMediaMetadata,videoMediaMetadata,capabilities/canDownload",
           supportsAllDrives: true,
         },
       }
@@ -268,6 +351,7 @@ async function getDriveFileMetadata(url: string): Promise<{
         name: file.name,
         mimeType: file.mimeType,
         size: file.size ? Number(file.size) : null,
+        canDownload: file.capabilities?.canDownload ?? undefined,
         imageMetadata: file.imageMediaMetadata
           ? {
               width: file.imageMediaMetadata.width ?? undefined,
@@ -287,11 +371,27 @@ async function getDriveFileMetadata(url: string): Promise<{
       },
     };
   } catch (error: unknown) {
-    const status = axios.isAxiosError(error)
-      ? (error as AxiosError).response?.status
+    const axiosError = axios.isAxiosError(error)
+      ? (error as AxiosError)
       : undefined;
+    const status = axiosError?.response?.status;
+
+    logDriveVerificationError("metadata", {
+      fileId,
+      url,
+      error,
+    });
 
     if (status === 403) {
+      if (axiosError && isGoogleAutomatedQueriesBlock(axiosError)) {
+        return {
+          verified: false,
+          message:
+            "Google Drive temporarily blocked automated validation requests. Please try again later.",
+          file: null,
+        };
+      }
+
       return {
         verified: false,
         message: "File is not accessible. Check sharing permissions.",
@@ -308,53 +408,6 @@ async function getDriveFileMetadata(url: string): Promise<{
     }
 
     throw new Error("Unable to verify file");
-  }
-}
-
-async function checkDriveFileDownloadAccess(fileId: string): Promise<{
-  verified: boolean;
-  message?: string;
-}> {
-  try {
-    await axios.get(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-      params: {
-        key: GOOGLE_DRIVE_API_KEY,
-        alt: "media",
-        supportsAllDrives: true,
-      },
-      headers: {
-        Range: "bytes=0-0",
-      },
-      responseType: "arraybuffer",
-    });
-
-    return {
-      verified: true,
-    };
-  } catch (error: unknown) {
-    const status = axios.isAxiosError(error)
-      ? (error as AxiosError).response?.status
-      : undefined;
-
-    if (status === 403) {
-      return {
-        verified: false,
-        message:
-          "File cannot be downloaded for validation. Check sharing permissions.",
-      };
-    }
-
-    if (status === 404) {
-      return {
-        verified: false,
-        message: "File not found",
-      };
-    }
-
-    return {
-      verified: false,
-      message: "Unable to download file for validation",
-    };
   }
 }
 
@@ -391,27 +444,20 @@ export async function verifyDriveFileAgainstRules({
     };
   }
 
-  if (metadataResult.fileId) {
-    const downloadAccessResult = await checkDriveFileDownloadAccess(
-      metadataResult.fileId
-    );
-
-    if (!downloadAccessResult.verified) {
-      return {
-        verified: false,
-        message:
-          downloadAccessResult.message ||
-          "Unable to download file for validation",
-        file: metadataResult.file,
-        fileId: metadataResult.fileId,
-        validation: {
-          isValid: false,
-          errors: downloadAccessResult.message
-            ? [downloadAccessResult.message]
-            : [],
-        },
-      };
-    }
+  if (metadataResult.file.canDownload === false) {
+    return {
+      verified: false,
+      message:
+        "File cannot be downloaded for validation. Check sharing permissions.",
+      file: metadataResult.file,
+      fileId: metadataResult.fileId,
+      validation: {
+        isValid: false,
+        errors: [
+          "File cannot be downloaded for validation. Check sharing permissions.",
+        ],
+      },
+    };
   }
 
   const validation = validateFileAgainstRules(
