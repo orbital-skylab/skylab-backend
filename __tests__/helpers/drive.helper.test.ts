@@ -112,8 +112,15 @@ describe("validateFileAgainstRules", () => {
 });
 
 describe("verifyDriveFileAgainstRules", () => {
+  const originalGoogleDriveApiKey = process.env.GOOGLE_DRIVE_API_KEY;
+
   beforeEach(() => {
     mockedAxios.get.mockReset();
+    process.env.GOOGLE_DRIVE_API_KEY = "test-key";
+  });
+
+  afterAll(() => {
+    process.env.GOOGLE_DRIVE_API_KEY = originalGoogleDriveApiKey;
   });
 
   it("fails when metadata says the file cannot be downloaded", async () => {
