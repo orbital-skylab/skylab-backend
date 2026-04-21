@@ -20,6 +20,8 @@ import {
 } from "../helpers/drive.helper";
 import { prisma } from "../client";
 import { QuestionType, UrlType } from "@prisma/client";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const router = Router();
 
@@ -118,7 +120,7 @@ router.post(
       } = req.body;
 
       if (!url) {
-        throw new Error("url is required");
+        throw new SkylabError("url is required", HttpStatusCode.BAD_REQUEST);
       }
 
       let resolvedUrlType: UrlType | null | undefined = urlType;
@@ -128,6 +130,13 @@ router.post(
       if (questionId != null) {
         const numericQuestionId =
           typeof questionId === "string" ? Number(questionId) : questionId;
+
+        if (!Number.isFinite(numericQuestionId)) {
+          throw new SkylabError(
+            "Invalid questionId",
+            HttpStatusCode.BAD_REQUEST
+          );
+        }
 
         const question = await prisma.question.findUnique({
           where: { id: numericQuestionId },
@@ -140,11 +149,17 @@ router.post(
         });
 
         if (!question) {
-          throw new Error("Question not found");
+          throw new SkylabError(
+            "Question not found",
+            HttpStatusCode.BAD_REQUEST
+          );
         }
 
         if (question.type !== QuestionType.Url) {
-          throw new Error("This question is not a URL question");
+          throw new SkylabError(
+            "This question is not a URL question",
+            HttpStatusCode.BAD_REQUEST
+          );
         }
 
         resolvedUrlType =
