@@ -18,6 +18,7 @@ import {
   findUniqueProject,
   findUniqueProjectWithUserData,
   updateOneProject,
+  countProjects,
 } from "../models/projects.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { removePasswordFromUser } from "./users.helper";
@@ -213,4 +214,139 @@ export async function getAdviserUserByProjectID(projectId: number) {
     where: { id: project.adviserId },
   });
   return adviser;
+}
+
+/**
+ * Achievement level ranking: Artemis (highest) > Apollo > Gemini > Vostok (lowest)
+ */
+export const ACHIEVEMENT_RANK: Record<AchievementLevel, number> = {
+  Artemis: 1,
+  Apollo: 2,
+  Gemini: 3,
+  Vostok: 4,
+};
+
+/**
+ * Sort projects by cohort year (desc), then by achievement level rank
+ *
+ * @param projects - Array of projects with user data
+ * @returns Sorted array of projects
+ */
+export function sortByAchievementRank<
+  T extends { cohortYear: number; achievement: AchievementLevel | null }
+>(projects: T[]): T[] {
+  return [...projects].sort((a, b) => {
+    // First by cohort year descending
+    if (b.cohortYear !== a.cohortYear) {
+      return b.cohortYear - a.cohortYear;
+    }
+    // Then by achievement level (Artemis first)
+    const rankA = a.achievement ? ACHIEVEMENT_RANK[a.achievement] : 999;
+    const rankB = b.achievement ? ACHIEVEMENT_RANK[b.achievement] : 999;
+    return rankA - rankB;
+  });
+}
+
+/**
+ * Build pagination metadata
+ *
+ * @param total - Total number of items
+ * @param page - Current page number
+ * @param limit - Items per page
+ * @returns Pagination metadata object
+ */
+export function buildPaginationMetadata(
+  total: number,
+  page: number,
+  limit: number
+): { total: number; page: number; pageSize: number; totalPages: number } {
+  return {
+    total,
+    page,
+    pageSize: limit,
+    totalPages: total > 0 ? Math.ceil(total / limit) : 0,
+  };
+}
+
+export interface GetPublicProjectsParams {
+  page?: number;
+  limit?: number;
+  achievement?: AchievementLevel;
+}
+
+export interface PaginatedProjects {
+  projects: ReturnType<typeof parseGetProjectInput>[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** Default pagination values */
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+
+/**
+ * Fetch public projects for static site generation
+ * Supports pagination, optional achievement filtering, and returns projects sorted by cohort year (desc) then ID (desc)
+ * Achievement filtering happens at DB level to ensure consistent page sizes
+ */
+export async function getPublicProjects(
+  params: GetPublicProjectsParams = {}
+): Promise<PaginatedProjects> {
+  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, achievement } = params;
+  const skip = (page - 1) * limit;
+
+  const where = {
+    hasDropped: false,
+    achievement: achievement ?? undefined,
+  };
+
+  const [projectsRaw, total] = await Promise.all([
+    findManyProjectsWithUserData({
+      where,
+      take: limit,
+      skip,
+      orderBy: [{ cohortYear: "desc" }, { id: "desc" }],
+    }),
+    countProjects(where),
+  ]);
+
+  return {
+    projects: projectsRaw.map((project) => parseGetProjectInput(project)),
+    ...buildPaginationMetadata(total, page, limit),
+  };
+}
+
+/**
+ * Get public projects count for metadata-only requests
+ *
+ * @param limit - Items per page for totalPages calculation
+ * @param achievement - Optional achievement level filter (e.g., "artemis", "apollo")
+ * @returns Total count and total pages
+ */
+export async function getPublicProjectsCount(
+  limit: number = DEFAULT_LIMIT,
+  achievement?: string
+): Promise<{ total: number; totalPages: number }> {
+  const where: Prisma.ProjectWhereInput = { hasDropped: false };
+
+  // Add achievement filter if provided
+  if (achievement) {
+    // Convert lowercase string (e.g., "artemis") to PascalCase (e.g., "Artemis")
+    const pascalCase =
+      achievement.charAt(0).toUpperCase() + achievement.slice(1).toLowerCase();
+    // Validate against enum values
+    if (
+      Object.values(AchievementLevel).includes(pascalCase as AchievementLevel)
+    ) {
+      where.achievement = pascalCase as AchievementLevel;
+    }
+  }
+
+  const total = await countProjects(where);
+  return {
+    total,
+    totalPages: total > 0 ? Math.ceil(total / limit) : 0,
+  };
 }
