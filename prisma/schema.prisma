@@ -135,6 +135,7 @@ model Deadline {
   submission            Submission[]
   evaluating            Deadline?            @relation(fields: [evaluatingMilestoneId], references: [id], name: "evaluation")
   evaluatingMilestoneId Int?                 @unique
+  evaluatorType         EvaluatorType?              
   evaluatedBy           Deadline?            @relation(name: "evaluation")
   anonymousApplicants   AnonymousApplicant[]
 
@@ -371,6 +372,12 @@ enum DeadlineType {
   Feedback
   Application
   Other
+}
+
+enum EvaluatorType {
+  Adviser
+  Team
+  Both
 }
 
 enum QuestionType {
