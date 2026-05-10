@@ -14,6 +14,14 @@ import {
 } from "../utils/ApiResponseWrapper";
 import { extractJwtData } from "../helpers/authentication.helper";
 import { findUniqueUserWithRoleData } from "../models/users.db";
+import {
+  UrlValidationRules,
+  verifyDriveFileAgainstRules,
+} from "../helpers/drive.helper";
+import { prisma } from "../client";
+import { QuestionType, UrlType } from "@prisma/client";
+import { SkylabError } from "../errors/SkylabError";
+import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
 const router = Router();
 
@@ -71,7 +79,7 @@ router
           Number(submissionId),
           userData
         );
-        return apiResponseWrapper(res, { submission: submission });
+        return apiResponseWrapper(res, { submission });
       } catch (e) {
         return routeErrorHandler(res, e);
       }
@@ -93,5 +101,84 @@ router
       }
     }
   );
+
+router.post(
+  "/verify-drive-file",
+  authorizeSignedIn,
+  async (req: Request, res: Response) => {
+    try {
+      const {
+        url,
+        questionId,
+        urlType,
+        urlValidationRules,
+      }: {
+        url?: string;
+        questionId?: number | string;
+        urlType?: UrlType;
+        urlValidationRules?: UrlValidationRules;
+      } = req.body;
+
+      if (!url) {
+        throw new SkylabError("url is required", HttpStatusCode.BAD_REQUEST);
+      }
+
+      let resolvedUrlType: UrlType | null | undefined = urlType;
+      let resolvedRules: UrlValidationRules | null | undefined =
+        urlValidationRules;
+
+      if (questionId != null) {
+        const numericQuestionId =
+          typeof questionId === "string" ? Number(questionId) : questionId;
+
+        if (!Number.isFinite(numericQuestionId)) {
+          throw new SkylabError(
+            "Invalid questionId",
+            HttpStatusCode.BAD_REQUEST
+          );
+        }
+
+        const question = await prisma.question.findUnique({
+          where: { id: numericQuestionId },
+          select: {
+            id: true,
+            type: true,
+            urlType: true,
+            urlValidationRules: true,
+          },
+        });
+
+        if (!question) {
+          throw new SkylabError(
+            "Question not found",
+            HttpStatusCode.BAD_REQUEST
+          );
+        }
+
+        if (question.type !== QuestionType.Url) {
+          throw new SkylabError(
+            "This question is not a URL question",
+            HttpStatusCode.BAD_REQUEST
+          );
+        }
+
+        resolvedUrlType =
+          (question.urlType as UrlType | null) ?? UrlType.Generic;
+        resolvedRules =
+          (question.urlValidationRules as UrlValidationRules | null) ?? null;
+      }
+
+      const result = await verifyDriveFileAgainstRules({
+        url,
+        urlType: resolvedUrlType ?? UrlType.Generic,
+        urlValidationRules: resolvedRules ?? null,
+      });
+
+      return apiResponseWrapper(res, result);
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 export default router;

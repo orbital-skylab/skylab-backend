@@ -155,17 +155,19 @@ model Section {
 }
 
 model Question {
-  id             Int          @id @default(autoincrement())
-  questionNumber Int
-  question       String
-  desc           String
-  type           QuestionType
-  isAnonymous    Boolean      @default(false)
-  isRequired     Boolean      @default(false)
-  answers        Answer[]
-  options        Option[] //for MCQ/Multi-select questions
-  section        Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  sectionId      Int
+  id                   Int          @id @default(autoincrement())
+  questionNumber       Int
+  question             String
+  desc                 String
+  type                 QuestionType
+  isAnonymous          Boolean      @default(false)
+  isRequired           Boolean      @default(false)
+  answers              Answer[]
+  options              Option[] //for MCQ/Multi-select questions
+  urlType              UrlType?  //for URL questions
+  urlValidationRules   Json?
+  section              Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId            Int
 }
 
 model Option {
@@ -390,6 +392,12 @@ enum QuestionType {
   Date
   Time
   RichTextEditor
+}
+
+enum UrlType {
+  Generic
+  Image
+  Video
 }
 
 enum AchievementLevel {

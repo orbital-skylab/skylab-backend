@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --runInBand --verbose --detectOpenHandles --forceExit",
+    "test:k6:drive": "k6 run k6/drive-verify-scenarios.js",
     "test:badges": "jest-coverage-badges",
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
     "format": "npx prettier --config .prettierrc.js --write \"src/**/*.ts\"",

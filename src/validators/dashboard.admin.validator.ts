@@ -5,6 +5,7 @@ import { CohortQueryValidator } from "./validator";
 export const GetSubmissionsByDeadlineIDValidator = [
   CohortQueryValidator,
   query("deadlineId").isNumeric().toInt().optional(),
+  query("includeAnonymous").isBoolean().optional(),
   query("submissionStatus")
     .isIn([
       SubmissionStatusEnum.SUBMITTED,

@@ -284,13 +284,17 @@ export async function editDeadlineByDeadlineId(
   }
 ) {
   const { evaluatingMilestoneId, ...deadline } = body.deadline;
+  const isEvaluationDeadline = deadline.type === DeadlineType.Evaluation;
   const updatedDeadline = await updateOneDeadline({
     where: { id: deadlineId },
     data: {
       ...deadline,
-      evaluating: evaluatingMilestoneId
-        ? { connect: { id: evaluatingMilestoneId } }
-        : undefined,
+      evaluatorType: isEvaluationDeadline ? deadline.evaluatorType : null,
+      evaluating: isEvaluationDeadline
+        ? evaluatingMilestoneId
+          ? { connect: { id: evaluatingMilestoneId } }
+          : undefined
+        : { disconnect: true },
     },
     include: { evaluating: true },
   });
