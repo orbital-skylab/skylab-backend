@@ -891,7 +891,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
           students: flattenedStudents,
         },
         toProject: flattenProjectUsers(relation.toProject),
-        submission: submissions || undefined,
+        submission: submissions.length > 0 ? submissions : undefined,
       };
     });
     combined.push(...(await Promise.all(pTeamSubmissions)));
