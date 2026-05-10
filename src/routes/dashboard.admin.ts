@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   getSubmissions,
+  getEvaluationSubmissions,
+  getCollatedMilestoneSubmissions,
   sendReminderEmail,
 } from "../helpers/dashboard.admin.helper";
 import authorizeAdmin from "../middleware/authorizeAdmin";
@@ -13,6 +15,25 @@ import { GetSubmissionsByDeadlineIDValidator } from "../validators/dashboard.adm
 import { errorFormatter, throwValidationError } from "../validators/validator";
 
 const router = Router();
+
+router.get(
+  "/team-submissions/collated",
+  authorizeAdmin,
+  GetSubmissionsByDeadlineIDValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const { collated, evaluationCollated } =
+        await getCollatedMilestoneSubmissions(req.query);
+      return apiResponseWrapper(res, { collated, evaluationCollated });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 router.get(
   "/team-submissions",
@@ -43,5 +64,23 @@ router.post("/send-reminders", async (req: Request, res: Response) => {
     return routeErrorHandler(res, e);
   }
 });
+
+router.get(
+  "/evaluations",
+  authorizeAdmin,
+  GetSubmissionsByDeadlineIDValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const submissions = await getEvaluationSubmissions(req.query);
+      return apiResponseWrapper(res, { submissions: submissions });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
 
 export default router;

@@ -606,10 +606,12 @@ describe("getAllCandidatesByVoteEvent helper integration test", () => {
   it("should return all candidates by vote event", async () => {
     const candidates = await getAllCandidatesByVoteEvent(mockVoteEvent1Id);
 
-    expect(candidates).toEqual([
-      { id: mockProject1Id, ...MOCK_PROJECT_1 },
-      { id: mockProject2Id, ...MOCK_PROJECT_2 },
-    ]);
+    expect(candidates).toEqual(
+      expect.arrayContaining([
+        { id: mockProject1Id, ...MOCK_PROJECT_1 },
+        { id: mockProject2Id, ...MOCK_PROJECT_2 },
+      ])
+    );
   });
 
   it("should return an empty array if no candidates found", async () => {

@@ -140,6 +140,7 @@ model Deadline {
   submission            Submission[]
   evaluating            Deadline?            @relation(fields: [evaluatingMilestoneId], references: [id], name: "evaluation")
   evaluatingMilestoneId Int?                 @unique
+  evaluatorType         EvaluatorType?              
   evaluatedBy           Deadline?            @relation(name: "evaluation")
   anonymousApplicants   AnonymousApplicant[]
 
@@ -159,16 +160,19 @@ model Section {
 }
 
 model Question {
-  id             Int          @id @default(autoincrement())
-  questionNumber Int
-  question       String
-  desc           String
-  type           QuestionType
-  isAnonymous    Boolean      @default(false)
-  answers        Answer[]
-  options        Option[] //for MCQ/Multi-select questions
-  section        Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  sectionId      Int
+  id                   Int          @id @default(autoincrement())
+  questionNumber       Int
+  question             String
+  desc                 String
+  type                 QuestionType
+  isAnonymous          Boolean      @default(false)
+  isRequired           Boolean      @default(false)
+  answers              Answer[]
+  options              Option[] //for MCQ/Multi-select questions
+  urlType              UrlType?  //for URL questions
+  urlValidationRules   Json?
+  section              Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId            Int
 }
 
 model Option {
@@ -377,6 +381,12 @@ enum DeadlineType {
   Other
 }
 
+enum EvaluatorType {
+  Adviser
+  Team
+  Both
+}
+
 enum QuestionType {
   ShortAnswer
   Paragraph
@@ -387,6 +397,12 @@ enum QuestionType {
   Date
   Time
   RichTextEditor
+}
+
+enum UrlType {
+  Generic
+  Image
+  Video
 }
 
 enum AchievementLevel {

@@ -1,4 +1,4 @@
-import { Answer } from "@prisma/client";
+import { Answer, Prisma } from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import {
   createUniqueAnswer,
@@ -19,9 +19,24 @@ import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 import { getOneAdviserById } from "./advisers.helper";
 import { parseQuestionsInput } from "./deadline.helper";
 import { getOneStudentById } from "./students.helper";
+import { getProjectIDsByAdviserID } from "./projects.helper";
+import { findUniqueUserWithRoleData } from "../models/users.db";
 
-export async function getSubmissionBySubmissionId(submissionId: number) {
-  const submission = await findUniqueSubmission({
+type SubmissionWithRelations = Prisma.SubmissionGetPayload<{
+  include: {
+    answers: { include: { question: true } };
+    fromProject: true;
+    fromUser: true;
+    toProject: true;
+    toUser: true;
+  };
+}>;
+
+export async function getSubmissionBySubmissionId(
+  submissionId: number,
+  user: Awaited<ReturnType<typeof findUniqueUserWithRoleData>>
+) {
+  const submission = (await findUniqueSubmission({
     where: { id: submissionId },
     include: {
       answers: { include: { question: true } },
@@ -30,7 +45,7 @@ export async function getSubmissionBySubmissionId(submissionId: number) {
       toProject: true,
       toUser: true,
     },
-  });
+  })) as SubmissionWithRelations | null;
 
   if (!submission) {
     throw new SkylabError(
@@ -46,16 +61,43 @@ export async function getSubmissionBySubmissionId(submissionId: number) {
 
   const { sections, ...deadlineData } = deadlineWithQuestions;
 
+  let parsedSections = sections.map((section) => {
+    const { questions, ...sectionData } = section;
+    return {
+      ...sectionData,
+      questions: parseQuestionsInput(questions),
+    };
+  });
+
+  const isAuthor =
+    (submission.fromProjectId &&
+      submission.fromProjectId === user.student?.projectId) ||
+    (submission.fromUserId && submission.fromUserId === user.id);
+
+  const isAdmin = Boolean(user.administrator?.id);
+
+  let filteredAnswers = submission.answers;
+
+  if (!isAuthor && !isAdmin) {
+    parsedSections = parsedSections.map((section) => ({
+      ...section,
+      questions: section.questions.filter((q) => !q.isAnonymous),
+    }));
+
+    const nonAnonymousQuestionIds = new Set(
+      parsedSections.flatMap((s) => s.questions).map((q) => q.id)
+    );
+
+    filteredAnswers = submission.answers.filter((a) =>
+      nonAnonymousQuestionIds.has(a.questionId)
+    );
+  }
+
   return {
     ...submission,
+    answers: filteredAnswers,
     deadline: deadlineData,
-    sections: sections.map((section) => {
-      const { questions, ...sectionData } = section;
-      return {
-        ...sectionData,
-        questions: parseQuestionsInput(questions),
-      };
-    }),
+    sections: parsedSections,
   };
 }
 
@@ -147,6 +189,15 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
   const adviser = await getOneAdviserById(adviserId);
   const { cohortYear } = adviser;
 
+  const adviserProjects = await getProjectIDsByAdviserID(adviserId);
+  if (adviserProjects.length === 0) {
+    throw new SkylabError(
+      "This adviser is not in charge of any projects, and hence has no anonymous answers to view!",
+      HttpStatusCode.BAD_REQUEST
+    );
+  }
+  const projectIds = adviserProjects.map((p) => p.id);
+
   const deadlines = await findManyDeadlinesWithAnonymousQuestionsData({
     where: { cohortYear: cohortYear },
   });
@@ -157,7 +208,10 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
         where: {
           deadlineId: deadline.id,
           isDraft: false,
-          toUserId: adviser.userId,
+          OR: [
+            { toProjectId: { in: projectIds } },
+            { toUserId: adviser.userId },
+          ],
         },
       });
 
@@ -175,7 +229,13 @@ export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
 
       return {
         deadline: deadline,
-        sections: sections,
+        sections: sections.map((section) => {
+          const { questions, ...sectionData } = section;
+          return {
+            ...sectionData,
+            questions: parseQuestionsInput(questions),
+          };
+        }),
         answers: answers,
       };
     }
@@ -223,7 +283,13 @@ export async function getAnonymousAnswersViaStudentID(studentId: number) {
 
       return {
         deadline: deadline,
-        sections: sections,
+        sections: sections.map((section) => {
+          const { questions, ...sectionData } = section;
+          return {
+            ...sectionData,
+            questions: parseQuestionsInput(questions),
+          };
+        }),
         answers: answers,
       };
     }

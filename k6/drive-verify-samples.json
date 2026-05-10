@@ -1,0 +1,92 @@
+{
+  "image_no_access": {
+    "description": "Image link with no permission to access",
+    "url": "https://drive.google.com/file/d/1MPxfj8t7BOQ-Jd5fDmv_WnyxRFYHOdEm/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A1"]
+    },
+    "expectedVerified": false,
+    "expectedMessageContains": "File not found"
+  },
+  "image_no_download": {
+    "description": "Image link with permission to access but no permission to download content",
+    "url": "https://drive.google.com/file/d/1gecfR81-nnGqCY57MeJLtajIaKH3wYUm/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A1"]
+    },
+    "expectedVerified": false,
+    "expectedMessageContains": "download"
+  },
+  "image_invalid_paper_format": {
+    "description": "Image link that is accessible and downloadable, but not A1/A4 compatible",
+    "url": "https://drive.google.com/file/d/1iOafA6tC9Cg3ktHSlZeRvuqu5-ghNMUu/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A1"]
+    },
+    "expectedVerified": false,
+    "expectedMessageContains": "validation"
+  },
+  "image_a1_portrait": {
+    "description": "Portrait image that should satisfy A1 validation",
+    "url": "https://drive.google.com/file/d/1pZr-0FrgKQyfvhMEVET7kngTM2bao6iY/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A1"]
+    },
+    "expectedVerified": true
+  },
+  "image_a1_landscape": {
+    "description": "Landscape image that should satisfy A1 validation",
+    "url": "https://drive.google.com/file/d/1-FOga3ByehG7fS7RpXJJji3Qk0j-uRtj/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A1"]
+    },
+    "expectedVerified": true
+  },
+  "image_a4_only": {
+    "description": "Image that should satisfy A4 validation but not A1 due to pixel size",
+    "url": "https://drive.google.com/file/d/1flSoarHYxM_F9ebcW2wLiOwbJ4kZJcOO/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A4"]
+    },
+    "expectedVerified": true
+  },
+  "image_a5_not_a1_a4": {
+    "description": "Image that is A5-compatible but not A1/A4 compatible",
+    "url": "https://drive.google.com/file/d/1ThX9ZrxaEv8SCPZh6nNmwali2RZLT-3H/view?usp=sharing",
+    "urlType": "Image",
+    "urlValidationRules": {
+      "allowedPaperFormats": ["A4"]
+    },
+    "expectedVerified": false,
+    "expectedMessageContains": "validation"
+  },
+  "video_no_access": {
+    "description": "Video link with no permission to access",
+    "url": "https://drive.google.com/file/d/1afSbuhheExVZdnjwKqet0p2yO3sptwYC/view?usp=sharing",
+    "urlType": "Video",
+    "urlValidationRules": null,
+    "expectedVerified": false,
+    "expectedMessageContains": "File not found"
+  },
+  "video_no_download": {
+    "description": "Video link with permission to access but no permission to download content",
+    "url": "https://drive.google.com/file/d/1-tTFsr4BAS3NPdNSWefHEHLI1t_xIkhN/view?usp=sharing",
+    "urlType": "Video",
+    "urlValidationRules": null,
+    "expectedVerified": false,
+    "expectedMessageContains": "download"
+  },
+  "video_accessible": {
+    "description": "Video link that should be accessible and downloadable",
+    "url": "https://drive.google.com/file/d/10j7n48B8Fyq02s29g9yVY4kwZtOAVDVK/view?usp=sharing",
+    "urlType": "Video",
+    "urlValidationRules": null,
+    "expectedVerified": true
+  }
+}
