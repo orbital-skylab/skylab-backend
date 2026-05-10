@@ -12,8 +12,6 @@ import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
-import { extractJwtData } from "../helpers/authentication.helper";
-import { findUniqueUserWithRoleData } from "../models/users.db";
 import {
   UrlValidationRules,
   verifyDriveFileAgainstRules,
@@ -71,10 +69,13 @@ router
     async (req: Request, res: Response) => {
       const { submissionId } = req.params;
       try {
-        const jwtData = extractJwtData(req, res);
-        const userData = await findUniqueUserWithRoleData({
-          where: { id: Number(jwtData.id) },
-        });
+        const { userData } = res.locals;
+        if (!userData) {
+          throw new SkylabError(
+            "Authentication failed",
+            HttpStatusCode.UNAUTHORIZED
+          );
+        }
         const submission = await getSubmissionBySubmissionId(
           Number(submissionId),
           userData
