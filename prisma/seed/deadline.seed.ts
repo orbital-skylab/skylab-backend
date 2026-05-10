@@ -1,4 +1,9 @@
-import { DeadlineType, QuestionType, type PrismaClient } from "@prisma/client";
+import {
+  DeadlineType,
+  EvaluatorType,
+  QuestionType,
+  type PrismaClient,
+} from "@prisma/client";
 
 export const seedDeadlines = async (prisma: PrismaClient) => {
   const today = new Date();
@@ -17,6 +22,10 @@ export const seedDeadlines = async (prisma: PrismaClient) => {
           name: `${deadlineType} ${i}`,
           type: deadlineType,
           dueBy: nextWeek,
+          evaluatorType:
+            deadlineType === DeadlineType.Evaluation
+              ? EvaluatorType.Both
+              : undefined,
           evaluating:
             deadlineType === DeadlineType.Evaluation
               ? {

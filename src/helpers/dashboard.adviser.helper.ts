@@ -38,6 +38,11 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
           HttpStatusCode.INTERNAL_SERVER_ERROR
         );
       }
+
+      if (deadline.evaluatorType === "Team") {
+        return [];
+      }
+
       const { evaluatingMilestoneId } = deadline;
       return await Promise.all(
         projects.map(async (project) => {
@@ -133,6 +138,12 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
         submissions: await Promise.all(milestoneSubmissions),
       };
     } else if (deadline.type == "Evaluation") {
+      if (deadline.evaluatorType === "Adviser") {
+        return {
+          deadline: deadline,
+          submissions: [],
+        };
+      }
       const evaluationSubmissions = relations.map(async (relation) => {
         const submission = await findFirstNonDraftSubmission({
           where: {
