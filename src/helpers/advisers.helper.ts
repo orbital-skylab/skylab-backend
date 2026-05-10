@@ -143,23 +143,33 @@ export async function createManyUsersWithAdviserRole(
       }
 
       const { cohortYear, ...adviserData } = adviser;
-      const [createdUser, createdAdviser] = await prisma.$transaction([
-        prisma.user.create({
-          data: { ...user },
-        }),
-        prisma.adviser.create({
-          data: {
-            ...adviserData,
-            user: { connect: { email: user.email } },
-            cohort: { connect: { academicYear: cohortYear } },
-          },
-        }),
-      ]);
+      const { user: adviserUser, adviser: createdAdviser } =
+        await prisma.$transaction(async (tx) => {
+          const existingUser = await tx.user.findUnique({
+            where: { email: user.email },
+          });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...createdUserWithoutPassword } = createdUser;
+          const linkedUser =
+            existingUser ??
+            (await tx.user.create({
+              data: { ...user },
+            }));
+
+          const createdAdviser = await tx.adviser.create({
+            data: {
+              ...adviserData,
+              user: { connect: { id: linkedUser.id } },
+              cohort: { connect: { academicYear: cohortYear } },
+            },
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { password, ...userWithoutPassword } = linkedUser;
+          return { user: userWithoutPassword, adviser: createdAdviser };
+        });
+
       return {
-        ...createdUserWithoutPassword,
+        ...adviserUser,
         adviser: createdAdviser,
       };
     })
