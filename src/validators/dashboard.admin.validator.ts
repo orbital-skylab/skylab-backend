@@ -16,4 +16,6 @@ export const GetSubmissionsByDeadlineIDValidator = [
   query("page").isNumeric().toInt().optional(),
   query("limit").isNumeric().toInt().optional(),
   query("dropped").isBoolean(),
+  query("search").isString().optional(),
+  query("evaluatorTypeFilter").isIn(["All", "Team", "Adviser"]).optional(),
 ];
