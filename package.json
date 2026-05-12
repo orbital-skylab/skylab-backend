@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --runInBand --verbose --detectOpenHandles --forceExit",
+    "test:k6:drive": "k6 run k6/drive-verify-scenarios.js",
     "test:badges": "jest-coverage-badges",
     "preflight": "eslint . --ext .ts && npx prettier --config .prettierrc.js --check \"src/**/*.ts\"",
     "format": "npx prettier --config .prettierrc.js --write \"src/**/*.ts\"",
@@ -63,7 +64,7 @@
     "build.ts"
   ],
   "dependencies": {
-    "@pinecone-database/pinecone": "^6.1.3",
+    "@pinecone-database/pinecone": "^6.1.4",
     "@prisma/client": "^3.15.2",
     "@sendgrid/mail": "^8.1.5",
     "@types/cookie-parser": "^1.4.3",
@@ -87,7 +88,7 @@
     "jsonwebtoken": "^8.5.1",
     "module-alias": "^2.2.2",
     "nodemon": "^2.0.15",
-    "openai": "^6.16.0",
+    "openai": "^6.37.0",
     "pg": "^8.7.3",
     "pg-hstore": "^2.3.4",
     "short-unique-id": "^5.2.0",

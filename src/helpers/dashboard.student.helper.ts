@@ -1,4 +1,4 @@
-import { DeadlineType } from "@prisma/client";
+import { DeadlineType, Submission } from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "../models/deadline.db";
 import {
@@ -57,6 +57,12 @@ export async function getDeadlinesByStudentId(studentId: number) {
     where: { fromProjectId: project.id },
   });
 
+  const incomingRelations = await findManyRelationsWithFromToProjectData({
+    where: {
+      toProjectId: project.id,
+    },
+  });
+
   const pDeadlinesOfStudent = deadlines.map(async (deadline) => {
     const deadlineAttribute = { deadline: deadline };
     if (deadline.type == "Milestone") {
@@ -69,17 +75,35 @@ export async function getDeadlinesByStudentId(studentId: number) {
         submission: submission ? submission : undefined,
       };
     } else if (deadline.type == "Evaluation") {
+      if (deadline.evaluatorType === "Adviser") {
+        return [];
+      }
       const pEvaluationDeadlines = relations.map(async (relation) => {
         const submission = await findFirstSubmission({
           where: {
-            id: deadline.id,
+            deadlineId: deadline.id,
             fromProjectId: project.id,
             toProjectId: relation.toProjectId,
           },
         });
+
+        let toProjectSubmission: Submission | null = null;
+        if (deadline.evaluatingMilestoneId) {
+          toProjectSubmission = await findFirstNonDraftSubmission({
+            where: {
+              deadlineId: deadline.evaluatingMilestoneId,
+              fromProjectId: relation.toProjectId,
+            },
+            rejectOnNotFound: false,
+          });
+        }
+
         return {
           ...deadlineAttribute,
           submission: submission ? submission : undefined,
+          toProjectSubmission: toProjectSubmission
+            ? toProjectSubmission
+            : undefined,
           fromProject: relation.fromProject,
           toProject: relation.toProject,
         };
@@ -93,11 +117,32 @@ export async function getDeadlinesByStudentId(studentId: number) {
           toUserId: adviser.userId,
         },
       });
-      return {
+
+      const adviserFeedback = {
         ...deadlineAttribute,
         submission: submission ? submission : undefined,
         toUser: adviser.user,
       };
+
+      const pPeerFeedbacks = incomingRelations.map(async (relation) => {
+        const peerSubmission = await findFirstSubmission({
+          where: {
+            deadlineId: deadline.id,
+            fromProjectId: project.id,
+            toProjectId: relation.fromProjectId,
+          },
+        });
+
+        return {
+          ...deadlineAttribute,
+          submission: peerSubmission ? peerSubmission : undefined,
+          fromProject: relation.toProject,
+          toProject: relation.fromProject,
+        };
+      });
+
+      const peerFeedbacks = await Promise.all(pPeerFeedbacks);
+      return [adviserFeedback, ...peerFeedbacks];
     }
   });
 
@@ -153,21 +198,34 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
 
   const pProjectSubmissions = [...cohortEvaluations, ...cohortFeedbacks].map(
     async (deadline) => {
-      const pPeerSubmissions = relations.map(async (relation) => {
-        const submission = await findFirstNonDraftSubmission({
-          where: {
-            deadlineId: deadline.id,
-            fromProjectId: relation.fromProjectId,
-            toProjectId: projectId,
-          },
-        });
-        return {
-          ...submission,
-          fromProject: relation.fromProject,
-        };
-      });
+      type PeerFeedback = Partial<Submission> & {
+        fromProject: typeof relations[0]["fromProject"];
+      };
+      type AdviserFeedback = Partial<Submission> & {
+        fromUser: typeof adviserUser;
+      };
+      type FeedbackSubmission = PeerFeedback | AdviserFeedback;
 
-      const peerSubmissions = await Promise.all(pPeerSubmissions);
+      let peerSubmissions: PeerFeedback[] = [];
+
+      if (deadline.evaluatorType !== "Adviser") {
+        const pPeerSubmissions = relations.map(async (relation) => {
+          const submission = await findFirstNonDraftSubmission({
+            where: {
+              deadlineId: deadline.id,
+              fromProjectId: relation.fromProjectId,
+              toProjectId: projectId,
+            },
+          });
+
+          const peerFeedback: PeerFeedback = {
+            ...(submission || {}),
+            fromProject: relation.fromProject,
+          };
+          return peerFeedback;
+        });
+        peerSubmissions = await Promise.all(pPeerSubmissions);
+      }
 
       if (deadline.type !== "Evaluation") {
         return {
@@ -176,22 +234,31 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
         };
       }
 
-      const pAdviserSubmission = findFirstNonDraftSubmission({
-        where: {
-          deadlineId: deadline.id,
-          fromUserId: adviserUser.id,
-          toProjectId: projectId,
-        },
-      });
+      let adviserSubmissionWrapper: AdviserFeedback | null = null;
 
-      const adviserSubmission = await pAdviserSubmission;
+      if (deadline.evaluatorType !== "Team") {
+        const pAdviserSubmission = await findFirstNonDraftSubmission({
+          where: {
+            deadlineId: deadline.id,
+            fromUserId: adviserUser.id,
+            toProjectId: projectId,
+          },
+        });
+
+        adviserSubmissionWrapper = {
+          fromUser: adviserUser,
+          ...(pAdviserSubmission || {}),
+        };
+      }
+
+      const finalSubmissions: FeedbackSubmission[] = [...peerSubmissions];
+      if (adviserSubmissionWrapper) {
+        finalSubmissions.push(adviserSubmissionWrapper);
+      }
 
       return {
         deadline: deadline,
-        submissions: [
-          ...peerSubmissions,
-          { fromUser: adviserUser, ...adviserSubmission },
-        ],
+        submissions: finalSubmissions,
       };
     }
   );

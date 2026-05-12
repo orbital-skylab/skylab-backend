@@ -5,6 +5,7 @@ import {
   DeadlineType,
   Option,
   AchievementLevel,
+  EvaluatorType,
 } from "@prisma/client";
 import { prisma } from "../client";
 import { SkylabError } from "../errors/SkylabError";
@@ -25,10 +26,18 @@ export async function getManyDeadlinesWithFilter(
 ) {
   const { cohortYear, name } = query;
 
+  const where: Prisma.DeadlineWhereInput = {};
+  if (cohortYear !== undefined && cohortYear !== null) {
+    where.cohortYear = cohortYear;
+  }
+  if (name !== undefined && name !== null) {
+    where.name = { contains: name, mode: "insensitive" };
+  }
+
   const deadlinesQuery: Prisma.DeadlineFindManyArgs = {
-    where: {
-      cohortYear: cohortYear ?? undefined,
-      name: { contains: name, mode: "insensitive" },
+    where,
+    orderBy: {
+      id: "asc",
     },
   };
 
@@ -45,15 +54,19 @@ export async function createDeadline(body: {
     type: DeadlineType;
     desc?: string;
     evaluatingMilestoneId?: number; // If type == "Evaluation"
+    evaluatorType?: EvaluatorType; // If type == "Evaluation"
   };
 }) {
   const { deadline: deadlineData } = body;
-  const { evaluatingMilestoneId, cohortYear, ...deadline } = deadlineData;
+  const { evaluatingMilestoneId, evaluatorType, cohortYear, ...deadline } =
+    deadlineData;
 
   const createdDeadline = await createOneDeadline({
     data: {
       cohort: { connect: { academicYear: cohortYear } },
       ...deadline,
+      evaluatorType:
+        deadline.type === DeadlineType.Evaluation ? evaluatorType : undefined,
       evaluating:
         deadline.type === DeadlineType.Evaluation
           ? {
@@ -271,13 +284,17 @@ export async function editDeadlineByDeadlineId(
   }
 ) {
   const { evaluatingMilestoneId, ...deadline } = body.deadline;
+  const isEvaluationDeadline = deadline.type === DeadlineType.Evaluation;
   const updatedDeadline = await updateOneDeadline({
     where: { id: deadlineId },
     data: {
       ...deadline,
-      evaluating: evaluatingMilestoneId
-        ? { connect: { id: evaluatingMilestoneId } }
-        : undefined,
+      evaluatorType: isEvaluationDeadline ? deadline.evaluatorType : null,
+      evaluating: isEvaluationDeadline
+        ? evaluatingMilestoneId
+          ? { connect: { id: evaluatingMilestoneId } }
+          : undefined
+        : { disconnect: true },
     },
     include: { evaluating: true },
   });

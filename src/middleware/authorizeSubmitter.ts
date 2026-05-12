@@ -27,6 +27,7 @@ const authorizeSubmitter = async (
     const userData = await findUniqueUserWithRoleData({
       where: { id: Number(jwtData.id) },
     });
+    res.locals.userData = userData;
 
     // allow admins
     if (userData.administrator) return next();

@@ -269,10 +269,5 @@ export const isValidMatriculationNumber = (
 };
 
 export const isValidNusnetId = (nusnetId: string | null | undefined) => {
-  if (nusnetId == null || nusnetId == undefined) {
-    return false;
-  }
-
-  const nusnetIdPattern = /^(e|E)[0-9]{7}$/;
-  return nusnetIdPattern.test(nusnetId);
+  return nusnetId != null && nusnetId != undefined && nusnetId !== "";
 };

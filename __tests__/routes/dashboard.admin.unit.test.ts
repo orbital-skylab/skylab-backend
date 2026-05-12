@@ -19,6 +19,7 @@ import * as DashboardAdminHelpers from "../../src/helpers/dashboard.admin.helper
 import authorizeAdmin from "../../src/middleware/authorizeAdmin";
 import app from "../../src/server";
 import * as utils from "../../src/utils/ApiResponseWrapper";
+import * as CohortValidatorHelpers from "../../src/validators/helper/cohort.validator.helper";
 
 const BASE_URL = "/api/dashboard/administrator";
 
@@ -224,6 +225,9 @@ describe("GET /team-submissions route unit test", () => {
 
   it("should call the helper function correctly to get all submissions with different cohort year", async () => {
     const cohortYear = 2024;
+    jest
+      .spyOn(CohortValidatorHelpers, "checkCohortExists")
+      .mockResolvedValueOnce(true);
     getAllSubmissions.mockResolvedValueOnce([
       MOCK_PROJECT_WITH_SUBMISSION,
       MOCK_PROJECT_WITHOUT_SUBMISSION,
