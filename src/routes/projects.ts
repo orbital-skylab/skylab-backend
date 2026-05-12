@@ -8,6 +8,7 @@ import {
   getManyProjectsWithFilter,
   getOneProjectById,
   getProjectsViaRoleIds,
+  getPublicProjectCohortYears,
   getPublicProjects,
   getPublicProjectsCount,
 } from "../helpers/projects.helper";
@@ -18,7 +19,6 @@ import {
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
-import { Project } from "@prisma/client";
 
 /** Pagination constraints for input validation */
 const PAGINATION_LIMITS = {
@@ -56,41 +56,97 @@ function parsePaginationParams(query: Request["query"]): {
 
 const router = Router();
 
-const projectGalleryCache = {
-  data: null as Project[] | null,
-  lastUpdated: 0,
+type ProjectGalleryCacheValue = Awaited<
+  ReturnType<typeof getManyProjectsWithFilter>
+>;
+
+type ProjectGalleryCacheEntry = {
+  data: ProjectGalleryCacheValue;
+  lastUpdated: number;
 };
+
+const projectGalleryCache = new Map<string, ProjectGalleryCacheEntry>();
 
 const CACHE_TTL = Number(
   process.env.PROJECT_GALLERY_CACHE_TTL_MS ?? 5 * 60 * 1000
 );
 
+const getFirstQueryValue = (value: Request["query"][string]) => {
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const normalizeQueryValue = (value: Request["query"][string]) => {
+  const firstValue = getFirstQueryValue(value);
+  return firstValue === undefined || firstValue === null
+    ? ""
+    : String(firstValue);
+};
+
+export const isCacheableDefaultGalleryFetch = (query: Request["query"]) => {
+  const { limit, page, achievement, search, cohortYear, dropped } = query;
+
+  return (
+    normalizeQueryValue(cohortYear) !== "" &&
+    (normalizeQueryValue(page) === "0" || normalizeQueryValue(page) === "") &&
+    normalizeQueryValue(search) === "" &&
+    normalizeQueryValue(achievement).toUpperCase() === "ARTEMIS" &&
+    (normalizeQueryValue(limit) === "" ||
+      Number(normalizeQueryValue(limit)) === 16) &&
+    (normalizeQueryValue(dropped) === "" ||
+      normalizeQueryValue(dropped) === "false")
+  );
+};
+
+export const getProjectGalleryCacheKey = (query: Request["query"]) => {
+  return JSON.stringify({
+    cohortYear: Number(normalizeQueryValue(query.cohortYear)),
+    achievement: normalizeQueryValue(query.achievement).toLowerCase(),
+    dropped: normalizeQueryValue(query.dropped) || "false",
+    limit: Number(normalizeQueryValue(query.limit) || 16),
+    page: Number(normalizeQueryValue(query.page) || 0),
+    search: normalizeQueryValue(query.search),
+  });
+};
+
+const clearProjectGalleryCache = () => {
+  projectGalleryCache.clear();
+};
+
+const parseOptionalNumber = (value: Request["query"][string]) => {
+  const numberValue = Number(normalizeQueryValue(value));
+  return Number.isFinite(numberValue) && numberValue > 0
+    ? numberValue
+    : undefined;
+};
+
 router
   .get("/", async (req: Request, res: Response) => {
     try {
-      const { limit, page, achievement, search } = req.query;
-
-      const isDefaultFetch =
-        (page === "0" || !page) &&
-        (search === "" || !search) &&
-        String(achievement).toUpperCase() === "ARTEMIS" &&
-        (!limit || Number(limit) === 16);
+      const isDefaultFetch = isCacheableDefaultGalleryFetch(req.query);
+      const cacheKey = isDefaultFetch
+        ? getProjectGalleryCacheKey(req.query)
+        : undefined;
+      const cacheEntry = cacheKey
+        ? projectGalleryCache.get(cacheKey)
+        : undefined;
 
       if (
         isDefaultFetch &&
-        projectGalleryCache.data &&
-        Date.now() - projectGalleryCache.lastUpdated < CACHE_TTL
+        cacheEntry &&
+        Date.now() - cacheEntry.lastUpdated < CACHE_TTL
       ) {
         console.log("Cache hit");
-        return apiResponseWrapper(res, { projects: projectGalleryCache.data });
+        return apiResponseWrapper(res, { projects: cacheEntry.data });
       }
       console.log("Cache missed");
 
       const allProjects = await getManyProjectsWithFilter(req.query);
 
-      if (isDefaultFetch) {
-        projectGalleryCache.data = allProjects;
-        projectGalleryCache.lastUpdated = Date.now();
+      if (cacheKey) {
+        projectGalleryCache.set(cacheKey, {
+          data: allProjects,
+          lastUpdated: Date.now(),
+        });
       }
 
       return apiResponseWrapper(res, { projects: allProjects });
@@ -102,7 +158,7 @@ router
     try {
       const createdProject = await createProject(req.body);
 
-      projectGalleryCache.data = null;
+      clearProjectGalleryCache();
 
       return apiResponseWrapper(res, { project: createdProject });
     } catch (e) {
@@ -158,14 +214,26 @@ router.get("/mentor/:mentorId", async (req: Request, res: Response) => {
 router.get("/public", async (req: Request, res: Response) => {
   try {
     const { page, limit } = parsePaginationParams(req.query);
-    const { achievement } = req.query;
+    const { achievement, cohortYear } = req.query;
+    const parsedAchievement = normalizeQueryValue(achievement);
+    const parsedCohortYear = parseOptionalNumber(cohortYear);
 
     const result = await getPublicProjects({
       page,
       limit,
-      achievement: achievement as any,
+      ...(parsedAchievement ? { achievement: parsedAchievement } : {}),
+      ...(parsedCohortYear ? { cohortYear: parsedCohortYear } : {}),
     });
     return apiResponseWrapper(res, result);
+  } catch (e) {
+    return routeErrorHandler(res, e);
+  }
+});
+
+router.get("/public/cohorts", async (_req: Request, res: Response) => {
+  try {
+    const cohortYears = await getPublicProjectCohortYears();
+    return apiResponseWrapper(res, { cohortYears });
   } catch (e) {
     return routeErrorHandler(res, e);
   }
@@ -180,8 +248,11 @@ router.get("/public/count", async (req: Request, res: Response) => {
   try {
     const { limit } = parsePaginationParams(req.query);
     const achievement = req.query.achievement as string | undefined;
+    const cohortYear = parseOptionalNumber(req.query.cohortYear);
 
-    const result = await getPublicProjectsCount(limit, achievement);
+    const result = cohortYear
+      ? await getPublicProjectsCount(limit, achievement, cohortYear)
+      : await getPublicProjectsCount(limit, achievement);
     return apiResponseWrapper(res, result);
   } catch (e) {
     return routeErrorHandler(res, e);
@@ -229,6 +300,7 @@ router
           Number(projectId),
           req.body
         );
+        clearProjectGalleryCache();
         return apiResponseWrapper(res, { project: updatedProject });
       } catch (e) {
         return routeErrorHandler(res, e);
@@ -240,6 +312,7 @@ router
 
     try {
       const deletedProject = await deleteOneProjectById(Number(projectId));
+      clearProjectGalleryCache();
       return apiResponseWrapper(res, { project: deletedProject });
     } catch (e) {
       return routeErrorHandler(res, e);

@@ -263,6 +263,29 @@ describe("GET /projects/public", () => {
     assertApiResponse(mockResult);
   });
 
+  it("passes cohortYear with achievement and pagination", async () => {
+    const mockResult = {
+      projects: [],
+      total: 0,
+      page: 1,
+      pageSize: 28,
+      totalPages: 0,
+    };
+    getPublicProjectsSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(
+      `${BASE_URL}/public?page=1&limit=28&achievement=artemis&cohortYear=2026`
+    );
+
+    expect(getPublicProjectsSpy).toHaveBeenCalledWith({
+      page: 1,
+      limit: 28,
+      achievement: "artemis",
+      cohortYear: 2026,
+    });
+    assertApiResponse(mockResult);
+  });
+
   it("passes achievement query parameter with default pagination", async () => {
     const mockResult = {
       projects: [],
@@ -379,6 +402,18 @@ describe("GET /projects/public/count", () => {
     );
 
     expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(28, "artemis");
+    assertApiResponse(mockResult);
+  });
+
+  it("passes cohortYear with achievement and limit", async () => {
+    const mockResult = { total: 20, totalPages: 1 };
+    getPublicProjectsCountSpy.mockResolvedValueOnce(mockResult);
+
+    await supertest(app).get(
+      `${BASE_URL}/public/count?limit=28&achievement=artemis&cohortYear=2026`
+    );
+
+    expect(getPublicProjectsCountSpy).toHaveBeenCalledWith(28, "artemis", 2026);
     assertApiResponse(mockResult);
   });
 
