@@ -602,6 +602,7 @@ export const getAllSubmissions = async (
     const submission = await findManySubmissions({
       where: {
         fromProjectId: project.id,
+        isDraft: false,
         deadlineId: {
           in: milestoneDeadlines.map(
             (milestoneDeadline) => milestoneDeadline.id
