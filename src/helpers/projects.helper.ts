@@ -271,7 +271,8 @@ export function buildPaginationMetadata(
 export interface GetPublicProjectsParams {
   page?: number;
   limit?: number;
-  achievement?: AchievementLevel;
+  achievement?: string | AchievementLevel;
+  cohortYear?: number;
 }
 
 export interface PaginatedProjects {
@@ -286,6 +287,42 @@ export interface PaginatedProjects {
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 
+function parseAchievementLevel(
+  achievement?: string | AchievementLevel
+): AchievementLevel | undefined {
+  if (!achievement) {
+    return undefined;
+  }
+
+  const pascalCase =
+    String(achievement).charAt(0).toUpperCase() +
+    String(achievement).slice(1).toLowerCase();
+
+  return Object.values(AchievementLevel).includes(
+    pascalCase as AchievementLevel
+  )
+    ? (pascalCase as AchievementLevel)
+    : undefined;
+}
+
+export function buildPublicProjectsWhere({
+  achievement,
+  cohortYear,
+}: Pick<GetPublicProjectsParams, "achievement" | "cohortYear">) {
+  const where: Prisma.ProjectWhereInput = { hasDropped: false };
+  const parsedAchievement = parseAchievementLevel(achievement);
+
+  if (parsedAchievement) {
+    where.achievement = parsedAchievement;
+  }
+
+  if (cohortYear) {
+    where.cohortYear = Number(cohortYear);
+  }
+
+  return where;
+}
+
 /**
  * Fetch public projects for static site generation
  * Supports pagination, optional achievement filtering, and returns projects sorted by cohort year (desc) then ID (desc)
@@ -294,13 +331,15 @@ const DEFAULT_LIMIT = 20;
 export async function getPublicProjects(
   params: GetPublicProjectsParams = {}
 ): Promise<PaginatedProjects> {
-  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, achievement } = params;
+  const {
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
+    achievement,
+    cohortYear,
+  } = params;
   const skip = (page - 1) * limit;
 
-  const where = {
-    hasDropped: false,
-    achievement: achievement ?? undefined,
-  };
+  const where = buildPublicProjectsWhere({ achievement, cohortYear });
 
   const [projectsRaw, total] = await Promise.all([
     findManyProjectsWithUserData({
@@ -327,26 +366,24 @@ export async function getPublicProjects(
  */
 export async function getPublicProjectsCount(
   limit: number = DEFAULT_LIMIT,
-  achievement?: string
+  achievement?: string,
+  cohortYear?: number
 ): Promise<{ total: number; totalPages: number }> {
-  const where: Prisma.ProjectWhereInput = { hasDropped: false };
-
-  // Add achievement filter if provided
-  if (achievement) {
-    // Convert lowercase string (e.g., "artemis") to PascalCase (e.g., "Artemis")
-    const pascalCase =
-      achievement.charAt(0).toUpperCase() + achievement.slice(1).toLowerCase();
-    // Validate against enum values
-    if (
-      Object.values(AchievementLevel).includes(pascalCase as AchievementLevel)
-    ) {
-      where.achievement = pascalCase as AchievementLevel;
-    }
-  }
+  const where = buildPublicProjectsWhere({ achievement, cohortYear });
 
   const total = await countProjects(where);
   return {
     total,
     totalPages: total > 0 ? Math.ceil(total / limit) : 0,
   };
+}
+
+export async function getPublicProjectCohortYears(): Promise<number[]> {
+  const projects = await findManyProjects({
+    where: { hasDropped: false },
+    select: { cohortYear: true },
+    orderBy: { cohortYear: "desc" },
+  });
+
+  return Array.from(new Set(projects.map((project) => project.cohortYear)));
 }

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import {
+  buildPublicProjectsWhere,
   getPublicProjects,
   getPublicProjectsCount,
   sortByAchievementRank,
@@ -79,6 +80,46 @@ describe("buildPaginationMetadata", () => {
   });
 });
 
+describe("buildPublicProjectsWhere", () => {
+  it("builds a cohort and achievement filtered public projects query", () => {
+    const result = buildPublicProjectsWhere({
+      achievement: "Artemis",
+      cohortYear: 2026,
+    });
+
+    expect(result).toEqual({
+      hasDropped: false,
+      achievement: "Artemis",
+      cohortYear: 2026,
+    });
+  });
+
+  it("normalizes lowercase achievement values", () => {
+    const result = buildPublicProjectsWhere({
+      achievement: "apollo" as any,
+      cohortYear: 2025,
+    });
+
+    expect(result).toEqual({
+      hasDropped: false,
+      achievement: "Apollo",
+      cohortYear: 2025,
+    });
+  });
+
+  it("ignores invalid achievement values", () => {
+    const result = buildPublicProjectsWhere({
+      achievement: "invalid_level" as any,
+      cohortYear: 2024,
+    });
+
+    expect(result).toEqual({
+      hasDropped: false,
+      cohortYear: 2024,
+    });
+  });
+});
+
 describe("getPublicProjectsCount", () => {
   it("returns total and totalPages for non-dropped projects", async () => {
     mockedCountProjects.mockResolvedValue(100);
@@ -108,6 +149,19 @@ describe("getPublicProjectsCount", () => {
     expect(mockedCountProjects).toHaveBeenCalledWith({
       hasDropped: false,
       achievement: "Artemis",
+    });
+  });
+
+  it("filters by cohort year when provided", async () => {
+    mockedCountProjects.mockResolvedValue(12);
+
+    const result = await getPublicProjectsCount(28, "artemis", 2026);
+
+    expect(result.total).toBe(12);
+    expect(mockedCountProjects).toHaveBeenCalledWith({
+      hasDropped: false,
+      achievement: "Artemis",
+      cohortYear: 2026,
     });
   });
 
@@ -186,6 +240,34 @@ describe("getPublicProjects", () => {
     expect(result.projects).toHaveLength(1);
   });
 
+  it("filters projects by cohort year and achievement level", async () => {
+    mockedFindManyProjectsWithUserData.mockResolvedValue([
+      MOCK_PROJECT_ARTEMIS_2024,
+    ] as any);
+    mockedCountProjects.mockResolvedValue(1);
+
+    const result = await getPublicProjects({
+      achievement: "Artemis",
+      cohortYear: 2024,
+    });
+
+    expect(mockedFindManyProjectsWithUserData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          hasDropped: false,
+          achievement: "Artemis",
+          cohortYear: 2024,
+        },
+      })
+    );
+    expect(mockedCountProjects).toHaveBeenCalledWith({
+      hasDropped: false,
+      achievement: "Artemis",
+      cohortYear: 2024,
+    });
+    expect(result.projects).toHaveLength(1);
+  });
+
   it("applies pagination with achievement filter", async () => {
     mockedFindManyProjectsWithUserData.mockResolvedValue([
       MOCK_PROJECT_ARTEMIS_2024,
@@ -221,10 +303,7 @@ describe("getPublicProjects", () => {
 
     expect(mockedFindManyProjectsWithUserData).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          achievement: undefined,
-          hasDropped: false,
-        }),
+        where: { hasDropped: false },
       })
     );
     expect(result.projects).toHaveLength(5);
