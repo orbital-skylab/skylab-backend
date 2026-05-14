@@ -599,7 +599,7 @@ export const getAllSubmissions = async (
   });
 
   const pSubmissions = projects.map(async (project) => {
-    const submission = await findManySubmissions({
+    const submissions = await findManySubmissions({
       where: {
         fromProjectId: project.id,
         isDraft: false,
@@ -618,7 +618,7 @@ export const getAllSubmissions = async (
 
     return {
       fromProject: flattenProjectUsers(project),
-      submission: submission || undefined,
+      submission: submissions.length > 0 ? submissions : undefined,
     };
   });
 
@@ -928,7 +928,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
             (({ password, ...rest }) => rest)(project.adviser.user as User)
           : undefined,
         toProject: flattenProjectUsers(project),
-        submission: submissions || undefined,
+        submission: submissions.length > 0 ? submissions : undefined,
       };
     });
     combined.push(...(await Promise.all(pAdviserSubmissions)));
