@@ -863,6 +863,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
         where: {
           fromProjectId: relation.fromProjectId,
           toProjectId: relation.toProjectId,
+          isDraft: false,
           deadlineId: { in: deadlineIds },
         },
         select: { id: true, updatedAt: true, deadlineId: true },
@@ -917,6 +918,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
         where: {
           fromUserId: project.adviser?.userId,
           toProjectId: project.id,
+          isDraft: false,
           deadlineId: { in: deadlineIds },
         },
         select: { id: true, updatedAt: true, deadlineId: true },
