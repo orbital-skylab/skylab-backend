@@ -599,9 +599,10 @@ export const getAllSubmissions = async (
   });
 
   const pSubmissions = projects.map(async (project) => {
-    const submission = await findManySubmissions({
+    const submissions = await findManySubmissions({
       where: {
         fromProjectId: project.id,
+        isDraft: false,
         deadlineId: {
           in: milestoneDeadlines.map(
             (milestoneDeadline) => milestoneDeadline.id
@@ -617,7 +618,7 @@ export const getAllSubmissions = async (
 
     return {
       fromProject: flattenProjectUsers(project),
-      submission: submission || undefined,
+      submission: submissions.length > 0 ? submissions : undefined,
     };
   });
 
@@ -862,6 +863,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
         where: {
           fromProjectId: relation.fromProjectId,
           toProjectId: relation.toProjectId,
+          isDraft: false,
           deadlineId: { in: deadlineIds },
         },
         select: { id: true, updatedAt: true, deadlineId: true },
@@ -916,6 +918,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
         where: {
           fromUserId: project.adviser?.userId,
           toProjectId: project.id,
+          isDraft: false,
           deadlineId: { in: deadlineIds },
         },
         select: { id: true, updatedAt: true, deadlineId: true },
@@ -927,7 +930,7 @@ export const getAllEvaluationSubmissions = async (query: any) => {
             (({ password, ...rest }) => rest)(project.adviser.user as User)
           : undefined,
         toProject: flattenProjectUsers(project),
-        submission: submissions || undefined,
+        submission: submissions.length > 0 ? submissions : undefined,
       };
     });
     combined.push(...(await Promise.all(pAdviserSubmissions)));
