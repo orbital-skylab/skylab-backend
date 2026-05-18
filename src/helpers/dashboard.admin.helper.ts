@@ -333,7 +333,7 @@ export const getCollatedMilestoneSubmissions = async (
                 return (
                   !!response.submissionId &&
                   !!response.submittedAt &&
-                  response.submittedAt < deadline.dueBy
+                  response.submittedAt <= deadline.dueBy
                 );
               }
 
@@ -518,7 +518,7 @@ export const getCollatedMilestoneSubmissions = async (
           return (
             !!response.submissionId &&
             !!response.submittedAt &&
-            response.submittedAt < deadline.dueBy
+            response.submittedAt <= deadline.dueBy
           );
         }
         if (submissionStatus === SubmissionStatusEnum.SUBMITTED_LATE) {
@@ -750,7 +750,7 @@ export const getSubmissionsByDeadlineId = async (
         );
       } else if (submissionStatus == SubmissionStatusEnum.SUBMITTED) {
         return (
-          !!result.submission && result.submission.updatedAt < deadline.dueBy
+          !!result.submission && result.submission.updatedAt <= deadline.dueBy
         );
       }
     });
@@ -1163,7 +1163,7 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
       if (submissionStatus == SubmissionStatusEnum.SUBMITTED_LATE)
         return sub && deadline.dueBy && sub.updatedAt > deadline.dueBy;
       if (submissionStatus == SubmissionStatusEnum.SUBMITTED)
-        return !!sub && deadline.dueBy && sub.updatedAt < deadline.dueBy;
+        return !!sub && deadline.dueBy && sub.updatedAt <= deadline.dueBy;
       return true;
     });
   }
