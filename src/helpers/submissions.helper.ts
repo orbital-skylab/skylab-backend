@@ -11,6 +11,7 @@ import {
 } from "../models/deadline.db";
 import {
   createUniqueSubmission,
+  findFirstSubmission,
   findManySubmissions,
   findUniqueSubmission,
   updateUniqueSubmission,
@@ -120,6 +121,20 @@ export async function createOneSubmission(body: {
     toProjectId,
     toUserId,
   } = submission;
+  const existingSubmission = await findFirstSubmission({
+    where: {
+      deadlineId,
+      fromProjectId: fromProjectId ?? null,
+      fromUserId: fromUserId ?? null,
+      toProjectId: toProjectId ?? null,
+      toUserId: toUserId ?? null,
+    },
+  });
+
+  if (existingSubmission) {
+    return existingSubmission;
+  }
+
   const createdSubmission = await createUniqueSubmission({
     data: {
       deadline: { connect: { id: deadlineId } },
@@ -182,7 +197,10 @@ export async function updateOneSubmissionBySubmissionId(
     });
   }
 
-  return await findUniqueSubmission({ where: { id: submissionId } });
+  return await findUniqueSubmission({
+    where: { id: submissionId },
+    include: { answers: true },
+  });
 }
 
 export async function getAnonymousAnswersViaAdviserID(adviserId: number) {
