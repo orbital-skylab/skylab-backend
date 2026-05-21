@@ -20,11 +20,15 @@ app.disable("x-powered-by");
  **********************************************************************************/
 
 // Common middlewares
+// The dev domain is included because the frontend at nusskylab-v2-dev makes
+// same-origin API calls that still carry the Origin header. Browsers don't
+// strip it, so the server's CORS middleware sees it and must whitelist it.
 const allowedOrigins = [
   "https://skylab-frontend.vercel.app",
   "http://localhost:3000",
   "http://frontend:3000",
   "http://frontend:3001",
+  "https://nusskylab-v2-dev.comp.nus.edu.sg",
 ];
 app.use(
   cors({
@@ -51,7 +55,6 @@ app.use(cookieParser());
 app.get("/", (_: Request, res: Response) => {
   return res.status(HttpStatusCode.OK).send("Server is running");
 });
-
 // Add api router
 app.use("/api", apiRouter);
 
