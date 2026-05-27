@@ -24,6 +24,7 @@ import {
 } from "../models/submissions.db";
 import { SENDER, GET_HTML_CONTENT_REMINDER } from "../utils/Emails";
 import { prisma } from "../client";
+import { removePasswordFromUser } from "./users.helper";
 
 export enum SubmissionStatusEnum {
   UNSUBMITTED = "Unsubmitted",
@@ -99,6 +100,39 @@ export type CollatedEvaluationDeadlineResponse = {
   questions: CollatedEvaluationQuestionResponse[];
 };
 
+const withoutPassword = (user?: User | null) => {
+  if (!user) return {};
+
+  return removePasswordFromUser(user);
+};
+
+const flattenStudentUser = (student: Student & { user?: User | null }) => {
+  const { user, id: studentId, ...studentData } = student;
+  return {
+    studentId,
+    ...withoutPassword(user),
+    ...studentData,
+  };
+};
+
+const flattenAdviserUser = (adviser: Adviser & { user?: User | null }) => {
+  const { user, id: adviserId, ...adviserData } = adviser;
+  return {
+    adviserId,
+    ...withoutPassword(user),
+    ...adviserData,
+  };
+};
+
+const flattenMentorUser = (mentor: Mentor & { user?: User | null }) => {
+  const { user, id: mentorId, ...mentorData } = mentor;
+  return {
+    mentorId,
+    ...withoutPassword(user),
+    ...mentorData,
+  };
+};
+
 export function flattenProjectUsers(
   project: Project & {
     students?: (Student & {
@@ -119,28 +153,14 @@ export function flattenProjectUsers(
   const { students, adviser, mentor, ...projectData } = project;
 
   const flattenedStudents = students
-    ? students.map((student) => {
-        const { user, ...studentData } = student;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, password, ...userData } = user;
-        return {
-          ...userData,
-          ...studentData,
-        };
-      })
+    ? students.map((student) => flattenStudentUser(student))
     : [];
 
   let tempMentorAdviser;
 
   if (adviser) {
-    const { user: adviserUser, ...adviserData } = adviser;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, password, ...adviserUserData } = adviserUser;
     tempMentorAdviser = {
-      adviser: {
-        ...adviserData,
-        ...adviserUserData,
-      },
+      adviser: flattenAdviserUser(adviser),
     };
   } else {
     tempMentorAdviser = {
@@ -149,15 +169,9 @@ export function flattenProjectUsers(
   }
 
   if (mentor) {
-    const { user: mentorUser, ...mentorData } = mentor;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, password, ...mentorUserData } = mentorUser;
     tempMentorAdviser = {
       ...tempMentorAdviser,
-      mentor: {
-        ...mentorUserData,
-        ...mentorData,
-      },
+      mentor: flattenMentorUser(mentor),
     };
   } else {
     tempMentorAdviser = {
@@ -881,24 +895,16 @@ export const getAllEvaluationSubmissions = async (query: any) => {
 
       const rawStudents =
         projectsWithStudentsMap.get(relation.fromProjectId) || [];
-      const flattenedStudents = rawStudents.map((student) => {
-        const { user, ...studentData } = student;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, password, ...userData } = user || {};
-        return { ...userData, ...studentData };
-      });
+      const flattenedStudents = rawStudents.map((student) =>
+        flattenStudentUser(student)
+      );
 
       return {
         relationId: relation.id,
         fromProject: {
           ...relation.fromProject,
           adviser: relation.fromProject.adviser
-            ? (() => {
-                const { user, ...adviserData } = relation.fromProject.adviser;
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { password, ...adviserUserData } = user || {};
-                return { ...adviserData, ...adviserUserData };
-              })()
+            ? flattenAdviserUser(relation.fromProject.adviser)
             : null,
           students: flattenedStudents,
         },
@@ -1059,22 +1065,12 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
 
       const rawStudents =
         projectsWithStudentsMap.get(relation.fromProjectId) || [];
-      const flattenedStudents = rawStudents.map((student) => {
-        const { user, ...studentData } = student;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, password, ...userData } = user || {};
-        return { ...userData, ...studentData };
-      });
+      const flattenedStudents = rawStudents.map((student) =>
+        flattenStudentUser(student)
+      );
 
       const adviser = relation.fromProject.adviser;
-      const sanitizedAdviser = adviser
-        ? (() => {
-            const { user, ...adviserData } = adviser as any;
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { id, password, ...userData } = (user as any) || {};
-            return { ...adviserData, ...userData };
-          })()
-        : null;
+      const sanitizedAdviser = adviser ? flattenAdviserUser(adviser) : null;
 
       return {
         relationId: relation.id,
