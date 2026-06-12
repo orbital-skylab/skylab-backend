@@ -141,6 +141,7 @@ export async function createOneDeadline(query: Prisma.DeadlineCreateArgs) {
   const createdDeadline = await prisma.deadline.create(query);
   const deadlineToReturn = await prisma.deadline.findUnique({
     where: { id: createdDeadline.id },
+    include: { evaluating: true },
   });
   return deadlineToReturn;
 }
