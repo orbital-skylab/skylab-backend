@@ -38,7 +38,11 @@ export function formatUserWithRoleData(user: UserWithRoleData) {
     ...userInfoWithoutPassword,
     student: student ? student[0] ?? {} : {},
     mentor: mentor ? mentor[0] ?? {} : {},
-    adviser: adviser ? adviser[0] ?? {} : undefined,
+    adviser: adviser
+      ? Array.isArray(adviser)
+        ? [...adviser].sort((a, b) => b.cohortYear - a.cohortYear)[0] ?? {}
+        : adviser
+      : undefined,
     administrator: administrator ? administrator[0] ?? {} : undefined,
   };
 }

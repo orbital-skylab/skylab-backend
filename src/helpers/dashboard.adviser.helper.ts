@@ -1,11 +1,11 @@
-import { DeadlineType } from "@prisma/client";
+import { DeadlineType, Prisma } from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import { findUniqueAdviserWithProjectData } from "../models/advisers.db";
 import { findManyDeadlines } from "../models/deadline.db";
-import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
 import {
   findFirstNonDraftSubmission,
   findFirstSubmission,
+  findManySubmissions,
 } from "../models/submissions.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
 
@@ -114,10 +114,6 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
 
   const projectIds = adviser.projects.map(({ id }) => id);
 
-  const relations = await findManyRelationsWithFromToProjectData({
-    where: { fromProjectId: { in: projectIds } },
-  });
-
   const cohortDeadlines = await findManyDeadlines({
     where: { cohortYear: adviser.cohortYear },
   });
@@ -144,23 +140,21 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
           submissions: [],
         };
       }
-      const evaluationSubmissions = relations.map(async (relation) => {
-        const submission = await findFirstNonDraftSubmission({
-          where: {
-            deadlineId: deadline.id,
-            fromProjectId: relation.fromProjectId,
-            toProjectId: relation.toProjectId,
-          },
-        });
-        return {
-          fromProject: relation.fromProject,
-          toProject: relation.toProject,
-          ...submission,
-        };
-      });
+      // Query submissions directly — survives EvaluationRelation deletion.
+      const evaluationSubmissions = (await findManySubmissions({
+        where: {
+          deadlineId: deadline.id,
+          fromProjectId: { in: projectIds },
+          toProjectId: { not: null },
+          isDraft: false,
+        },
+        include: { fromProject: true, toProject: true },
+      })) as Prisma.SubmissionGetPayload<{
+        include: { fromProject: true; toProject: true };
+      }>[];
       return {
         deadline: deadline,
-        submissions: await Promise.all(evaluationSubmissions),
+        submissions: evaluationSubmissions,
       };
     } else if (deadline.type == "Feedback") {
       const feedbackSubmissions = adviser.projects.map(async (project) => {

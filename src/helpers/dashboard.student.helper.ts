@@ -1,10 +1,7 @@
-import { DeadlineType, Submission } from "@prisma/client";
+import { DeadlineType, Prisma, Submission } from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "../models/deadline.db";
-import {
-  findManyRelationsWithFromProjectData,
-  findManyRelationsWithFromToProjectData,
-} from "../models/relations.db";
+import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
 import {
   findUniqueStudentWithProjectWithAdviserData,
   findUniqueStudentWithProjectWithAdviserUserData,
@@ -12,6 +9,7 @@ import {
 import {
   findFirstSubmission,
   findFirstNonDraftSubmission,
+  findManySubmissions,
 } from "../models/submissions.db";
 import { findUniqueUser } from "../models/users.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
@@ -190,17 +188,11 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
     pCohortFeedbacks,
   ]);
 
-  const relations = await findManyRelationsWithFromProjectData({
-    where: {
-      toProjectId: projectId,
-    },
-  });
-
   const pProjectSubmissions = [...cohortEvaluations, ...cohortFeedbacks].map(
     async (deadline) => {
-      type PeerFeedback = Partial<Submission> & {
-        fromProject: typeof relations[0]["fromProject"];
-      };
+      type PeerFeedback = Prisma.SubmissionGetPayload<{
+        include: { fromProject: true };
+      }>;
       type AdviserFeedback = Partial<Submission> & {
         fromUser: typeof adviserUser;
       };
@@ -209,22 +201,16 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
       let peerSubmissions: PeerFeedback[] = [];
 
       if (deadline.evaluatorType !== "Adviser") {
-        const pPeerSubmissions = relations.map(async (relation) => {
-          const submission = await findFirstNonDraftSubmission({
-            where: {
-              deadlineId: deadline.id,
-              fromProjectId: relation.fromProjectId,
-              toProjectId: projectId,
-            },
-          });
-
-          const peerFeedback: PeerFeedback = {
-            ...(submission || {}),
-            fromProject: relation.fromProject,
-          };
-          return peerFeedback;
-        });
-        peerSubmissions = await Promise.all(pPeerSubmissions);
+        // Query submissions directly — survives EvaluationRelation deletion.
+        peerSubmissions = (await findManySubmissions({
+          where: {
+            deadlineId: deadline.id,
+            toProjectId: projectId,
+            fromProjectId: { not: null },
+            isDraft: false,
+          },
+          include: { fromProject: true },
+        })) as PeerFeedback[];
       }
 
       if (deadline.type !== "Evaluation") {
