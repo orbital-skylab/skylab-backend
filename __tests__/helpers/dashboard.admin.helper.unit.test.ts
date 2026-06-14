@@ -123,7 +123,8 @@ describe("flattenProjectUsers function unit test", () => {
 
     const expectedFlattened = {
       adviser: {
-        id: 37,
+        adviserId: 37,
+        id: 439,
         userId: 439,
         submitterId: null,
         matricNo: "A0622992K",
@@ -138,7 +139,8 @@ describe("flattenProjectUsers function unit test", () => {
         selfIntro: "Ullam et maiores et.",
       },
       mentor: {
-        id: 37,
+        mentorId: 37,
+        id: 539,
         userId: 539,
         cohortYear: 2025,
         name: "Mireille Bernhard",
@@ -165,6 +167,7 @@ describe("flattenProjectUsers function unit test", () => {
       students: [
         {
           id: 37,
+          studentId: 37,
           userId: 37,
           projectId: 37,
           nusnetId: "e0612289",
@@ -181,6 +184,7 @@ describe("flattenProjectUsers function unit test", () => {
         },
         {
           id: 364,
+          studentId: 364,
           userId: 364,
           projectId: 37,
           nusnetId: "e0368678",
