@@ -8,6 +8,7 @@ import {
 } from "../helpers/submissions.helper";
 import authorizeSignedIn from "../middleware/authorizeSignedIn";
 import authorizeSubmitter from "../middleware/authorizeSubmitter";
+import authorizeSelfRole from "../middleware/authorizeSelfRole";
 import {
   apiResponseWrapper,
   routeErrorHandler,
@@ -34,7 +35,7 @@ router.post("/", authorizeSignedIn, async (req: Request, res: Response) => {
 
 router.get(
   "/student/:studentId/anonymous-questions",
-  authorizeSignedIn,
+  authorizeSelfRole("student", "studentId"),
   async (req: Request, res: Response) => {
     const { studentId } = req.params;
     try {
@@ -49,7 +50,7 @@ router.get(
 
 router.get(
   "/adviser/:adviserId/anonymous-questions",
-  authorizeSignedIn,
+  authorizeSelfRole("adviser", "adviserId"),
   async (req: Request, res: Response) => {
     const { adviserId } = req.params;
     try {

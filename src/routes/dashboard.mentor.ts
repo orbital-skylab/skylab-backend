@@ -1,16 +1,17 @@
 import { Request, Response, Router } from "express";
 import { getProjectMilestonesByMentorId } from "../helpers/dashboard.mentor";
-import authorizeSignedIn from "../middleware/authorizeSignedIn";
+import authorizeSelfRole from "../middleware/authorizeSelfRole";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
 
 const router = Router();
+const authorizeSelfMentor = authorizeSelfRole("mentor", "mentorId");
 
 router.get(
   "/:mentorId/submissions",
-  authorizeSignedIn,
+  authorizeSelfMentor,
   async (req: Request, res: Response) => {
     const { mentorId } = req.params;
     try {

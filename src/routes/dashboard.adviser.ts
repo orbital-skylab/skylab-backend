@@ -3,17 +3,18 @@ import {
   getDeadlinesByAdviserId,
   getProjectSubmissionsViaAdviserId,
 } from "../helpers/dashboard.adviser.helper";
-import authorizeSignedIn from "../middleware/authorizeSignedIn";
+import authorizeSelfRole from "../middleware/authorizeSelfRole";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
 
 const router = Router();
+const authorizeSelfAdviser = authorizeSelfRole("adviser", "adviserId");
 
 router.get(
   "/:adviserId/deadlines",
-  authorizeSignedIn,
+  authorizeSelfAdviser,
   async (req: Request, res: Response) => {
     const { adviserId } = req.params;
     try {
@@ -27,7 +28,7 @@ router.get(
 
 router.get(
   "/:adviserId/submissions",
-  authorizeSignedIn,
+  authorizeSelfAdviser,
   async (req: Request, res: Response) => {
     const { adviserId } = req.params;
     try {
