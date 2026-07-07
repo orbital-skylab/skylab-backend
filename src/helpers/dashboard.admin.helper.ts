@@ -761,8 +761,8 @@ export const getSubmissionsByDeadlineId = async (
 
   results.sort((a, b) => a.fromProject.id - b.fromProject.id);
 
-  if (limit !== undefined && page !== undefined) {
-    const startIndex = Number(limit) * Number(page);
+  if (limit !== undefined) {
+    const startIndex = Number(limit) * Number(page ?? 0);
     results = results.slice(startIndex, startIndex + Number(limit));
   }
 
