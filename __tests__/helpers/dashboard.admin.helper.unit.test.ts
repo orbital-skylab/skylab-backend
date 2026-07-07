@@ -17,7 +17,12 @@ import * as DashboardAdminHelpers from "../../src/helpers/dashboard.admin.helper
 import {
   flattenProjectUsers,
   getSubmissions,
+  getSubmissionsByDeadlineId,
+  SubmissionStatusEnum,
 } from "../../src/helpers/dashboard.admin.helper";
+import * as DeadlineDb from "../../src/models/deadline.db";
+import * as ProjectsDb from "../../src/models/projects.db";
+import * as SubmissionsDb from "../../src/models/submissions.db";
 
 afterEach(() => {
   jest.resetAllMocks();
@@ -248,5 +253,85 @@ describe("getSubmissions helper unit test", () => {
     expect(getSubmissionsByDeadlineIdSpy).not.toHaveBeenCalled();
 
     expect(result).toEqual(mockProjects);
+  });
+});
+
+describe("getSubmissionsByDeadlineId helper unit test", () => {
+  const buildProject = (id: number, hasDropped = false) =>
+    ({
+      id,
+      name: `Project ${id}`,
+      teamName: `Team ${id}`,
+      adviserId: null,
+      mentorId: null,
+      achievement: AchievementLevel.Vostok,
+      cohortYear: 2025,
+      proposalPdf: null,
+      posterUrl: null,
+      videoUrl: null,
+      hasDropped,
+      students: [],
+      adviser: null,
+      mentor: null,
+    } as any);
+
+  const buildSubmission = (projectId: number) =>
+    ({
+      id: projectId,
+      deadlineId: 1,
+      isDraft: false,
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      fromProjectId: projectId,
+      toProjectId: null,
+      fromUserId: null,
+      toUserId: null,
+    } as any);
+
+  it("filters and sorts submissions before paginating with a default first page", async () => {
+    const projects = Array.from({ length: 56 }, (_, index) =>
+      buildProject(index + 1)
+    );
+    const findManyProjectsSpy = jest
+      .spyOn(ProjectsDb, "findManyProjectsWithUserData")
+      .mockResolvedValueOnce(projects);
+    const findFirstNonDraftSubmissionSpy = jest
+      .spyOn(SubmissionsDb, "findFirstNonDraftSubmission")
+      .mockImplementation(async ({ where }: any) => {
+        const projectId = where.fromProjectId;
+        return projectId <= 50 ? buildSubmission(projectId) : null;
+      });
+
+    jest.spyOn(DeadlineDb, "findUniqueDeadline").mockResolvedValueOnce({
+      id: 1,
+      name: "Milestone 1",
+      cohortYear: 2025,
+      createdOn: new Date("2025-01-01T00:00:00.000Z"),
+      dueBy: new Date("2025-02-01T00:00:00.000Z"),
+      desc: null,
+      type: "Milestone",
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      evaluatingMilestoneId: null,
+      evaluatorType: null,
+    } as any);
+
+    const result = await getSubmissionsByDeadlineId({
+      cohortYear: 2025,
+      deadlineId: 1,
+      dropped: "false",
+      submissionStatus: SubmissionStatusEnum.UNSUBMITTED,
+      limit: 2,
+    });
+
+    expect(findManyProjectsSpy).toHaveBeenCalledWith({
+      where: {
+        cohortYear: 2025,
+        hasDropped: false,
+        name: undefined,
+      },
+    });
+    expect(findFirstNonDraftSubmissionSpy).toHaveBeenCalledTimes(56);
+    expect(result.map((submission) => submission.fromProject.id)).toEqual([
+      51, 52,
+    ]);
   });
 });
