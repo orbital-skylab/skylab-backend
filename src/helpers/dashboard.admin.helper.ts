@@ -668,10 +668,12 @@ export const getSubmissionsByDeadlineId = async (
     dropped,
   } = query;
 
+  const isDropped = dropped === "true" || dropped === true;
   const deadline = await findUniqueDeadline({ where: { id: deadlineId } });
   const projects = await findManyProjectsWithUserData({
     where: {
       cohortYear: cohortYear,
+      hasDropped: isDropped,
       name: search ? { contains: search } : undefined,
     },
   });
