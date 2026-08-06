@@ -708,7 +708,7 @@ export const getSubmissionsByDeadlineId = async (
 
   let results: {
     fromProject: Project;
-    toUser?: User;
+    toUser?: Omit<User, "password">;
     toProject?: Project;
     submission?: Submission;
   }[];
@@ -733,20 +733,24 @@ export const getSubmissionsByDeadlineId = async (
     results = await Promise.all(pSubmissions);
   } else if (deadline.type == "Feedback") {
     const pSubmissions = projects.map(async (project) => {
+      if (!project.adviser) return null;
+
       const submission = await findFirstNonDraftSubmission({
         where: {
           deadlineId: deadlineId,
           fromProjectId: project.id,
-          toUserId: project.adviser?.userId,
+          toUserId: project.adviser.userId,
         },
       });
       return {
         fromProject: flattenProjectUsers(project),
-        toUser: project.adviser?.user,
+        toUser: removePasswordFromUser(project.adviser.user),
         submission: submission || undefined,
       };
     });
-    results = await Promise.all(pSubmissions);
+    results = (await Promise.all(pSubmissions)).filter(
+      (result): result is NonNullable<typeof result> => result !== null
+    );
   } else {
     const pSubmissions = projects.map(async (project) => {
       const submission = await findFirstNonDraftSubmission({

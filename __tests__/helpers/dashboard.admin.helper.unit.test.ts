@@ -383,7 +383,7 @@ describe("getSubmissionsByDeadlineId helper unit test", () => {
       evaluatorType: null,
     } as any);
 
-    await getSubmissionsByDeadlineId({
+    const result = await getSubmissionsByDeadlineId({
       cohortYear: 2025,
       deadlineId: 4,
       dropped: "false",
@@ -396,6 +396,43 @@ describe("getSubmissionsByDeadlineId helper unit test", () => {
         toUserId: adviserUserId,
       },
     });
+    expect(result[0].toUser).toEqual(
+      expect.not.objectContaining({ password: expect.anything() })
+    );
+  });
+
+  it("skips feedback submission queries for projects without advisers", async () => {
+    const project = buildProject(1);
+
+    jest
+      .spyOn(ProjectsDb, "findManyProjectsWithUserData")
+      .mockResolvedValueOnce([project]);
+    const findFirstNonDraftSubmissionSpy = jest.spyOn(
+      SubmissionsDb,
+      "findFirstNonDraftSubmission"
+    );
+
+    jest.spyOn(DeadlineDb, "findUniqueDeadline").mockResolvedValueOnce({
+      id: 4,
+      name: "Feedback 1",
+      cohortYear: 2025,
+      createdOn: new Date("2025-01-01T00:00:00.000Z"),
+      dueBy: new Date("2025-02-01T00:00:00.000Z"),
+      desc: null,
+      type: "Feedback",
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      evaluatingMilestoneId: null,
+      evaluatorType: null,
+    } as any);
+
+    const result = await getSubmissionsByDeadlineId({
+      cohortYear: 2025,
+      deadlineId: 4,
+      dropped: "false",
+    });
+
+    expect(findFirstNonDraftSubmissionSpy).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
   });
 });
 
