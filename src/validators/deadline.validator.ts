@@ -39,7 +39,11 @@ export const CreateDeadlineValidator = [
       }
     }),
   body("deadline.evaluatorType")
-    .if(body("deadline.type").equals("Evaluation"))
+    .if((value, { req }) =>
+      [DeadlineType.Evaluation, DeadlineType.Feedback].includes(
+        req.body.deadline?.type
+      )
+    )
     .notEmpty()
     .isIn(Object.values(EvaluatorType)),
 ];

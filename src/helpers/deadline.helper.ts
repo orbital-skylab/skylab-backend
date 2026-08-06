@@ -54,7 +54,7 @@ export async function createDeadline(body: {
     type: DeadlineType;
     desc?: string;
     evaluatingMilestoneId?: number; // If type == "Evaluation"
-    evaluatorType?: EvaluatorType; // If type == "Evaluation"
+    evaluatorType?: EvaluatorType; // If type == "Evaluation" or "Feedback"
   };
 }) {
   const { deadline: deadlineData } = body;
@@ -66,7 +66,10 @@ export async function createDeadline(body: {
       cohort: { connect: { academicYear: cohortYear } },
       ...deadline,
       evaluatorType:
-        deadline.type === DeadlineType.Evaluation ? evaluatorType : undefined,
+        deadline.type === DeadlineType.Evaluation ||
+        deadline.type === DeadlineType.Feedback
+          ? evaluatorType
+          : undefined,
       evaluating:
         deadline.type === DeadlineType.Evaluation
           ? {
@@ -285,11 +288,13 @@ export async function editDeadlineByDeadlineId(
 ) {
   const { evaluatingMilestoneId, ...deadline } = body.deadline;
   const isEvaluationDeadline = deadline.type === DeadlineType.Evaluation;
+  const supportsEvaluatorType =
+    isEvaluationDeadline || deadline.type === DeadlineType.Feedback;
   const updatedDeadline = await updateOneDeadline({
     where: { id: deadlineId },
     data: {
       ...deadline,
-      evaluatorType: isEvaluationDeadline ? deadline.evaluatorType : null,
+      evaluatorType: supportsEvaluatorType ? deadline.evaluatorType : null,
       evaluating: isEvaluationDeadline
         ? evaluatingMilestoneId
           ? { connect: { id: evaluatingMilestoneId } }
@@ -314,7 +319,8 @@ export async function duplicateDeadlineByDeadlineId(
 ) {
   const deadline = await getOneDeadlineById(deadlineId);
   if (!deadline) return null;
-  const { name, dueBy, type, desc, evaluatingMilestoneId } = deadline;
+  const { name, dueBy, type, desc, evaluatingMilestoneId, evaluatorType } =
+    deadline;
   const duplicatedDeadline = await createDeadline({
     deadline: {
       cohortYear,
@@ -323,6 +329,7 @@ export async function duplicateDeadlineByDeadlineId(
       type,
       desc: desc as string | undefined,
       evaluatingMilestoneId: evaluatingMilestoneId as number | undefined,
+      evaluatorType: evaluatorType as EvaluatorType | undefined,
     },
   });
   return duplicatedDeadline;

@@ -1,4 +1,4 @@
-import { DeadlineType, Prisma } from "@prisma/client";
+import { DeadlineType, EvaluatorType, Prisma } from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import { findUniqueAdviserWithProjectData } from "../models/advisers.db";
 import { findManyDeadlines } from "../models/deadline.db";
@@ -8,6 +8,16 @@ import {
   findManySubmissions,
 } from "../models/submissions.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+
+const canAdviserSubmit = (evaluatorType: EvaluatorType | null) =>
+  !evaluatorType ||
+  evaluatorType === EvaluatorType.Adviser ||
+  evaluatorType === EvaluatorType.Both;
+
+const canTeamSubmit = (evaluatorType: EvaluatorType | null) =>
+  !evaluatorType ||
+  evaluatorType === EvaluatorType.Team ||
+  evaluatorType === EvaluatorType.Both;
 
 export async function getDeadlinesByAdviserId(adviserId: number) {
   const adviser = await findUniqueAdviserWithProjectData({
@@ -39,7 +49,7 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
         );
       }
 
-      if (deadline.evaluatorType === "Team") {
+      if (!canAdviserSubmit(deadline.evaluatorType)) {
         return [];
       }
 
@@ -76,6 +86,10 @@ export async function getDeadlinesByAdviserId(adviserId: number) {
         })
       );
     } else {
+      if (!canAdviserSubmit(deadline.evaluatorType)) {
+        return [];
+      }
+
       return await Promise.all(
         projects.map(async (project) => {
           const { id: toProjectId } = project;
@@ -134,7 +148,7 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
         submissions: await Promise.all(milestoneSubmissions),
       };
     } else if (deadline.type == "Evaluation") {
-      if (deadline.evaluatorType === "Adviser") {
+      if (!canTeamSubmit(deadline.evaluatorType)) {
         return {
           deadline: deadline,
           submissions: [],
@@ -157,6 +171,13 @@ export async function getProjectSubmissionsViaAdviserId(adviserId: number) {
         submissions: evaluationSubmissions,
       };
     } else if (deadline.type == "Feedback") {
+      if (!canTeamSubmit(deadline.evaluatorType)) {
+        return {
+          deadline: deadline,
+          submissions: [],
+        };
+      }
+
       const feedbackSubmissions = adviser.projects.map(async (project) => {
         const submission = await findFirstNonDraftSubmission({
           where: {

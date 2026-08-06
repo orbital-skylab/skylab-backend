@@ -1,4 +1,9 @@
-import { DeadlineType, Prisma, Submission } from "@prisma/client";
+import {
+  DeadlineType,
+  EvaluatorType,
+  Prisma,
+  Submission,
+} from "@prisma/client";
 import { SkylabError } from "../errors/SkylabError";
 import { findManyDeadlines, findManyEvaluations } from "../models/deadline.db";
 import { findManyRelationsWithFromToProjectData } from "../models/relations.db";
@@ -13,6 +18,16 @@ import {
 } from "../models/submissions.db";
 import { findUniqueUser } from "../models/users.db";
 import { HttpStatusCode } from "../utils/HTTP_Status_Codes";
+
+const canTeamSubmit = (evaluatorType: EvaluatorType | null) =>
+  !evaluatorType ||
+  evaluatorType === EvaluatorType.Team ||
+  evaluatorType === EvaluatorType.Both;
+
+const canAdviserSubmit = (evaluatorType: EvaluatorType | null) =>
+  !evaluatorType ||
+  evaluatorType === EvaluatorType.Adviser ||
+  evaluatorType === EvaluatorType.Both;
 
 export async function getDeadlinesByStudentId(studentId: number) {
   const student = await findUniqueStudentWithProjectWithAdviserUserData({
@@ -73,7 +88,7 @@ export async function getDeadlinesByStudentId(studentId: number) {
         submission: submission ? submission : undefined,
       };
     } else if (deadline.type == "Evaluation") {
-      if (deadline.evaluatorType === "Adviser") {
+      if (!canTeamSubmit(deadline.evaluatorType)) {
         return [];
       }
       const pEvaluationDeadlines = relations.map(async (relation) => {
@@ -108,6 +123,10 @@ export async function getDeadlinesByStudentId(studentId: number) {
       });
       return await Promise.all(pEvaluationDeadlines);
     } else {
+      if (!canTeamSubmit(deadline.evaluatorType)) {
+        return [];
+      }
+
       const submission = await findFirstSubmission({
         where: {
           deadlineId: deadline.id,
@@ -200,7 +219,7 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
 
       let peerSubmissions: PeerFeedback[] = [];
 
-      if (deadline.evaluatorType !== "Adviser") {
+      if (canTeamSubmit(deadline.evaluatorType)) {
         // Query submissions directly — survives EvaluationRelation deletion.
         peerSubmissions = (await findManySubmissions({
           where: {
@@ -222,7 +241,7 @@ export async function getPeerEvaluationFeedbackByStudentID(studentId: number) {
 
       let adviserSubmissionWrapper: AdviserFeedback | null = null;
 
-      if (deadline.evaluatorType !== "Team") {
+      if (canAdviserSubmit(deadline.evaluatorType)) {
         const pAdviserSubmission = await findFirstNonDraftSubmission({
           where: {
             deadlineId: deadline.id,
