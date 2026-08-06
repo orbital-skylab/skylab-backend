@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
   getSubmissions,
+  getFeedbackSubmissions,
   getEvaluationSubmissions,
   getCollatedMilestoneSubmissions,
   sendReminderEmail,
@@ -46,6 +47,24 @@ router.get(
     }
     try {
       const submissions = await getSubmissions(req.query);
+      return apiResponseWrapper(res, { submissions: submissions });
+    } catch (e) {
+      return routeErrorHandler(res, e);
+    }
+  }
+);
+
+router.get(
+  "/feedback",
+  authorizeAdmin,
+  GetSubmissionsByDeadlineIDValidator,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return throwValidationError(res, errors);
+    }
+    try {
+      const submissions = await getFeedbackSubmissions(req.query);
       return apiResponseWrapper(res, { submissions: submissions });
     } catch (e) {
       return routeErrorHandler(res, e);

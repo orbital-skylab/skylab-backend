@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Adviser,
+  DeadlineType,
+  EvaluatorType,
   Mentor,
   Project,
   Student,
@@ -106,6 +108,16 @@ const withoutPassword = (user?: User | null) => {
   return removePasswordFromUser(user);
 };
 
+const includesTeamEvaluator = (evaluatorType: EvaluatorType | null) =>
+  !evaluatorType ||
+  evaluatorType === EvaluatorType.Team ||
+  evaluatorType === EvaluatorType.Both;
+
+const includesAdviserEvaluator = (evaluatorType: EvaluatorType | null) =>
+  !evaluatorType ||
+  evaluatorType === EvaluatorType.Adviser ||
+  evaluatorType === EvaluatorType.Both;
+
 const flattenStudentUser = (student: Student & { user?: User | null }) => {
   const { user, id: studentId, ...studentData } = student;
   return {
@@ -191,6 +203,7 @@ export const getSubmissions = async (
   query: any & {
     cohortYear: number;
     deadlineId?: number;
+    deadlineType?: DeadlineType;
     submissionStatus?: SubmissionStatusEnum;
     search?: string;
     page?: number;
@@ -204,6 +217,27 @@ export const getSubmissions = async (
   }
 
   return await getAllSubmissions(query);
+};
+
+export const getFeedbackSubmissions = async (
+  query: any & {
+    cohortYear: number;
+    deadlineId?: number;
+    submissionStatus?: SubmissionStatusEnum;
+    search?: string;
+    page?: number;
+    limit?: number;
+    dropped: boolean;
+  }
+) => {
+  const feedbackQuery = {
+    ...query,
+    deadlineType: DeadlineType.Feedback,
+  };
+
+  return query.deadlineId
+    ? await getEvaluationSubmissionsByDeadlineId(feedbackQuery)
+    : await getAllEvaluationSubmissions(feedbackQuery);
 };
 
 export const getCollatedMilestoneSubmissions = async (
@@ -477,11 +511,7 @@ export const getCollatedMilestoneSubmissions = async (
         answers: { questionId: number; answer: string }[];
       }[] = [];
 
-      if (
-        !deadline.evaluatorType ||
-        deadline.evaluatorType === "Team" ||
-        deadline.evaluatorType === "Both"
-      ) {
+      if (includesTeamEvaluator(deadline.evaluatorType)) {
         teamRelations.forEach((relation) => {
           const submission = evaluationSubmissionsMap.get(
             `team-${deadline.id}-${relation.fromProjectId}-${relation.toProjectId}`
@@ -501,10 +531,7 @@ export const getCollatedMilestoneSubmissions = async (
         });
       }
 
-      if (
-        deadline.evaluatorType === "Adviser" ||
-        deadline.evaluatorType === "Both"
-      ) {
+      if (includesAdviserEvaluator(deadline.evaluatorType)) {
         adviserProjects.forEach((project) => {
           if (!project.adviser?.userId) return;
           const submission = evaluationSubmissionsMap.get(
@@ -585,6 +612,7 @@ export const getCollatedMilestoneSubmissions = async (
 export const getAllSubmissions = async (
   query: any & {
     cohortYear: number;
+    deadlineType?: DeadlineType;
     search?: string;
     page?: number;
     limit?: number;
@@ -592,6 +620,7 @@ export const getAllSubmissions = async (
   }
 ) => {
   const { search, cohortYear, page, limit, dropped } = query;
+  const deadlineType = query.deadlineType ?? DeadlineType.Milestone;
   const isDropped = dropped === "true" || dropped === true;
 
   const searchCondition = search
@@ -613,10 +642,10 @@ export const getAllSubmissions = async (
     skip: query.limit && query.page ? limit * page : undefined,
   });
 
-  const milestoneDeadlines = await findManyDeadlines({
+  const deadlines = await findManyDeadlines({
     where: {
       cohortYear: Number(cohortYear),
-      type: "Milestone",
+      type: deadlineType,
     },
   });
 
@@ -626,9 +655,7 @@ export const getAllSubmissions = async (
         fromProjectId: project.id,
         isDraft: false,
         deadlineId: {
-          in: milestoneDeadlines.map(
-            (milestoneDeadline) => milestoneDeadline.id
-          ),
+          in: deadlines.map((deadline) => deadline.id),
         },
       },
       select: {
@@ -710,7 +737,7 @@ export const getSubmissionsByDeadlineId = async (
         where: {
           deadlineId: deadlineId,
           fromProjectId: project.id,
-          toUserId: project.adviserId,
+          toUserId: project.adviser?.userId,
         },
       });
       return {
@@ -807,6 +834,10 @@ export const getAllEvaluationSubmissions = async (query: any) => {
   const { search, cohortYear, page, limit, dropped, evaluatorTypeFilter } =
     query;
   const isDropped = dropped === "true" || dropped === true;
+  const deadlineType = query.deadlineType ?? DeadlineType.Evaluation;
+  const isFeedback = deadlineType === DeadlineType.Feedback;
+  const includeAnswers =
+    query.includeAnswers === "true" || query.includeAnswers === true;
 
   const teamSearchCondition = search
     ? {
@@ -851,27 +882,50 @@ export const getAllEvaluationSubmissions = async (query: any) => {
     : {};
 
   const evaluationDeadlines = await findManyDeadlines({
-    where: { cohortYear: Number(cohortYear), type: "Evaluation" },
+    where: { cohortYear: Number(cohortYear), type: deadlineType },
   });
   const deadlineIds = evaluationDeadlines.map((d) => d.id);
+  const hasTeamDeadline = evaluationDeadlines.some((deadline) =>
+    includesTeamEvaluator(deadline.evaluatorType)
+  );
+  const hasAdviserDeadline = evaluationDeadlines.some((deadline) =>
+    includesAdviserEvaluator(deadline.evaluatorType)
+  );
 
   let combined: any[] = [];
 
   // Fetch Teams if filter allows
   if (
-    !evaluatorTypeFilter ||
-    evaluatorTypeFilter === "All" ||
-    evaluatorTypeFilter === "Team"
+    hasTeamDeadline &&
+    (!evaluatorTypeFilter ||
+      evaluatorTypeFilter === "All" ||
+      evaluatorTypeFilter === "Team")
   ) {
     const relations = await findManyRelationsForEvaluations({
       where: {
-        fromProject: { cohortYear: Number(cohortYear), hasDropped: isDropped },
+        ...(isFeedback
+          ? {
+              toProject: {
+                cohortYear: Number(cohortYear),
+                hasDropped: isDropped,
+              },
+            }
+          : {
+              fromProject: {
+                cohortYear: Number(cohortYear),
+                hasDropped: isDropped,
+              },
+            }),
         ...teamSearchCondition,
       },
     });
 
     const evaluatorProjectIds = Array.from(
-      new Set(relations.map((r) => r.fromProjectId))
+      new Set(
+        relations.map((relation) =>
+          isFeedback ? relation.toProjectId : relation.fromProjectId
+        )
+      )
     );
     const evaluatorProjects = await findManyProjectsWithUserData({
       where: { id: { in: evaluatorProjectIds } },
@@ -881,42 +935,88 @@ export const getAllEvaluationSubmissions = async (query: any) => {
     );
 
     const pTeamSubmissions = relations.map(async (relation) => {
+      const evaluatorProject = isFeedback
+        ? relation.toProject
+        : relation.fromProject;
+      const evaluateeProject = isFeedback
+        ? relation.fromProject
+        : relation.toProject;
       const submissions = await findManySubmissions({
         where: {
-          fromProjectId: relation.fromProjectId,
-          toProjectId: relation.toProjectId,
+          fromProjectId: evaluatorProject.id,
+          toProjectId: evaluateeProject.id,
           isDraft: false,
           deadlineId: { in: deadlineIds },
         },
-        select: { id: true, updatedAt: true, deadlineId: true },
+        ...(includeAnswers
+          ? { include: { answers: { include: { question: true } } } }
+          : { select: { id: true, updatedAt: true, deadlineId: true } }),
       });
 
       const rawStudents =
-        projectsWithStudentsMap.get(relation.fromProjectId) || [];
+        projectsWithStudentsMap.get(evaluatorProject.id) || [];
       const flattenedStudents = rawStudents.map((student) =>
         flattenStudentUser(student)
       );
 
       return {
-        relationId: relation.id,
+        relationId: isFeedback ? `F-T-${relation.id}` : relation.id,
         fromProject: {
-          ...relation.fromProject,
-          adviser: relation.fromProject.adviser
-            ? flattenAdviserUser(relation.fromProject.adviser)
+          ...evaluatorProject,
+          adviser: evaluatorProject.adviser
+            ? flattenAdviserUser(evaluatorProject.adviser)
             : null,
           students: flattenedStudents,
         },
-        toProject: flattenProjectUsers(relation.toProject),
+        toProject: flattenProjectUsers(evaluateeProject),
         submission: submissions.length > 0 ? submissions : undefined,
       };
     });
     combined.push(...(await Promise.all(pTeamSubmissions)));
+
+    if (isFeedback) {
+      const teamAdviserProjects = await findManyProjectsWithUserData({
+        where: {
+          cohortYear: Number(cohortYear),
+          hasDropped: isDropped,
+          adviserId: { not: null },
+          ...adviserSearchCondition,
+        },
+      });
+      const teamAdviserSubmissions = teamAdviserProjects.map(
+        async (project) => {
+          if (!project.adviser) return null;
+          const submissions = await findManySubmissions({
+            where: {
+              fromProjectId: project.id,
+              toUserId: project.adviser.userId,
+              isDraft: false,
+              deadlineId: { in: deadlineIds },
+            },
+            ...(includeAnswers
+              ? { include: { answers: { include: { question: true } } } }
+              : { select: { id: true, updatedAt: true, deadlineId: true } }),
+          });
+          return {
+            relationId: `F-A-${project.id}`,
+            fromProject: flattenProjectUsers(project),
+            fromUser: undefined,
+            toUser: withoutPassword(project.adviser.user),
+            submission: submissions.length > 0 ? submissions : undefined,
+          };
+        }
+      );
+      combined.push(
+        ...(await Promise.all(teamAdviserSubmissions)).filter(Boolean)
+      );
+    }
   }
 
   if (
-    !evaluatorTypeFilter ||
-    evaluatorTypeFilter === "All" ||
-    evaluatorTypeFilter === "Adviser"
+    hasAdviserDeadline &&
+    (!evaluatorTypeFilter ||
+      evaluatorTypeFilter === "All" ||
+      evaluatorTypeFilter === "Adviser")
   ) {
     const adviserProjects = await findManyProjectsWithUserData({
       where: {
@@ -935,7 +1035,9 @@ export const getAllEvaluationSubmissions = async (query: any) => {
           isDraft: false,
           deadlineId: { in: deadlineIds },
         },
-        select: { id: true, updatedAt: true, deadlineId: true },
+        ...(includeAnswers
+          ? { include: { answers: { include: { question: true } } } }
+          : { select: { id: true, updatedAt: true, deadlineId: true } }),
       });
       return {
         relationId: `A-${project.id}`,
@@ -993,17 +1095,34 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
     evaluatorTypeFilter,
   } = query;
   const isDropped = dropped === "true" || dropped === true;
+  const deadlineType = query.deadlineType ?? DeadlineType.Evaluation;
+  const isFeedback = deadlineType === DeadlineType.Feedback;
+  const includeAnswers =
+    query.includeAnswers === "true" || query.includeAnswers === true;
 
   const deadline = await findUniqueDeadline({
     where: { id: Number(deadlineId) },
   });
 
   let results: any[] = [];
+  const adviserSearchCondition = search
+    ? {
+        OR: [
+          {
+            adviser: {
+              user: {
+                name: { contains: search, mode: "insensitive" as const },
+              },
+            },
+          },
+          { name: { contains: search, mode: "insensitive" as const } },
+          { teamName: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
 
   const includeTeams =
-    (!deadline.evaluatorType ||
-      deadline.evaluatorType === "Team" ||
-      deadline.evaluatorType === "Both") &&
+    includesTeamEvaluator(deadline.evaluatorType) &&
     (!evaluatorTypeFilter ||
       evaluatorTypeFilter === "All" ||
       evaluatorTypeFilter === "Team");
@@ -1037,13 +1156,29 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
       : {};
     const relations = await findManyRelationsForEvaluations({
       where: {
-        fromProject: { cohortYear: Number(cohortYear), hasDropped: isDropped },
+        ...(isFeedback
+          ? {
+              toProject: {
+                cohortYear: Number(cohortYear),
+                hasDropped: isDropped,
+              },
+            }
+          : {
+              fromProject: {
+                cohortYear: Number(cohortYear),
+                hasDropped: isDropped,
+              },
+            }),
         ...teamSearchCondition,
       },
     });
 
     const evaluatorProjectIds = Array.from(
-      new Set(relations.map((r) => r.fromProjectId))
+      new Set(
+        relations.map((relation) =>
+          isFeedback ? relation.toProjectId : relation.fromProjectId
+        )
+      )
     );
     const evaluatorProjects = await findManyProjectsWithUserData({
       where: { id: { in: evaluatorProjectIds } },
@@ -1053,60 +1188,88 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
     );
 
     const pTeamSubmissions = relations.map(async (relation) => {
+      const evaluatorProject = isFeedback
+        ? relation.toProject
+        : relation.fromProject;
+      const evaluateeProject = isFeedback
+        ? relation.fromProject
+        : relation.toProject;
       const submission = await findFirstNonDraftSubmission({
         where: {
           deadlineId: Number(deadlineId),
-          fromProjectId: relation.fromProjectId,
-          toProjectId: relation.toProjectId,
+          fromProjectId: evaluatorProject.id,
+          toProjectId: evaluateeProject.id,
         },
+        include: includeAnswers
+          ? { answers: { include: { question: true } } }
+          : undefined,
       });
 
       const rawStudents =
-        projectsWithStudentsMap.get(relation.fromProjectId) || [];
+        projectsWithStudentsMap.get(evaluatorProject.id) || [];
       const flattenedStudents = rawStudents.map((student) =>
         flattenStudentUser(student)
       );
 
-      const adviser = relation.fromProject.adviser;
+      const adviser = evaluatorProject.adviser;
       const sanitizedAdviser = adviser ? flattenAdviserUser(adviser) : null;
 
       return {
-        relationId: relation.id,
+        relationId: isFeedback ? `F-T-${relation.id}` : relation.id,
         fromProject: {
-          ...relation.fromProject,
+          ...evaluatorProject,
           adviser: sanitizedAdviser,
           students: flattenedStudents,
         },
-        toProject: flattenProjectUsers(relation.toProject),
+        toProject: flattenProjectUsers(evaluateeProject),
         submission: submission || undefined,
       };
     });
     results.push(...(await Promise.all(pTeamSubmissions)));
+
+    if (isFeedback) {
+      const teamAdviserProjects = await findManyProjectsWithUserData({
+        where: {
+          cohortYear: Number(cohortYear),
+          hasDropped: isDropped,
+          adviserId: { not: null },
+          ...adviserSearchCondition,
+        },
+      });
+      const teamAdviserSubmissions = teamAdviserProjects.map(
+        async (project) => {
+          if (!project.adviser) return null;
+          const submission = await findFirstNonDraftSubmission({
+            where: {
+              deadlineId: Number(deadlineId),
+              fromProjectId: project.id,
+              toUserId: project.adviser.userId,
+            },
+            include: includeAnswers
+              ? { answers: { include: { question: true } } }
+              : undefined,
+          });
+          return {
+            relationId: `F-A-${project.id}`,
+            fromProject: flattenProjectUsers(project),
+            toUser: withoutPassword(project.adviser.user),
+            submission: submission || undefined,
+          };
+        }
+      );
+      results.push(
+        ...(await Promise.all(teamAdviserSubmissions)).filter(Boolean)
+      );
+    }
   }
 
   const includeAdvisers =
-    (deadline.evaluatorType === "Adviser" ||
-      deadline.evaluatorType === "Both") &&
+    includesAdviserEvaluator(deadline.evaluatorType) &&
     (!evaluatorTypeFilter ||
       evaluatorTypeFilter === "All" ||
       evaluatorTypeFilter === "Adviser");
 
   if (includeAdvisers) {
-    const adviserSearchCondition = search
-      ? {
-          OR: [
-            {
-              adviser: {
-                user: {
-                  name: { contains: search, mode: "insensitive" as const },
-                },
-              },
-            },
-            { name: { contains: search, mode: "insensitive" as const } },
-            { teamName: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
     const adviserProjects = await findManyProjectsWithUserData({
       where: {
         cohortYear: Number(cohortYear),
@@ -1129,6 +1292,9 @@ export const getEvaluationSubmissionsByDeadlineId = async (query: any) => {
           fromUserId: adviser.userId,
           toProjectId: project.id,
         },
+        include: includeAnswers
+          ? { answers: { include: { question: true } } }
+          : undefined,
       });
 
       const adviserUser: any = adviser.user;

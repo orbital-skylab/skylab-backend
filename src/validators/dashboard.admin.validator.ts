@@ -6,6 +6,7 @@ export const GetSubmissionsByDeadlineIDValidator = [
   CohortQueryValidator,
   query("deadlineId").isNumeric().toInt().optional(),
   query("includeAnonymous").isBoolean().optional(),
+  query("includeAnswers").isBoolean().optional(),
   query("submissionStatus")
     .isIn([
       SubmissionStatusEnum.SUBMITTED,

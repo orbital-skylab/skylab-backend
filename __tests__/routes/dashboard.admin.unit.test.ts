@@ -340,3 +340,41 @@ describe("GET /team-submissions route unit test", () => {
     assertApiResponse({ submissions: [MOCK_PROJECT_WITHOUT_SUBMISSION] });
   });
 });
+
+describe("GET /feedback route unit test", () => {
+  let getFeedbackSubmissions;
+
+  beforeAll(() => {
+    getFeedbackSubmissions = jest.spyOn(
+      DashboardAdminHelpers,
+      "getFeedbackSubmissions"
+    );
+  });
+
+  it("should call the helper function correctly to get feedback submissions", async () => {
+    const deadlineId = 4;
+    getFeedbackSubmissions.mockResolvedValueOnce([
+      MOCK_PROJECT_WITH_SUBMISSION,
+      MOCK_PROJECT_WITHOUT_SUBMISSION,
+    ]);
+
+    await supertest(app).get(
+      `${BASE_URL}/feedback?cohortYear=${MOCK_SUBMISSION.cohortYear}&dropped=${MOCK_SUBMISSION.dropped}&deadlineId=${deadlineId}`
+    );
+
+    expect(authorizeAdmin).toHaveBeenCalledTimes(1);
+    expect(getFeedbackSubmissions).toHaveBeenCalledTimes(1);
+    expect(getFeedbackSubmissions).toHaveBeenCalledWith({
+      cohortYear: MOCK_SUBMISSION.cohortYear,
+      dropped: MOCK_SUBMISSION.dropped,
+      deadlineId,
+    });
+
+    assertApiResponse({
+      submissions: [
+        MOCK_PROJECT_WITH_SUBMISSION,
+        MOCK_PROJECT_WITHOUT_SUBMISSION,
+      ],
+    });
+  });
+});
