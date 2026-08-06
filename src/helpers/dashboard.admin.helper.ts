@@ -668,14 +668,14 @@ export const getSubmissionsByDeadlineId = async (
     dropped,
   } = query;
 
+  const isDropped = dropped === "true" || dropped === true;
   const deadline = await findUniqueDeadline({ where: { id: deadlineId } });
   const projects = await findManyProjectsWithUserData({
     where: {
       cohortYear: cohortYear,
+      hasDropped: isDropped,
       name: search ? { contains: search } : undefined,
     },
-    take: query.limit ?? undefined,
-    skip: query.limit && query.page ? limit * page : undefined,
   });
   const projectIds = projects.map(({ id }) => id);
 
@@ -745,17 +745,8 @@ export const getSubmissionsByDeadlineId = async (
     }
   });
 
-  if (!submissionStatus) {
-    return results.map((result) => {
-      const { submission, ...resultData } = result;
-      return {
-        id: submission ? submission.id : undefined,
-        updatedAt: submission ? submission.updatedAt : undefined,
-        ...resultData,
-      };
-    });
-  } else {
-    const filteredResult = results.filter((result) => {
+  if (submissionStatus) {
+    results = results.filter((result) => {
       if (submissionStatus == SubmissionStatusEnum.UNSUBMITTED) {
         return !result.submission;
       } else if (submissionStatus == SubmissionStatusEnum.SUBMITTED_LATE) {
@@ -768,16 +759,23 @@ export const getSubmissionsByDeadlineId = async (
         );
       }
     });
-
-    return filteredResult.map((result) => {
-      const { submission, ...resultData } = result;
-      return {
-        id: submission ? submission.id : undefined,
-        updatedAt: submission ? submission.updatedAt : undefined,
-        ...resultData,
-      };
-    });
   }
+
+  results.sort((a, b) => a.fromProject.id - b.fromProject.id);
+
+  if (limit !== undefined) {
+    const startIndex = Number(limit) * Number(page ?? 0);
+    results = results.slice(startIndex, startIndex + Number(limit));
+  }
+
+  return results.map((result) => {
+    const { submission, ...resultData } = result;
+    return {
+      id: submission ? submission.id : undefined,
+      updatedAt: submission ? submission.updatedAt : undefined,
+      ...resultData,
+    };
+  });
 };
 
 export async function sendReminderEmail(
