@@ -16,12 +16,14 @@ import {
 import * as DashboardAdminHelpers from "../../src/helpers/dashboard.admin.helper";
 import {
   flattenProjectUsers,
+  getFeedbackSubmissions,
   getSubmissions,
   getSubmissionsByDeadlineId,
   SubmissionStatusEnum,
 } from "../../src/helpers/dashboard.admin.helper";
 import * as DeadlineDb from "../../src/models/deadline.db";
 import * as ProjectsDb from "../../src/models/projects.db";
+import * as RelationsDb from "../../src/models/relations.db";
 import * as SubmissionsDb from "../../src/models/submissions.db";
 
 afterEach(() => {
@@ -333,5 +335,258 @@ describe("getSubmissionsByDeadlineId helper unit test", () => {
     expect(result.map((submission) => submission.fromProject.id)).toEqual([
       51, 52,
     ]);
+  });
+
+  it("uses the adviser's user id when fetching feedback submissions", async () => {
+    const adviserUserId = 900;
+    const project = {
+      ...buildProject(1),
+      adviserId: 10,
+      adviser: {
+        id: 10,
+        userId: adviserUserId,
+        cohortYear: 2025,
+        nusnetId: "e0123456",
+        matricNo: "A0123456A",
+        user: {
+          id: adviserUserId,
+          name: "Adviser One",
+          email: "adviser@example.com",
+          password: "password",
+          profilePicUrl: null,
+          githubUrl: null,
+          linkedinUrl: null,
+          personalSiteUrl: null,
+          selfIntro: null,
+          submitterId: null,
+        },
+      },
+    };
+
+    jest
+      .spyOn(ProjectsDb, "findManyProjectsWithUserData")
+      .mockResolvedValueOnce([project]);
+    const findFirstNonDraftSubmissionSpy = jest
+      .spyOn(SubmissionsDb, "findFirstNonDraftSubmission")
+      .mockResolvedValueOnce(null);
+
+    jest.spyOn(DeadlineDb, "findUniqueDeadline").mockResolvedValueOnce({
+      id: 4,
+      name: "Feedback 1",
+      cohortYear: 2025,
+      createdOn: new Date("2025-01-01T00:00:00.000Z"),
+      dueBy: new Date("2025-02-01T00:00:00.000Z"),
+      desc: null,
+      type: "Feedback",
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      evaluatingMilestoneId: null,
+      evaluatorType: null,
+    } as any);
+
+    const result = await getSubmissionsByDeadlineId({
+      cohortYear: 2025,
+      deadlineId: 4,
+      dropped: "false",
+    });
+
+    expect(findFirstNonDraftSubmissionSpy).toHaveBeenCalledWith({
+      where: {
+        deadlineId: 4,
+        fromProjectId: project.id,
+        toUserId: adviserUserId,
+      },
+    });
+    expect(result[0].toUser).toEqual(
+      expect.not.objectContaining({ password: expect.anything() })
+    );
+  });
+
+  it("skips feedback submission queries for projects without advisers", async () => {
+    const project = buildProject(1);
+
+    jest
+      .spyOn(ProjectsDb, "findManyProjectsWithUserData")
+      .mockResolvedValueOnce([project]);
+    const findFirstNonDraftSubmissionSpy = jest.spyOn(
+      SubmissionsDb,
+      "findFirstNonDraftSubmission"
+    );
+
+    jest.spyOn(DeadlineDb, "findUniqueDeadline").mockResolvedValueOnce({
+      id: 4,
+      name: "Feedback 1",
+      cohortYear: 2025,
+      createdOn: new Date("2025-01-01T00:00:00.000Z"),
+      dueBy: new Date("2025-02-01T00:00:00.000Z"),
+      desc: null,
+      type: "Feedback",
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      evaluatingMilestoneId: null,
+      evaluatorType: null,
+    } as any);
+
+    const result = await getSubmissionsByDeadlineId({
+      cohortYear: 2025,
+      deadlineId: 4,
+      dropped: "false",
+    });
+
+    expect(findFirstNonDraftSubmissionSpy).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+});
+
+describe("getFeedbackSubmissions helper unit test", () => {
+  it("reverses evaluation relations for team feedback", async () => {
+    const buildProject = (id: number) =>
+      ({
+        id,
+        name: `Project ${id}`,
+        teamName: `Team ${id}`,
+        adviserId: null,
+        mentorId: null,
+        achievement: AchievementLevel.Vostok,
+        cohortYear: 2025,
+        proposalPdf: null,
+        posterUrl: null,
+        videoUrl: null,
+        hasDropped: false,
+        students: [],
+        adviser: null,
+        mentor: null,
+      } as any);
+    const evaluator = buildProject(1);
+    const evaluatee = buildProject(2);
+
+    jest.spyOn(DeadlineDb, "findUniqueDeadline").mockResolvedValueOnce({
+      id: 4,
+      name: "Feedback 1",
+      cohortYear: 2025,
+      createdOn: new Date("2025-01-01T00:00:00.000Z"),
+      dueBy: new Date("2025-02-01T00:00:00.000Z"),
+      desc: null,
+      type: "Feedback",
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      evaluatingMilestoneId: null,
+      evaluatorType: "Team",
+    } as any);
+    jest
+      .spyOn(RelationsDb, "findManyRelationsForEvaluations")
+      .mockResolvedValueOnce([
+        {
+          id: 7,
+          fromProjectId: evaluator.id,
+          toProjectId: evaluatee.id,
+          adviserId: null,
+          fromProject: evaluator,
+          toProject: evaluatee,
+        },
+      ] as any);
+    jest
+      .spyOn(ProjectsDb, "findManyProjectsWithUserData")
+      .mockResolvedValueOnce([evaluatee])
+      .mockResolvedValueOnce([]);
+    jest
+      .spyOn(SubmissionsDb, "findFirstNonDraftSubmission")
+      .mockResolvedValueOnce(null);
+
+    const result = await getFeedbackSubmissions({
+      cohortYear: 2025,
+      deadlineId: 4,
+      dropped: "false",
+      evaluatorTypeFilter: "Team",
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      relationId: "F-T-7",
+      fromProject: { id: evaluatee.id },
+      toProject: { id: evaluator.id },
+    });
+  });
+
+  it("returns a submitted Team feedback response addressed to its adviser", async () => {
+    const adviserUser = {
+      id: 11,
+      name: "Adviser One",
+      email: "adviser@example.com",
+      password: "password",
+    };
+    const teamProject = {
+      id: 2,
+      name: "Project 2",
+      teamName: "Team 2",
+      adviserId: 12,
+      mentorId: null,
+      achievement: AchievementLevel.Vostok,
+      cohortYear: 2025,
+      proposalPdf: null,
+      posterUrl: null,
+      videoUrl: null,
+      hasDropped: false,
+      students: [],
+      mentor: null,
+      adviser: {
+        id: 12,
+        userId: adviserUser.id,
+        cohortYear: 2025,
+        nusnetId: "e0123456",
+        matricNo: "A0123456A",
+        user: adviserUser,
+      },
+    };
+    const submittedAt = new Date("2025-01-20T00:00:00.000Z");
+
+    jest.spyOn(DeadlineDb, "findUniqueDeadline").mockResolvedValueOnce({
+      id: 4,
+      name: "Feedback 1",
+      cohortYear: 2025,
+      createdOn: new Date("2025-01-01T00:00:00.000Z"),
+      dueBy: new Date("2025-02-01T00:00:00.000Z"),
+      desc: null,
+      type: "Feedback",
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      evaluatingMilestoneId: null,
+      evaluatorType: "Team",
+    } as any);
+    jest
+      .spyOn(RelationsDb, "findManyRelationsForEvaluations")
+      .mockResolvedValueOnce([]);
+    jest
+      .spyOn(ProjectsDb, "findManyProjectsWithUserData")
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([teamProject] as any);
+    jest
+      .spyOn(SubmissionsDb, "findFirstNonDraftSubmission")
+      .mockResolvedValueOnce({
+        id: 101,
+        deadlineId: 4,
+        fromProjectId: teamProject.id,
+        fromUserId: null,
+        toProjectId: null,
+        toUserId: adviserUser.id,
+        isDraft: false,
+        updatedAt: submittedAt,
+      } as any);
+
+    const result = await getFeedbackSubmissions({
+      cohortYear: 2025,
+      deadlineId: 4,
+      dropped: "false",
+      evaluatorTypeFilter: "Team",
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      relationId: `F-A-${teamProject.id}`,
+      fromProject: { id: teamProject.id },
+      toUser: { id: adviserUser.id },
+      submission: {
+        id: 101,
+        deadlineId: 4,
+        isDraft: false,
+        updatedAt: submittedAt,
+      },
+    });
   });
 });
