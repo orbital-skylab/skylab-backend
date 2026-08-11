@@ -3,17 +3,18 @@ import {
   getDeadlinesByStudentId,
   getPeerEvaluationFeedbackByStudentID,
 } from "../helpers/dashboard.student.helper";
-import authorizeSignedIn from "../middleware/authorizeSignedIn";
+import authorizeSelfRole from "../middleware/authorizeSelfRole";
 import {
   apiResponseWrapper,
   routeErrorHandler,
 } from "../utils/ApiResponseWrapper";
 
 const router = Router();
+const authorizeSelfStudent = authorizeSelfRole("student", "studentId");
 
 router.get(
   "/:studentId/deadlines",
-  authorizeSignedIn,
+  authorizeSelfStudent,
   async (req: Request, res: Response) => {
     const { studentId } = req.params;
     try {
@@ -27,7 +28,7 @@ router.get(
 
 router.get(
   "/:studentId/evaluations-feedbacks",
-  authorizeSignedIn,
+  authorizeSelfStudent,
   async (req: Request, res: Response) => {
     const { studentId } = req.params;
     try {
